@@ -1,0 +1,12 @@
+@model ImportResult?
+@{ ViewData["Title"] = "Import students"; }
+<h1 class="page-title">Import students (CSV)</h1>
+<div class="ax-card mb-3" style="max-width:760px"><div class="card-b">
+    <p>Columns: <code>FullName,Email,Phone,BranchCode,Section,Semester,JoiningDate</code>. Student IDs and QR codes are generated automatically. <a asp-action="Template">Download template</a>. The sample dataset is in <code>Dataset/students.csv</code>.</p>
+    <form method="post" enctype="multipart/form-data" data-once><input type="file" name="file" accept=".csv" class="form-control mb-3" /><button class="btn btn-ax" type="submit">Import</button> <a class="btn btn-outline-secondary" asp-action="Index">Back</a></form>
+</div></div>
+@if (Model != null)
+{
+    <div class="alert @(Model.Imported > 0 ? "alert-success" : "alert-warning")">Imported @Model.Imported of @Model.Total rows.</div>
+    @if (Model.HasErrors) { <div class="ax-card"><div class="card-h">Rows that failed</div><div class="card-b"><ul class="mb-0">@foreach (var e in Model.Errors.Take(100)) { <li>@e</li> }</ul></div></div> }
+}

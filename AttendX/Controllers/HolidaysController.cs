@@ -1,0 +1,42 @@
+namespace AttendX.Controllers;
+
+[Authorize(Policy = PolicyNames.AdminOnly)]
+public class HolidaysController(AppDbContext db, IAuditService audit) : Controller
+{
+    private readonly AppDbContext _db = db;
+    private readonly IAuditService _audit = audit;
+
+    public async Task<IActionResult> Index() => View(await _db.Holidays.AsNoTracking().OrderBy(h => h.Date).ToListAsync());
+
+    public IActionResult Create() => View("Form", new Holiday { Date = DateTime.Today });
+
+    public async Task<IActionResult> Edit(int id)
+    {
+        var h = await _db.Holidays.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        return h == null ? NotFound() : View("Form", h);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Save([Bind("Id,Date,Name,Type")] Holiday m)
+    {
+        if (m.Type is not ("Holiday" or "Event" or "Exam")) ModelState.AddModelError(nameof(m.Type), "Choose Holiday, Event or Exam.");
+        if (!ModelState.IsValid) return View("Form", m);
+        m.Date = m.Date.Date;
+        Holiday h;
+        if (m.Id > 0) h = (await _db.Holidays.FindAsync(m.Id))!;
+        else { h = new Holiday(); _db.Holidays.Add(h); }
+        h.Date = m.Date; h.Name = m.Name.Trim(); h.Type = m.Type;
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(m.Id > 0 ? "HolidayUpdated" : "HolidayCreated", "Holiday", h.Date.ToString("yyyy-MM-dd"), newValues: $"{h.Type}: {h.Name}");
+        TempData["Success"] = "Saved.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var h = await _db.Holidays.FindAsync(id);
+        if (h != null) { _db.Holidays.Remove(h); await _db.SaveChangesAsync(); await _audit.LogAsync("HolidayDeleted", "Holiday", h.Date.ToString("yyyy-MM-dd"), oldValues: h.Name); }
+        return RedirectToAction(nameof(Index));
+    }
+}

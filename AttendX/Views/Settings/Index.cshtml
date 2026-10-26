@@ -1,0 +1,58 @@
+@model SettingsViewModel
+@{ ViewData["Title"] = "Settings"; var s = Model.Settings; }
+<h1 class="page-title">Settings</h1>
+<div class="row g-3">
+<div class="col-lg-6"><div class="ax-card"><div class="card-h">Attendance rules</div><div class="card-b">
+<form asp-action="SaveSettings" method="post" data-once><div class="row g-2">
+    <div class="col-6"><label class="form-label small">Grace minutes (before/after period)</label><input name="GraceMinutes" type="number" min="0" max="120" value="@s.GraceMinutes" class="form-control" /></div>
+    <div class="col-6"><label class="form-label small">Default threshold %</label><input name="DefaultThreshold" type="number" step="0.5" min="1" max="100" value="@s.DefaultThreshold.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" /></div>
+    <div class="col-6"><label class="form-label small">QR session key expiry (seconds)</label><input name="QrExpirySeconds" type="number" min="10" max="300" value="@s.QrExpirySeconds" class="form-control" /></div>
+    <div class="col-6"><label class="form-label small">Location</label><select name="LocationRequirement" class="form-select">@foreach (var v in Enum.GetValues<LocationRequirement>()) { <option value="@v" selected="@(v == s.LocationRequirement)">@v</option> }</select></div>
+    <div class="col-6"><label class="form-label small">Late counts as (0-1 of a Present)</label><input name="LateWeight" type="number" step="0.05" min="0" max="1" value="@s.LateWeight.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" /></div>
+    <div class="col-6"><label class="form-label small">QR scan = Late after (minutes, 0 = off)</label><input name="LateAfterMinutes" type="number" min="0" max="120" value="@s.LateAfterMinutes" class="form-control" /></div>
+    <div class="col-6"><label class="form-label small">Periods per day</label><input name="PeriodCount" type="number" min="1" max="12" value="@s.PeriodCount" class="form-control" /></div>
+    <div class="col-6"><label class="form-label small">Offline sync max delay (minutes)</label><input name="OfflineMaxDelayMinutes" type="number" min="0" max="1440" value="@s.OfflineMaxDelayMinutes" class="form-control" /></div>
+    <div class="col-12"><div class="form-check"><input type="checkbox" class="form-check-input" name="OfflineSyncEnabled" value="true" checked="@s.OfflineSyncEnabled" /><input type="hidden" name="OfflineSyncEnabled" value="false" /><label class="form-check-label">Allow offline attendance sync</label></div></div>
+</div><button class="btn btn-ax mt-3" type="submit">Save settings</button></form></div></div></div>
+
+<div class="col-lg-6"><div class="ax-card"><div class="card-h">Period timings</div><div class="card-b">
+<form asp-action="SavePeriods" method="post" data-once>
+    <table class="table table-sm"><thead><tr><th>Period</th><th>Start</th><th>End</th></tr></thead><tbody>
+    @for (int i = 1; i <= s.PeriodCount; i++)
+    {
+        var p = Model.Periods.FirstOrDefault(x => x.PeriodNo == i);
+        <tr><td>P@(i)<input type="hidden" name="periodNo" value="@i" /></td><td><input type="time" name="start" class="form-control form-control-sm" value="@(p == null ? "" : UiHelpers.Time(p.StartTime))" required /></td><td><input type="time" name="end" class="form-control form-control-sm" value="@(p == null ? "" : UiHelpers.Time(p.EndTime))" required /></td></tr>
+    }
+    </tbody></table>
+    
+    <button class="btn btn-ax" type="submit">Save periods</button>
+</form></div></div></div>
+
+<div class="col-lg-6"><div class="ax-card"><div class="card-h">Threshold rules</div><div class="card-b">
+    <p class="small text-muted">Most specific rule wins (section &gt; semester &gt; branch). Without a matching rule the default threshold applies.</p>
+    <table class="table table-sm"><thead><tr><th>Branch</th><th>Sem</th><th>Section</th><th>%</th><th></th></tr></thead><tbody>
+    @foreach (var r in Model.Rules) { <tr><td>@(r.Branch?.Code ?? "any")</td><td>@(r.Semester?.ToString() ?? "any")</td><td>@(r.Section?.Name ?? "any")</td><td>@r.Percent%</td><td><form asp-action="DeleteRule" asp-route-id="@r.Id" method="post" data-confirm="Delete rule?"><button class="btn btn-sm btn-outline-danger" type="submit">x</button></form></td></tr> }
+    </tbody></table>
+    <form asp-action="AddRule" method="post" class="row g-2">
+        <div class="col-4"><select name="branchId" id="BranchId" class="form-select form-select-sm"><option value="">Any branch</option>@foreach (var b in Model.Branches) { <option value="@b.Value">@b.Text</option> }</select></div>
+        <div class="col-3"><select name="semester" class="form-select form-select-sm"><option value="">Any sem</option>@for (int i = 1; i <= 8; i++) { <option value="@i">@i</option> }</select></div>
+        <div class="col-3"><select name="sectionId" id="SectionId" class="form-select form-select-sm"><option value="">Any section</option></select></div>
+        <div class="col-2"><input name="percent" type="number" step="0.5" min="1" max="100" value="75" class="form-control form-control-sm" /></div>
+        <div class="col-12"><button class="btn btn-sm btn-ax" type="submit">Add rule</button></div>
+    </form>
+</div></div></div>
+
+<div class="col-lg-6"><div class="ax-card"><div class="card-h">Academic years</div><div class="card-b">
+    <table class="table table-sm"><thead><tr><th>Year</th><th>From</th><th>To</th><th></th></tr></thead><tbody>
+    @foreach (var y in Model.Years) { <tr><td>@y.Name @if (y.IsCurrent) { <span class="badge bg-success">current</span> }</td><td>@y.StartDate.ToString("dd MMM yyyy")</td><td>@y.EndDate.ToString("dd MMM yyyy")</td>
+        <td>@if (!y.IsCurrent) { <form asp-action="SetCurrentYear" asp-route-id="@y.Id" method="post" data-confirm="Make this the current academic year?"><button class="btn btn-sm btn-outline-primary" type="submit">Make current</button></form> }</td></tr> }
+    </tbody></table>
+    <form asp-action="AddYear" method="post" class="row g-2">
+        <div class="col-4"><input name="name" class="form-control form-control-sm" placeholder="2027-28" maxlength="9" required /></div>
+        <div class="col-3"><input type="date" name="start" class="form-control form-control-sm" required /></div>
+        <div class="col-3"><input type="date" name="end" class="form-control form-control-sm" required /></div>
+        <div class="col-2"><button class="btn btn-sm btn-ax" type="submit">Add</button></div>
+    </form>
+</div></div></div>
+</div>
+@section Scripts { <script>document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('BranchId'),s=document.getElementById('SectionId');if(b&&s)b.addEventListener('change',function(){AttendX.loadSections(b,s,'',true);});});</script> }

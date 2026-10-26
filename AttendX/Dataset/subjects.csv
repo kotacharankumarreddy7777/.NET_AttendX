@@ -1,0 +1,897 @@
+BranchCode,Semester,SubjectCode,SubjectName,Credits
+CSE,1,CSE-101,Mathematics-I (Calculus & Linear Algebra),4
+CSE,1,CSE-102,Engineering Physics,3
+CSE,1,CSE-103,Programming for Problem Solving (C),4
+CSE,1,CSE-104,Basic Electrical Engineering,3
+CSE,1,CSE-105,Communication Skills,2
+CSE,1,CSE-106,Environmental Science,2
+CSE,1,CSE-107,Physics Lab,1
+CSE,1,CSE-108,Programming Lab-I,1
+CSE,2,CSE-201,Mathematics-II (Differential Equations),4
+CSE,2,CSE-202,Engineering Chemistry,3
+CSE,2,CSE-203,Object Oriented Programming (C++),4
+CSE,2,CSE-204,Digital Logic Design,3
+CSE,2,CSE-205,Engineering Graphics,4
+CSE,2,CSE-206,Professional Ethics,2
+CSE,2,CSE-207,Chemistry Lab,1
+CSE,2,CSE-208,OOP Lab,1
+CSE,3,CSE-301,Data Structures,4
+CSE,3,CSE-302,Discrete Mathematics,3
+CSE,3,CSE-303,Digital Electronics & Computer Organization,4
+CSE,3,CSE-304,Object Oriented Programming with Java,3
+CSE,3,CSE-305,Probability & Statistics,4
+CSE,3,CSE-306,Data Structures Lab,1
+CSE,3,CSE-307,Java Lab,1
+CSE,3,CSE-308,Indian Constitution,2
+CSE,4,CSE-401,Design & Analysis of Algorithms,4
+CSE,4,CSE-402,Database Management Systems,3
+CSE,4,CSE-403,Operating Systems,4
+CSE,4,CSE-404,Computer Networks,3
+CSE,4,CSE-405,Software Engineering,4
+CSE,4,CSE-406,DBMS Lab,1
+CSE,4,CSE-407,OS Lab,1
+CSE,4,CSE-408,Universal Human Values,2
+CSE,5,CSE-501,Theory of Computation,4
+CSE,5,CSE-502,Compiler Design,3
+CSE,5,CSE-503,.NET Technologies,4
+CSE,5,CSE-504,Web Technologies,3
+CSE,5,CSE-505,Microprocessor & Interfacing,4
+CSE,5,CSE-506,Computer Graphics,3
+CSE,5,CSE-507,.NET Lab,1
+CSE,5,CSE-508,Web Technologies Lab,1
+CSE,6,CSE-601,Artificial Intelligence,4
+CSE,6,CSE-602,Machine Learning,3
+CSE,6,CSE-603,Cloud Computing,4
+CSE,6,CSE-604,Information Security,3
+CSE,6,CSE-605,Mobile Application Development,4
+CSE,6,CSE-606,Data Mining,3
+CSE,6,CSE-607,Machine Learning Lab,1
+CSE,6,CSE-608,Mini Project,6
+CSE,7,CSE-701,Big Data Analytics,4
+CSE,7,CSE-702,Distributed Systems,3
+CSE,7,CSE-703,Deep Learning,4
+CSE,7,CSE-704,Software Testing & Quality Assurance,3
+CSE,7,CSE-705,Elective-I (Domain Elective),4
+CSE,7,CSE-706,Elective-II (Open Elective),3
+CSE,7,CSE-707,Project Phase-I,6
+CSE,7,CSE-708,Industrial Training,2
+CSE,8,CSE-801,Elective-III (Open Elective),4
+CSE,8,CSE-802,Elective-IV (Domain Elective),3
+CSE,8,CSE-803,Major Project,6
+CSE,8,CSE-804,Seminar,2
+CSE,8,CSE-805,Professional Practice & Management,2
+CSE,8,CSE-806,Entrepreneurship Development,2
+CSE,8,CSE-807,Technical Report Writing,2
+CSE,8,CSE-808,Comprehensive Viva,2
+CSEAI,1,CSEAI-101,Mathematics-I (Calculus & Linear Algebra),4
+CSEAI,1,CSEAI-102,Engineering Physics,3
+CSEAI,1,CSEAI-103,Programming for Problem Solving (C),4
+CSEAI,1,CSEAI-104,Basic Electrical Engineering,3
+CSEAI,1,CSEAI-105,Communication Skills,2
+CSEAI,1,CSEAI-106,Environmental Science,2
+CSEAI,1,CSEAI-107,Physics Lab,1
+CSEAI,1,CSEAI-108,Programming Lab-I,1
+CSEAI,2,CSEAI-201,Mathematics-II (Differential Equations),4
+CSEAI,2,CSEAI-202,Engineering Chemistry,3
+CSEAI,2,CSEAI-203,Object Oriented Programming (C++),4
+CSEAI,2,CSEAI-204,Digital Logic Design,3
+CSEAI,2,CSEAI-205,Engineering Graphics,4
+CSEAI,2,CSEAI-206,Professional Ethics,2
+CSEAI,2,CSEAI-207,Chemistry Lab,1
+CSEAI,2,CSEAI-208,OOP Lab,1
+CSEAI,3,CSEAI-301,Data Structures,4
+CSEAI,3,CSEAI-302,Discrete Mathematics,3
+CSEAI,3,CSEAI-303,Python for Data Science,4
+CSEAI,3,CSEAI-304,Linear Algebra for Machine Learning,3
+CSEAI,3,CSEAI-305,Probability & Statistics,4
+CSEAI,3,CSEAI-306,Object Oriented Programming,3
+CSEAI,3,CSEAI-307,Data Structures Lab,1
+CSEAI,3,CSEAI-308,Python Lab,1
+CSEAI,4,CSEAI-401,Design & Analysis of Algorithms,4
+CSEAI,4,CSEAI-402,Database Management Systems,3
+CSEAI,4,CSEAI-403,Operating Systems,4
+CSEAI,4,CSEAI-404,Computer Networks,3
+CSEAI,4,CSEAI-405,Foundations of Artificial Intelligence,4
+CSEAI,4,CSEAI-406,Optimization Techniques,3
+CSEAI,4,CSEAI-407,DBMS Lab,1
+CSEAI,4,CSEAI-408,AI Lab,1
+CSEAI,5,CSEAI-501,Machine Learning,4
+CSEAI,5,CSEAI-502,Natural Language Processing,3
+CSEAI,5,CSEAI-503,Computer Vision,4
+CSEAI,5,CSEAI-504,Data Mining,3
+CSEAI,5,CSEAI-505,Knowledge Representation & Reasoning,4
+CSEAI,5,CSEAI-506,Web Technologies,3
+CSEAI,5,CSEAI-507,Machine Learning Lab,1
+CSEAI,5,CSEAI-508,NLP Lab,1
+CSEAI,6,CSEAI-601,Deep Learning,4
+CSEAI,6,CSEAI-602,Reinforcement Learning,3
+CSEAI,6,CSEAI-603,Big Data Analytics,4
+CSEAI,6,CSEAI-604,Cloud Computing,3
+CSEAI,6,CSEAI-605,Speech Processing,4
+CSEAI,6,CSEAI-606,Generative AI,3
+CSEAI,6,CSEAI-607,Deep Learning Lab,1
+CSEAI,6,CSEAI-608,Mini Project,6
+CSEAI,7,CSEAI-701,AI Ethics & Governance,2
+CSEAI,7,CSEAI-702,MLOps,3
+CSEAI,7,CSEAI-703,Time Series Forecasting,4
+CSEAI,7,CSEAI-704,Robotics & Automation,3
+CSEAI,7,CSEAI-705,Elective-I (Domain Elective),4
+CSEAI,7,CSEAI-706,Elective-II (Open Elective),3
+CSEAI,7,CSEAI-707,Project Phase-I,6
+CSEAI,7,CSEAI-708,Industrial Training,2
+CSEAI,8,CSEAI-801,Elective-III (Open Elective),4
+CSEAI,8,CSEAI-802,Elective-IV (Domain Elective),3
+CSEAI,8,CSEAI-803,Major Project,6
+CSEAI,8,CSEAI-804,Seminar,2
+CSEAI,8,CSEAI-805,Professional Practice & Management,2
+CSEAI,8,CSEAI-806,Entrepreneurship Development,2
+CSEAI,8,CSEAI-807,Technical Report Writing,2
+CSEAI,8,CSEAI-808,Comprehensive Viva,2
+CSEAIML,1,CSEAIML-101,Mathematics-I (Calculus & Linear Algebra),4
+CSEAIML,1,CSEAIML-102,Engineering Physics,3
+CSEAIML,1,CSEAIML-103,Programming for Problem Solving (C),4
+CSEAIML,1,CSEAIML-104,Basic Electrical Engineering,3
+CSEAIML,1,CSEAIML-105,Communication Skills,2
+CSEAIML,1,CSEAIML-106,Environmental Science,2
+CSEAIML,1,CSEAIML-107,Physics Lab,1
+CSEAIML,1,CSEAIML-108,Programming Lab-I,1
+CSEAIML,2,CSEAIML-201,Mathematics-II (Differential Equations),4
+CSEAIML,2,CSEAIML-202,Engineering Chemistry,3
+CSEAIML,2,CSEAIML-203,Object Oriented Programming (C++),4
+CSEAIML,2,CSEAIML-204,Digital Logic Design,3
+CSEAIML,2,CSEAIML-205,Engineering Graphics,4
+CSEAIML,2,CSEAIML-206,Professional Ethics,2
+CSEAIML,2,CSEAIML-207,Chemistry Lab,1
+CSEAIML,2,CSEAIML-208,OOP Lab,1
+CSEAIML,3,CSEAIML-301,Data Structures,4
+CSEAIML,3,CSEAIML-302,Discrete Mathematics,3
+CSEAIML,3,CSEAIML-303,Python for Data Science,4
+CSEAIML,3,CSEAIML-304,Linear Algebra for Machine Learning,3
+CSEAIML,3,CSEAIML-305,Probability & Statistics,4
+CSEAIML,3,CSEAIML-306,Object Oriented Programming,3
+CSEAIML,3,CSEAIML-307,Data Structures Lab,1
+CSEAIML,3,CSEAIML-308,Python Lab,1
+CSEAIML,4,CSEAIML-401,Design & Analysis of Algorithms,4
+CSEAIML,4,CSEAIML-402,Database Management Systems,3
+CSEAIML,4,CSEAIML-403,Operating Systems,4
+CSEAIML,4,CSEAIML-404,Computer Networks,3
+CSEAIML,4,CSEAIML-405,Foundations of Artificial Intelligence,4
+CSEAIML,4,CSEAIML-406,Optimization Techniques,3
+CSEAIML,4,CSEAIML-407,DBMS Lab,1
+CSEAIML,4,CSEAIML-408,AI Lab,1
+CSEAIML,5,CSEAIML-501,Machine Learning,4
+CSEAIML,5,CSEAIML-502,Natural Language Processing,3
+CSEAIML,5,CSEAIML-503,Computer Vision,4
+CSEAIML,5,CSEAIML-504,Data Mining,3
+CSEAIML,5,CSEAIML-505,Knowledge Representation & Reasoning,4
+CSEAIML,5,CSEAIML-506,Web Technologies,3
+CSEAIML,5,CSEAIML-507,Machine Learning Lab,1
+CSEAIML,5,CSEAIML-508,NLP Lab,1
+CSEAIML,6,CSEAIML-601,Deep Learning,4
+CSEAIML,6,CSEAIML-602,Reinforcement Learning,3
+CSEAIML,6,CSEAIML-603,Big Data Analytics,4
+CSEAIML,6,CSEAIML-604,Cloud Computing,3
+CSEAIML,6,CSEAIML-605,Speech Processing,4
+CSEAIML,6,CSEAIML-606,Generative AI,3
+CSEAIML,6,CSEAIML-607,Deep Learning Lab,1
+CSEAIML,6,CSEAIML-608,Mini Project,6
+CSEAIML,7,CSEAIML-701,AI Ethics & Governance,2
+CSEAIML,7,CSEAIML-702,MLOps,3
+CSEAIML,7,CSEAIML-703,Time Series Forecasting,4
+CSEAIML,7,CSEAIML-704,Robotics & Automation,3
+CSEAIML,7,CSEAIML-705,Elective-I (Domain Elective),4
+CSEAIML,7,CSEAIML-706,Elective-II (Open Elective),3
+CSEAIML,7,CSEAIML-707,Project Phase-I,6
+CSEAIML,7,CSEAIML-708,Industrial Training,2
+CSEAIML,8,CSEAIML-801,Elective-III (Open Elective),4
+CSEAIML,8,CSEAIML-802,Elective-IV (Domain Elective),3
+CSEAIML,8,CSEAIML-803,Major Project,6
+CSEAIML,8,CSEAIML-804,Seminar,2
+CSEAIML,8,CSEAIML-805,Professional Practice & Management,2
+CSEAIML,8,CSEAIML-806,Entrepreneurship Development,2
+CSEAIML,8,CSEAIML-807,Technical Report Writing,2
+CSEAIML,8,CSEAIML-808,Comprehensive Viva,2
+ADS,1,ADS-101,Mathematics-I (Calculus & Linear Algebra),4
+ADS,1,ADS-102,Engineering Physics,3
+ADS,1,ADS-103,Programming for Problem Solving (C),4
+ADS,1,ADS-104,Basic Electrical Engineering,3
+ADS,1,ADS-105,Communication Skills,2
+ADS,1,ADS-106,Environmental Science,2
+ADS,1,ADS-107,Physics Lab,1
+ADS,1,ADS-108,Programming Lab-I,1
+ADS,2,ADS-201,Mathematics-II (Differential Equations),4
+ADS,2,ADS-202,Engineering Chemistry,3
+ADS,2,ADS-203,Object Oriented Programming (C++),4
+ADS,2,ADS-204,Digital Logic Design,3
+ADS,2,ADS-205,Engineering Graphics,4
+ADS,2,ADS-206,Professional Ethics,2
+ADS,2,ADS-207,Chemistry Lab,1
+ADS,2,ADS-208,OOP Lab,1
+ADS,3,ADS-301,Data Structures,4
+ADS,3,ADS-302,Statistics for Data Science,3
+ADS,3,ADS-303,Discrete Mathematics,4
+ADS,3,ADS-304,Python Programming,3
+ADS,3,ADS-305,Database Systems,4
+ADS,3,ADS-306,Data Wrangling,3
+ADS,3,ADS-307,Data Structures Lab,1
+ADS,3,ADS-308,Python Lab,1
+ADS,4,ADS-401,Design & Analysis of Algorithms,4
+ADS,4,ADS-402,Operating Systems,3
+ADS,4,ADS-403,Machine Learning Fundamentals,4
+ADS,4,ADS-404,Data Visualization,3
+ADS,4,ADS-405,Computer Networks,4
+ADS,4,ADS-406,Linear Algebra,3
+ADS,4,ADS-407,Machine Learning Lab,1
+ADS,4,ADS-408,Visualization Lab,1
+ADS,5,ADS-501,Data Mining,4
+ADS,5,ADS-502,Big Data Technologies,3
+ADS,5,ADS-503,Deep Learning,4
+ADS,5,ADS-504,Time Series Analysis,3
+ADS,5,ADS-505,Cloud Computing,4
+ADS,5,ADS-506,Business Intelligence,3
+ADS,5,ADS-507,Big Data Lab,1
+ADS,5,ADS-508,Data Mining Lab,1
+ADS,6,ADS-601,Natural Language Processing,4
+ADS,6,ADS-602,Predictive Analytics,3
+ADS,6,ADS-603,Information Retrieval,4
+ADS,6,ADS-604,Data Security & Privacy,3
+ADS,6,ADS-605,Distributed Computing,4
+ADS,6,ADS-606,Optimization Methods,3
+ADS,6,ADS-607,Analytics Lab,1
+ADS,6,ADS-608,Mini Project,6
+ADS,7,ADS-701,Social Network Analytics,4
+ADS,7,ADS-702,MLOps,3
+ADS,7,ADS-703,Healthcare Analytics,4
+ADS,7,ADS-704,Streaming Data Systems,3
+ADS,7,ADS-705,Elective-I (Domain Elective),4
+ADS,7,ADS-706,Elective-II (Open Elective),3
+ADS,7,ADS-707,Project Phase-I,6
+ADS,7,ADS-708,Industrial Training,2
+ADS,8,ADS-801,Elective-III (Open Elective),4
+ADS,8,ADS-802,Elective-IV (Domain Elective),3
+ADS,8,ADS-803,Major Project,6
+ADS,8,ADS-804,Seminar,2
+ADS,8,ADS-805,Professional Practice & Management,2
+ADS,8,ADS-806,Entrepreneurship Development,2
+ADS,8,ADS-807,Technical Report Writing,2
+ADS,8,ADS-808,Comprehensive Viva,2
+ECE,1,ECE-101,Mathematics-I (Calculus & Linear Algebra),4
+ECE,1,ECE-102,Engineering Physics,3
+ECE,1,ECE-103,Engineering Chemistry,4
+ECE,1,ECE-104,Basic Electrical Engineering,3
+ECE,1,ECE-105,Engineering Graphics & CAD,4
+ECE,1,ECE-106,Communication Skills,2
+ECE,1,ECE-107,Physics Lab,1
+ECE,1,ECE-108,Workshop Practice,1
+ECE,2,ECE-201,Mathematics-II (Differential Equations),4
+ECE,2,ECE-202,Programming for Problem Solving (C),3
+ECE,2,ECE-203,Basic Electronics,4
+ECE,2,ECE-204,Engineering Mechanics,3
+ECE,2,ECE-205,Environmental Science,2
+ECE,2,ECE-206,Professional Ethics,2
+ECE,2,ECE-207,Programming Lab,1
+ECE,2,ECE-208,Electrical Lab,1
+ECE,3,ECE-301,Network Analysis,4
+ECE,3,ECE-302,Analog Electronics,3
+ECE,3,ECE-303,Digital Electronics,4
+ECE,3,ECE-304,Signals & Systems,3
+ECE,3,ECE-305,Electromagnetic Fields,4
+ECE,3,ECE-306,Mathematics-III,3
+ECE,3,ECE-307,Analog Electronics Lab,1
+ECE,3,ECE-308,Digital Electronics Lab,1
+ECE,4,ECE-401,Analog Communication,2
+ECE,4,ECE-402,Linear Integrated Circuits,3
+ECE,4,ECE-403,Microprocessors & Microcontrollers,4
+ECE,4,ECE-404,Control Systems,3
+ECE,4,ECE-405,Probability & Random Processes,4
+ECE,4,ECE-406,Electronic Measurements,3
+ECE,4,ECE-407,Microcontroller Lab,1
+ECE,4,ECE-408,Communication Lab,1
+ECE,5,ECE-501,Digital Communication,2
+ECE,5,ECE-502,Digital Signal Processing,3
+ECE,5,ECE-503,VLSI Design,4
+ECE,5,ECE-504,Antenna & Wave Propagation,3
+ECE,5,ECE-505,Embedded Systems,4
+ECE,5,ECE-506,Information Theory & Coding,3
+ECE,5,ECE-507,DSP Lab,1
+ECE,5,ECE-508,VLSI Lab,1
+ECE,6,ECE-601,Microwave Engineering,4
+ECE,6,ECE-602,Wireless Communication,2
+ECE,6,ECE-603,Optical Fiber Communication,2
+ECE,6,ECE-604,Computer Networks,3
+ECE,6,ECE-605,Digital Image Processing,4
+ECE,6,ECE-606,Power Electronics,3
+ECE,6,ECE-607,Wireless Communication Lab,1
+ECE,6,ECE-608,Mini Project,6
+ECE,7,ECE-701,Satellite Communication,2
+ECE,7,ECE-702,Radar Systems,3
+ECE,7,ECE-703,Mobile Communication (5G),2
+ECE,7,ECE-704,Nano Electronics,3
+ECE,7,ECE-705,Elective-I (Domain Elective),4
+ECE,7,ECE-706,Elective-II (Open Elective),3
+ECE,7,ECE-707,Project Phase-I,6
+ECE,7,ECE-708,Industrial Training,2
+ECE,8,ECE-801,Elective-III (Open Elective),4
+ECE,8,ECE-802,Elective-IV (Domain Elective),3
+ECE,8,ECE-803,Major Project,6
+ECE,8,ECE-804,Seminar,2
+ECE,8,ECE-805,Professional Practice & Management,2
+ECE,8,ECE-806,Entrepreneurship Development,2
+ECE,8,ECE-807,Technical Report Writing,2
+ECE,8,ECE-808,Comprehensive Viva,2
+EEE,1,EEE-101,Mathematics-I (Calculus & Linear Algebra),4
+EEE,1,EEE-102,Engineering Physics,3
+EEE,1,EEE-103,Engineering Chemistry,4
+EEE,1,EEE-104,Basic Electrical Engineering,3
+EEE,1,EEE-105,Engineering Graphics & CAD,4
+EEE,1,EEE-106,Communication Skills,2
+EEE,1,EEE-107,Physics Lab,1
+EEE,1,EEE-108,Workshop Practice,1
+EEE,2,EEE-201,Mathematics-II (Differential Equations),4
+EEE,2,EEE-202,Programming for Problem Solving (C),3
+EEE,2,EEE-203,Basic Electronics,4
+EEE,2,EEE-204,Engineering Mechanics,3
+EEE,2,EEE-205,Environmental Science,2
+EEE,2,EEE-206,Professional Ethics,2
+EEE,2,EEE-207,Programming Lab,1
+EEE,2,EEE-208,Electrical Lab,1
+EEE,3,EEE-301,Circuit Theory,4
+EEE,3,EEE-302,Electrical Machines-I,3
+EEE,3,EEE-303,Analog Electronics,4
+EEE,3,EEE-304,Electromagnetic Theory,3
+EEE,3,EEE-305,Mathematics-III,4
+EEE,3,EEE-306,Measurements & Instrumentation,3
+EEE,3,EEE-307,Machines Lab-I,1
+EEE,3,EEE-308,Electronics Lab,1
+EEE,4,EEE-401,Electrical Machines-II,4
+EEE,4,EEE-402,Power Systems-I,3
+EEE,4,EEE-403,Control Systems,4
+EEE,4,EEE-404,Digital Electronics,3
+EEE,4,EEE-405,Signals & Systems,4
+EEE,4,EEE-406,Power Electronics,3
+EEE,4,EEE-407,Machines Lab-II,1
+EEE,4,EEE-408,Control Systems Lab,1
+EEE,5,EEE-501,Power Systems-II,4
+EEE,5,EEE-502,Microprocessors & Microcontrollers,3
+EEE,5,EEE-503,Electric Drives,4
+EEE,5,EEE-504,Power System Protection,3
+EEE,5,EEE-505,Renewable Energy Systems,4
+EEE,5,EEE-506,High Voltage Engineering,3
+EEE,5,EEE-507,Microcontroller Lab,1
+EEE,5,EEE-508,Power Electronics Lab,1
+EEE,6,EEE-601,Switchgear & Protection,4
+EEE,6,EEE-602,Power System Operation & Control,3
+EEE,6,EEE-603,Digital Signal Processing,4
+EEE,6,EEE-604,Utilization of Electrical Energy,3
+EEE,6,EEE-605,Smart Grid Technology,4
+EEE,6,EEE-606,Electrical Machine Design,3
+EEE,6,EEE-607,Power Systems Lab,1
+EEE,6,EEE-608,Mini Project,6
+EEE,7,EEE-701,HVDC & FACTS,4
+EEE,7,EEE-702,Electric Vehicles,3
+EEE,7,EEE-703,Industrial Automation,4
+EEE,7,EEE-704,Energy Auditing & Management,3
+EEE,7,EEE-705,Elective-I (Domain Elective),4
+EEE,7,EEE-706,Elective-II (Open Elective),3
+EEE,7,EEE-707,Project Phase-I,6
+EEE,7,EEE-708,Industrial Training,2
+EEE,8,EEE-801,Elective-III (Open Elective),4
+EEE,8,EEE-802,Elective-IV (Domain Elective),3
+EEE,8,EEE-803,Major Project,6
+EEE,8,EEE-804,Seminar,2
+EEE,8,EEE-805,Professional Practice & Management,2
+EEE,8,EEE-806,Entrepreneurship Development,2
+EEE,8,EEE-807,Technical Report Writing,2
+EEE,8,EEE-808,Comprehensive Viva,2
+MECH,1,MECH-101,Mathematics-I (Calculus & Linear Algebra),4
+MECH,1,MECH-102,Engineering Physics,3
+MECH,1,MECH-103,Engineering Chemistry,4
+MECH,1,MECH-104,Basic Electrical Engineering,3
+MECH,1,MECH-105,Engineering Graphics & CAD,4
+MECH,1,MECH-106,Communication Skills,2
+MECH,1,MECH-107,Physics Lab,1
+MECH,1,MECH-108,Workshop Practice,1
+MECH,2,MECH-201,Mathematics-II (Differential Equations),4
+MECH,2,MECH-202,Programming for Problem Solving (C),3
+MECH,2,MECH-203,Basic Electronics,4
+MECH,2,MECH-204,Engineering Mechanics,3
+MECH,2,MECH-205,Environmental Science,2
+MECH,2,MECH-206,Professional Ethics,2
+MECH,2,MECH-207,Programming Lab,1
+MECH,2,MECH-208,Electrical Lab,1
+MECH,3,MECH-301,Thermodynamics,4
+MECH,3,MECH-302,Strength of Materials,3
+MECH,3,MECH-303,Fluid Mechanics,4
+MECH,3,MECH-304,Manufacturing Processes,3
+MECH,3,MECH-305,Material Science,4
+MECH,3,MECH-306,Mathematics-III,3
+MECH,3,MECH-307,Fluid Mechanics Lab,1
+MECH,3,MECH-308,Manufacturing Processes Lab,1
+MECH,4,MECH-401,Kinematics of Machinery,4
+MECH,4,MECH-402,Applied Thermodynamics,3
+MECH,4,MECH-403,Fluid Machinery,4
+MECH,4,MECH-404,Machine Drawing,3
+MECH,4,MECH-405,Metrology & Measurements,4
+MECH,4,MECH-406,Metal Cutting & Machine Tools,3
+MECH,4,MECH-407,Thermal Engineering Lab,1
+MECH,4,MECH-408,Metrology Lab,1
+MECH,5,MECH-501,Dynamics of Machinery,4
+MECH,5,MECH-502,Heat & Mass Transfer,3
+MECH,5,MECH-503,Design of Machine Elements,4
+MECH,5,MECH-504,Internal Combustion Engines,3
+MECH,5,MECH-505,Industrial Engineering,4
+MECH,5,MECH-506,Mechatronics,3
+MECH,5,MECH-507,Heat Transfer Lab,1
+MECH,5,MECH-508,CAD Lab,1
+MECH,6,MECH-601,Refrigeration & Air Conditioning,4
+MECH,6,MECH-602,Finite Element Analysis,3
+MECH,6,MECH-603,Power Plant Engineering,4
+MECH,6,MECH-604,CAD/CAM,3
+MECH,6,MECH-605,Operations Research,4
+MECH,6,MECH-606,Automobile Engineering,3
+MECH,6,MECH-607,CAM Lab,1
+MECH,6,MECH-608,Mini Project,6
+MECH,7,MECH-701,Robotics,4
+MECH,7,MECH-702,Additive Manufacturing,3
+MECH,7,MECH-703,Computational Fluid Dynamics,4
+MECH,7,MECH-704,Quality Engineering,3
+MECH,7,MECH-705,Elective-I (Domain Elective),4
+MECH,7,MECH-706,Elective-II (Open Elective),3
+MECH,7,MECH-707,Project Phase-I,6
+MECH,7,MECH-708,Industrial Training,2
+MECH,8,MECH-801,Elective-III (Open Elective),4
+MECH,8,MECH-802,Elective-IV (Domain Elective),3
+MECH,8,MECH-803,Major Project,6
+MECH,8,MECH-804,Seminar,2
+MECH,8,MECH-805,Professional Practice & Management,2
+MECH,8,MECH-806,Entrepreneurship Development,2
+MECH,8,MECH-807,Technical Report Writing,2
+MECH,8,MECH-808,Comprehensive Viva,2
+CIVIL,1,CIVIL-101,Mathematics-I (Calculus & Linear Algebra),4
+CIVIL,1,CIVIL-102,Engineering Physics,3
+CIVIL,1,CIVIL-103,Engineering Chemistry,4
+CIVIL,1,CIVIL-104,Basic Electrical Engineering,3
+CIVIL,1,CIVIL-105,Engineering Graphics & CAD,4
+CIVIL,1,CIVIL-106,Communication Skills,2
+CIVIL,1,CIVIL-107,Physics Lab,1
+CIVIL,1,CIVIL-108,Workshop Practice,1
+CIVIL,2,CIVIL-201,Mathematics-II (Differential Equations),4
+CIVIL,2,CIVIL-202,Programming for Problem Solving (C),3
+CIVIL,2,CIVIL-203,Basic Electronics,4
+CIVIL,2,CIVIL-204,Engineering Mechanics,3
+CIVIL,2,CIVIL-205,Environmental Science,2
+CIVIL,2,CIVIL-206,Professional Ethics,2
+CIVIL,2,CIVIL-207,Programming Lab,1
+CIVIL,2,CIVIL-208,Electrical Lab,1
+CIVIL,3,CIVIL-301,Surveying,4
+CIVIL,3,CIVIL-302,Building Materials & Construction,3
+CIVIL,3,CIVIL-303,Strength of Materials,4
+CIVIL,3,CIVIL-304,Fluid Mechanics,3
+CIVIL,3,CIVIL-305,Engineering Geology,4
+CIVIL,3,CIVIL-306,Mathematics-III,3
+CIVIL,3,CIVIL-307,Surveying Lab,1
+CIVIL,3,CIVIL-308,Materials Testing Lab,1
+CIVIL,4,CIVIL-401,Structural Analysis-I,4
+CIVIL,4,CIVIL-402,Concrete Technology,3
+CIVIL,4,CIVIL-403,Hydraulics & Hydraulic Machines,4
+CIVIL,4,CIVIL-404,Geotechnical Engineering-I,3
+CIVIL,4,CIVIL-405,Transportation Engineering-I,4
+CIVIL,4,CIVIL-406,Environmental Engineering-I,2
+CIVIL,4,CIVIL-407,Concrete Technology Lab,1
+CIVIL,4,CIVIL-408,Hydraulics Lab,1
+CIVIL,5,CIVIL-501,Structural Analysis-II,4
+CIVIL,5,CIVIL-502,Design of RC Structures,3
+CIVIL,5,CIVIL-503,Geotechnical Engineering-II,4
+CIVIL,5,CIVIL-504,Transportation Engineering-II,3
+CIVIL,5,CIVIL-505,Water Resources Engineering,4
+CIVIL,5,CIVIL-506,Environmental Engineering-II,2
+CIVIL,5,CIVIL-507,Geotechnical Lab,1
+CIVIL,5,CIVIL-508,Transportation Lab,1
+CIVIL,6,CIVIL-601,Design of Steel Structures,4
+CIVIL,6,CIVIL-602,Foundation Engineering,3
+CIVIL,6,CIVIL-603,Construction Management,4
+CIVIL,6,CIVIL-604,Estimation & Costing,3
+CIVIL,6,CIVIL-605,Hydrology & Irrigation,4
+CIVIL,6,CIVIL-606,Remote Sensing & GIS,3
+CIVIL,6,CIVIL-607,CAD Lab,1
+CIVIL,6,CIVIL-608,Mini Project,6
+CIVIL,7,CIVIL-701,Earthquake Engineering,4
+CIVIL,7,CIVIL-702,Prestressed Concrete,3
+CIVIL,7,CIVIL-703,Bridge Engineering,4
+CIVIL,7,CIVIL-704,Urban Planning,3
+CIVIL,7,CIVIL-705,Elective-I (Domain Elective),4
+CIVIL,7,CIVIL-706,Elective-II (Open Elective),3
+CIVIL,7,CIVIL-707,Project Phase-I,6
+CIVIL,7,CIVIL-708,Industrial Training,2
+CIVIL,8,CIVIL-801,Elective-III (Open Elective),4
+CIVIL,8,CIVIL-802,Elective-IV (Domain Elective),3
+CIVIL,8,CIVIL-803,Major Project,6
+CIVIL,8,CIVIL-804,Seminar,2
+CIVIL,8,CIVIL-805,Professional Practice & Management,2
+CIVIL,8,CIVIL-806,Entrepreneurship Development,2
+CIVIL,8,CIVIL-807,Technical Report Writing,2
+CIVIL,8,CIVIL-808,Comprehensive Viva,2
+IT,1,IT-101,Mathematics-I (Calculus & Linear Algebra),4
+IT,1,IT-102,Engineering Physics,3
+IT,1,IT-103,Programming for Problem Solving (C),4
+IT,1,IT-104,Basic Electrical Engineering,3
+IT,1,IT-105,Communication Skills,2
+IT,1,IT-106,Environmental Science,2
+IT,1,IT-107,Physics Lab,1
+IT,1,IT-108,Programming Lab-I,1
+IT,2,IT-201,Mathematics-II (Differential Equations),4
+IT,2,IT-202,Engineering Chemistry,3
+IT,2,IT-203,Object Oriented Programming (C++),4
+IT,2,IT-204,Digital Logic Design,3
+IT,2,IT-205,Engineering Graphics,4
+IT,2,IT-206,Professional Ethics,2
+IT,2,IT-207,Chemistry Lab,1
+IT,2,IT-208,OOP Lab,1
+IT,3,IT-301,Data Structures,4
+IT,3,IT-302,Discrete Mathematics,3
+IT,3,IT-303,Computer Organization,4
+IT,3,IT-304,Python Programming,3
+IT,3,IT-305,Probability & Statistics,4
+IT,3,IT-306,Digital Logic,3
+IT,3,IT-307,Data Structures Lab,1
+IT,3,IT-308,Python Lab,1
+IT,4,IT-401,Design & Analysis of Algorithms,4
+IT,4,IT-402,Database Management Systems,3
+IT,4,IT-403,Operating Systems,4
+IT,4,IT-404,Computer Networks,3
+IT,4,IT-405,Software Engineering,4
+IT,4,IT-406,Web Design Fundamentals,3
+IT,4,IT-407,DBMS Lab,1
+IT,4,IT-408,Web Design Lab,1
+IT,5,IT-501,Information Security,4
+IT,5,IT-502,Web Technologies,3
+IT,5,IT-503,Full Stack Development,4
+IT,5,IT-504,Cloud Computing,3
+IT,5,IT-505,Data Mining,4
+IT,5,IT-506,Mobile Computing,3
+IT,5,IT-507,Full Stack Lab,1
+IT,5,IT-508,Cloud Computing Lab,1
+IT,6,IT-601,Machine Learning,4
+IT,6,IT-602,Internet of Things,3
+IT,6,IT-603,DevOps,4
+IT,6,IT-604,Big Data Analytics,3
+IT,6,IT-605,Information Retrieval,4
+IT,6,IT-606,Software Testing,3
+IT,6,IT-607,Machine Learning Lab,1
+IT,6,IT-608,Mini Project,6
+IT,7,IT-701,Blockchain Technology,4
+IT,7,IT-702,Enterprise Systems,3
+IT,7,IT-703,Human Computer Interaction,4
+IT,7,IT-704,Service Oriented Architecture,3
+IT,7,IT-705,Elective-I (Domain Elective),4
+IT,7,IT-706,Elective-II (Open Elective),3
+IT,7,IT-707,Project Phase-I,6
+IT,7,IT-708,Industrial Training,2
+IT,8,IT-801,Elective-III (Open Elective),4
+IT,8,IT-802,Elective-IV (Domain Elective),3
+IT,8,IT-803,Major Project,6
+IT,8,IT-804,Seminar,2
+IT,8,IT-805,Professional Practice & Management,2
+IT,8,IT-806,Entrepreneurship Development,2
+IT,8,IT-807,Technical Report Writing,2
+IT,8,IT-808,Comprehensive Viva,2
+CYBER,1,CYBER-101,Mathematics-I (Calculus & Linear Algebra),4
+CYBER,1,CYBER-102,Engineering Physics,3
+CYBER,1,CYBER-103,Programming for Problem Solving (C),4
+CYBER,1,CYBER-104,Basic Electrical Engineering,3
+CYBER,1,CYBER-105,Communication Skills,2
+CYBER,1,CYBER-106,Environmental Science,2
+CYBER,1,CYBER-107,Physics Lab,1
+CYBER,1,CYBER-108,Programming Lab-I,1
+CYBER,2,CYBER-201,Mathematics-II (Differential Equations),4
+CYBER,2,CYBER-202,Engineering Chemistry,3
+CYBER,2,CYBER-203,Object Oriented Programming (C++),4
+CYBER,2,CYBER-204,Digital Logic Design,3
+CYBER,2,CYBER-205,Engineering Graphics,4
+CYBER,2,CYBER-206,Professional Ethics,2
+CYBER,2,CYBER-207,Chemistry Lab,1
+CYBER,2,CYBER-208,OOP Lab,1
+CYBER,3,CYBER-301,Data Structures,4
+CYBER,3,CYBER-302,Discrete Mathematics,3
+CYBER,3,CYBER-303,Computer Organization,4
+CYBER,3,CYBER-304,Networking Fundamentals,3
+CYBER,3,CYBER-305,Probability & Statistics,4
+CYBER,3,CYBER-306,Linux Administration,3
+CYBER,3,CYBER-307,Networking Lab,1
+CYBER,3,CYBER-308,Linux Lab,1
+CYBER,4,CYBER-401,Operating Systems,4
+CYBER,4,CYBER-402,Database Management Systems,3
+CYBER,4,CYBER-403,Cryptography Fundamentals,4
+CYBER,4,CYBER-404,Computer Networks,3
+CYBER,4,CYBER-405,Secure Coding Practices,2
+CYBER,4,CYBER-406,Ethical Hacking Basics,3
+CYBER,4,CYBER-407,Cryptography Lab,1
+CYBER,4,CYBER-408,Secure Coding Lab,1
+CYBER,5,CYBER-501,Network Security,4
+CYBER,5,CYBER-502,Digital Forensics,3
+CYBER,5,CYBER-503,Web Application Security,4
+CYBER,5,CYBER-504,Malware Analysis,3
+CYBER,5,CYBER-505,Cloud Security,4
+CYBER,5,CYBER-506,Security Operations (SOC),3
+CYBER,5,CYBER-507,Digital Forensics Lab,1
+CYBER,5,CYBER-508,Network Security Lab,1
+CYBER,6,CYBER-601,Penetration Testing,4
+CYBER,6,CYBER-602,Cyber Law & Ethics,2
+CYBER,6,CYBER-603,Cryptanalysis,4
+CYBER,6,CYBER-604,Mobile Security,3
+CYBER,6,CYBER-605,Incident Response,4
+CYBER,6,CYBER-606,Blockchain Security,3
+CYBER,6,CYBER-607,Penetration Testing Lab,1
+CYBER,6,CYBER-608,Mini Project,6
+CYBER,7,CYBER-701,Threat Intelligence,4
+CYBER,7,CYBER-702,IoT Security,3
+CYBER,7,CYBER-703,Security Auditing & Compliance,4
+CYBER,7,CYBER-704,Reverse Engineering,3
+CYBER,7,CYBER-705,Elective-I (Domain Elective),4
+CYBER,7,CYBER-706,Elective-II (Open Elective),3
+CYBER,7,CYBER-707,Project Phase-I,6
+CYBER,7,CYBER-708,Industrial Training,2
+CYBER,8,CYBER-801,Elective-III (Open Elective),4
+CYBER,8,CYBER-802,Elective-IV (Domain Elective),3
+CYBER,8,CYBER-803,Major Project,6
+CYBER,8,CYBER-804,Seminar,2
+CYBER,8,CYBER-805,Professional Practice & Management,2
+CYBER,8,CYBER-806,Entrepreneurship Development,2
+CYBER,8,CYBER-807,Technical Report Writing,2
+CYBER,8,CYBER-808,Comprehensive Viva,2
+AIDS,1,AIDS-101,Mathematics-I (Calculus & Linear Algebra),4
+AIDS,1,AIDS-102,Engineering Physics,3
+AIDS,1,AIDS-103,Programming for Problem Solving (C),4
+AIDS,1,AIDS-104,Basic Electrical Engineering,3
+AIDS,1,AIDS-105,Communication Skills,2
+AIDS,1,AIDS-106,Environmental Science,2
+AIDS,1,AIDS-107,Physics Lab,1
+AIDS,1,AIDS-108,Programming Lab-I,1
+AIDS,2,AIDS-201,Mathematics-II (Differential Equations),4
+AIDS,2,AIDS-202,Engineering Chemistry,3
+AIDS,2,AIDS-203,Object Oriented Programming (C++),4
+AIDS,2,AIDS-204,Digital Logic Design,3
+AIDS,2,AIDS-205,Engineering Graphics,4
+AIDS,2,AIDS-206,Professional Ethics,2
+AIDS,2,AIDS-207,Chemistry Lab,1
+AIDS,2,AIDS-208,OOP Lab,1
+AIDS,3,AIDS-301,Data Structures,4
+AIDS,3,AIDS-302,Statistics for Data Science,3
+AIDS,3,AIDS-303,Discrete Mathematics,4
+AIDS,3,AIDS-304,Python Programming,3
+AIDS,3,AIDS-305,Database Systems,4
+AIDS,3,AIDS-306,Data Wrangling,3
+AIDS,3,AIDS-307,Data Structures Lab,1
+AIDS,3,AIDS-308,Python Lab,1
+AIDS,4,AIDS-401,Design & Analysis of Algorithms,4
+AIDS,4,AIDS-402,Operating Systems,3
+AIDS,4,AIDS-403,Machine Learning Fundamentals,4
+AIDS,4,AIDS-404,Data Visualization,3
+AIDS,4,AIDS-405,Computer Networks,4
+AIDS,4,AIDS-406,Linear Algebra,3
+AIDS,4,AIDS-407,Machine Learning Lab,1
+AIDS,4,AIDS-408,Visualization Lab,1
+AIDS,5,AIDS-501,Data Mining,4
+AIDS,5,AIDS-502,Big Data Technologies,3
+AIDS,5,AIDS-503,Deep Learning,4
+AIDS,5,AIDS-504,Time Series Analysis,3
+AIDS,5,AIDS-505,Cloud Computing,4
+AIDS,5,AIDS-506,Business Intelligence,3
+AIDS,5,AIDS-507,Big Data Lab,1
+AIDS,5,AIDS-508,Data Mining Lab,1
+AIDS,6,AIDS-601,Natural Language Processing,4
+AIDS,6,AIDS-602,Predictive Analytics,3
+AIDS,6,AIDS-603,Information Retrieval,4
+AIDS,6,AIDS-604,Data Security & Privacy,3
+AIDS,6,AIDS-605,Distributed Computing,4
+AIDS,6,AIDS-606,Optimization Methods,3
+AIDS,6,AIDS-607,Analytics Lab,1
+AIDS,6,AIDS-608,Mini Project,6
+AIDS,7,AIDS-701,Social Network Analytics,4
+AIDS,7,AIDS-702,MLOps,3
+AIDS,7,AIDS-703,Healthcare Analytics,4
+AIDS,7,AIDS-704,Streaming Data Systems,3
+AIDS,7,AIDS-705,Elective-I (Domain Elective),4
+AIDS,7,AIDS-706,Elective-II (Open Elective),3
+AIDS,7,AIDS-707,Project Phase-I,6
+AIDS,7,AIDS-708,Industrial Training,2
+AIDS,8,AIDS-801,Elective-III (Open Elective),4
+AIDS,8,AIDS-802,Elective-IV (Domain Elective),3
+AIDS,8,AIDS-803,Major Project,6
+AIDS,8,AIDS-804,Seminar,2
+AIDS,8,AIDS-805,Professional Practice & Management,2
+AIDS,8,AIDS-806,Entrepreneurship Development,2
+AIDS,8,AIDS-807,Technical Report Writing,2
+AIDS,8,AIDS-808,Comprehensive Viva,2
+AIML,1,AIML-101,Mathematics-I (Calculus & Linear Algebra),4
+AIML,1,AIML-102,Engineering Physics,3
+AIML,1,AIML-103,Programming for Problem Solving (C),4
+AIML,1,AIML-104,Basic Electrical Engineering,3
+AIML,1,AIML-105,Communication Skills,2
+AIML,1,AIML-106,Environmental Science,2
+AIML,1,AIML-107,Physics Lab,1
+AIML,1,AIML-108,Programming Lab-I,1
+AIML,2,AIML-201,Mathematics-II (Differential Equations),4
+AIML,2,AIML-202,Engineering Chemistry,3
+AIML,2,AIML-203,Object Oriented Programming (C++),4
+AIML,2,AIML-204,Digital Logic Design,3
+AIML,2,AIML-205,Engineering Graphics,4
+AIML,2,AIML-206,Professional Ethics,2
+AIML,2,AIML-207,Chemistry Lab,1
+AIML,2,AIML-208,OOP Lab,1
+AIML,3,AIML-301,Data Structures,4
+AIML,3,AIML-302,Discrete Mathematics,3
+AIML,3,AIML-303,Python for Data Science,4
+AIML,3,AIML-304,Linear Algebra for Machine Learning,3
+AIML,3,AIML-305,Probability & Statistics,4
+AIML,3,AIML-306,Object Oriented Programming,3
+AIML,3,AIML-307,Data Structures Lab,1
+AIML,3,AIML-308,Python Lab,1
+AIML,4,AIML-401,Design & Analysis of Algorithms,4
+AIML,4,AIML-402,Database Management Systems,3
+AIML,4,AIML-403,Operating Systems,4
+AIML,4,AIML-404,Computer Networks,3
+AIML,4,AIML-405,Foundations of Artificial Intelligence,4
+AIML,4,AIML-406,Optimization Techniques,3
+AIML,4,AIML-407,DBMS Lab,1
+AIML,4,AIML-408,AI Lab,1
+AIML,5,AIML-501,Machine Learning,4
+AIML,5,AIML-502,Natural Language Processing,3
+AIML,5,AIML-503,Computer Vision,4
+AIML,5,AIML-504,Data Mining,3
+AIML,5,AIML-505,Knowledge Representation & Reasoning,4
+AIML,5,AIML-506,Web Technologies,3
+AIML,5,AIML-507,Machine Learning Lab,1
+AIML,5,AIML-508,NLP Lab,1
+AIML,6,AIML-601,Deep Learning,4
+AIML,6,AIML-602,Reinforcement Learning,3
+AIML,6,AIML-603,Big Data Analytics,4
+AIML,6,AIML-604,Cloud Computing,3
+AIML,6,AIML-605,Speech Processing,4
+AIML,6,AIML-606,Generative AI,3
+AIML,6,AIML-607,Deep Learning Lab,1
+AIML,6,AIML-608,Mini Project,6
+AIML,7,AIML-701,AI Ethics & Governance,2
+AIML,7,AIML-702,MLOps,3
+AIML,7,AIML-703,Time Series Forecasting,4
+AIML,7,AIML-704,Robotics & Automation,3
+AIML,7,AIML-705,Elective-I (Domain Elective),4
+AIML,7,AIML-706,Elective-II (Open Elective),3
+AIML,7,AIML-707,Project Phase-I,6
+AIML,7,AIML-708,Industrial Training,2
+AIML,8,AIML-801,Elective-III (Open Elective),4
+AIML,8,AIML-802,Elective-IV (Domain Elective),3
+AIML,8,AIML-803,Major Project,6
+AIML,8,AIML-804,Seminar,2
+AIML,8,AIML-805,Professional Practice & Management,2
+AIML,8,AIML-806,Entrepreneurship Development,2
+AIML,8,AIML-807,Technical Report Writing,2
+AIML,8,AIML-808,Comprehensive Viva,2
+IOT,1,IOT-101,Mathematics-I (Calculus & Linear Algebra),4
+IOT,1,IOT-102,Engineering Physics,3
+IOT,1,IOT-103,Programming for Problem Solving (C),4
+IOT,1,IOT-104,Basic Electrical Engineering,3
+IOT,1,IOT-105,Communication Skills,2
+IOT,1,IOT-106,Environmental Science,2
+IOT,1,IOT-107,Physics Lab,1
+IOT,1,IOT-108,Programming Lab-I,1
+IOT,2,IOT-201,Mathematics-II (Differential Equations),4
+IOT,2,IOT-202,Engineering Chemistry,3
+IOT,2,IOT-203,Object Oriented Programming (C++),4
+IOT,2,IOT-204,Digital Logic Design,3
+IOT,2,IOT-205,Engineering Graphics,4
+IOT,2,IOT-206,Professional Ethics,2
+IOT,2,IOT-207,Chemistry Lab,1
+IOT,2,IOT-208,OOP Lab,1
+IOT,3,IOT-301,Data Structures,4
+IOT,3,IOT-302,Digital Electronics,3
+IOT,3,IOT-303,Sensors & Transducers,4
+IOT,3,IOT-304,Python Programming,3
+IOT,3,IOT-305,Discrete Mathematics,4
+IOT,3,IOT-306,Circuit Analysis,3
+IOT,3,IOT-307,Sensors Lab,1
+IOT,3,IOT-308,Python Lab,1
+IOT,4,IOT-401,Embedded C Programming,4
+IOT,4,IOT-402,ARM Microcontrollers,3
+IOT,4,IOT-403,Computer Networks,4
+IOT,4,IOT-404,Operating Systems,3
+IOT,4,IOT-405,Database Management Systems,4
+IOT,4,IOT-406,Signals & Systems,3
+IOT,4,IOT-407,Embedded Systems Lab,1
+IOT,4,IOT-408,Networks Lab,1
+IOT,5,IOT-501,IoT Architecture & Protocols,4
+IOT,5,IOT-502,Wireless Sensor Networks,3
+IOT,5,IOT-503,Embedded Linux,4
+IOT,5,IOT-504,Cloud Platforms for IoT,3
+IOT,5,IOT-505,Data Analytics for IoT,4
+IOT,5,IOT-506,Edge Computing,3
+IOT,5,IOT-507,IoT Lab,1
+IOT,5,IOT-508,Wireless Sensor Networks Lab,1
+IOT,6,IOT-601,IoT Security,4
+IOT,6,IOT-602,Industrial IoT,3
+IOT,6,IOT-603,Machine Learning for IoT,4
+IOT,6,IOT-604,Real-Time Operating Systems,3
+IOT,6,IOT-605,Smart Cities & Applications,4
+IOT,6,IOT-606,5G & LPWAN Technologies,3
+IOT,6,IOT-607,Industrial IoT Lab,1
+IOT,6,IOT-608,Mini Project,6
+IOT,7,IOT-701,Digital Twins,4
+IOT,7,IOT-702,Robotics & Drones,3
+IOT,7,IOT-703,Smart Agriculture Systems,4
+IOT,7,IOT-704,Wearable Computing,3
+IOT,7,IOT-705,Elective-I (Domain Elective),4
+IOT,7,IOT-706,Elective-II (Open Elective),3
+IOT,7,IOT-707,Project Phase-I,6
+IOT,7,IOT-708,Industrial Training,2
+IOT,8,IOT-801,Elective-III (Open Elective),4
+IOT,8,IOT-802,Elective-IV (Domain Elective),3
+IOT,8,IOT-803,Major Project,6
+IOT,8,IOT-804,Seminar,2
+IOT,8,IOT-805,Professional Practice & Management,2
+IOT,8,IOT-806,Entrepreneurship Development,2
+IOT,8,IOT-807,Technical Report Writing,2
+IOT,8,IOT-808,Comprehensive Viva,2
+DS,1,DS-101,Mathematics-I (Calculus & Linear Algebra),4
+DS,1,DS-102,Engineering Physics,3
+DS,1,DS-103,Programming for Problem Solving (C),4
+DS,1,DS-104,Basic Electrical Engineering,3
+DS,1,DS-105,Communication Skills,2
+DS,1,DS-106,Environmental Science,2
+DS,1,DS-107,Physics Lab,1
+DS,1,DS-108,Programming Lab-I,1
+DS,2,DS-201,Mathematics-II (Differential Equations),4
+DS,2,DS-202,Engineering Chemistry,3
+DS,2,DS-203,Object Oriented Programming (C++),4
+DS,2,DS-204,Digital Logic Design,3
+DS,2,DS-205,Engineering Graphics,4
+DS,2,DS-206,Professional Ethics,2
+DS,2,DS-207,Chemistry Lab,1
+DS,2,DS-208,OOP Lab,1
+DS,3,DS-301,Data Structures,4
+DS,3,DS-302,Statistics for Data Science,3
+DS,3,DS-303,Discrete Mathematics,4
+DS,3,DS-304,Python Programming,3
+DS,3,DS-305,Database Systems,4
+DS,3,DS-306,Data Wrangling,3
+DS,3,DS-307,Data Structures Lab,1
+DS,3,DS-308,Python Lab,1
+DS,4,DS-401,Design & Analysis of Algorithms,4
+DS,4,DS-402,Operating Systems,3
+DS,4,DS-403,Machine Learning Fundamentals,4
+DS,4,DS-404,Data Visualization,3
+DS,4,DS-405,Computer Networks,4
+DS,4,DS-406,Linear Algebra,3
+DS,4,DS-407,Machine Learning Lab,1
+DS,4,DS-408,Visualization Lab,1
+DS,5,DS-501,Data Mining,4
+DS,5,DS-502,Big Data Technologies,3
+DS,5,DS-503,Deep Learning,4
+DS,5,DS-504,Time Series Analysis,3
+DS,5,DS-505,Cloud Computing,4
+DS,5,DS-506,Business Intelligence,3
+DS,5,DS-507,Big Data Lab,1
+DS,5,DS-508,Data Mining Lab,1
+DS,6,DS-601,Natural Language Processing,4
+DS,6,DS-602,Predictive Analytics,3
+DS,6,DS-603,Information Retrieval,4
+DS,6,DS-604,Data Security & Privacy,3
+DS,6,DS-605,Distributed Computing,4
+DS,6,DS-606,Optimization Methods,3
+DS,6,DS-607,Analytics Lab,1
+DS,6,DS-608,Mini Project,6
+DS,7,DS-701,Social Network Analytics,4
+DS,7,DS-702,MLOps,3
+DS,7,DS-703,Healthcare Analytics,4
+DS,7,DS-704,Streaming Data Systems,3
+DS,7,DS-705,Elective-I (Domain Elective),4
+DS,7,DS-706,Elective-II (Open Elective),3
+DS,7,DS-707,Project Phase-I,6
+DS,7,DS-708,Industrial Training,2
+DS,8,DS-801,Elective-III (Open Elective),4
+DS,8,DS-802,Elective-IV (Domain Elective),3
+DS,8,DS-803,Major Project,6
+DS,8,DS-804,Seminar,2
+DS,8,DS-805,Professional Practice & Management,2
+DS,8,DS-806,Entrepreneurship Development,2
+DS,8,DS-807,Technical Report Writing,2
+DS,8,DS-808,Comprehensive Viva,2

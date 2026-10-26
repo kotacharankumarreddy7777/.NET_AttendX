@@ -1,0 +1,38 @@
+@model TimetableGridViewModel
+@{ ViewData["Title"] = "Timetable"; bool facultyOnly = ViewBag.FacultyOnly; var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday }; }
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><h1 class="page-title">Timetable</h1>
+@if (!Model.ReadOnly) { <a class="btn btn-ax" asp-action="Create" asp-route-branchId="@Model.BranchId" asp-route-sectionId="@Model.SectionId" asp-route-semester="@Model.Semester"><i class="bi bi-plus-lg"></i> Add slot</a> }</div>
+@if (!facultyOnly)
+{
+<form method="get" class="ax-card card-b mb-3"><div class="row g-2">
+    <div class="col-md-3"><select name="branchId" id="BranchId" class="form-select"><option value="">Branch</option>@foreach (var b in Model.Branches) { <option value="@b.Value" selected="@(b.Value == Model.BranchId?.ToString())">@b.Text</option> }</select></div>
+    <div class="col-md-2"><select name="sectionId" id="SectionId" class="form-select"><option value="">All sections</option>@foreach (var s in Model.Sections) { <option value="@s.Value" selected="@(s.Value == Model.SectionId?.ToString())">@s.Text</option> }</select></div>
+    <div class="col-md-2"><select name="semester" id="Semester" class="form-select"><option value="">Semester</option>@for (int i = 1; i <= 8; i++) { <option value="@i" selected="@(Model.Semester == i)">Sem @i</option> }</select></div>
+    <div class="col-md-3"><select name="facultyId" class="form-select"><option value="">Faculty (optional)</option>@foreach (var f in Model.Faculty) { <option value="@f.Value" selected="@(f.Value == Model.FacultyId?.ToString())">@f.Text</option> }</select></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Show</button></div>
+</div></form>
+}
+@if (!Model.HasFilter) { <div class="alert alert-info">Choose a branch (and a section) or a faculty to view the timetable.</div> }
+else
+{
+<div class="ax-card"><div class="table-responsive"><table class="table table-bordered tt-grid mb-0"><thead><tr><th>Period</th>@foreach (var d in days) { <th>@d</th> }</tr></thead><tbody>
+@foreach (var p in Model.Periods)
+{
+    <tr><th>P@(p.PeriodNo)<br /><small class="text-muted">@UiHelpers.Time(p.StartTime)-@UiHelpers.Time(p.EndTime)</small></th>
+    @foreach (var d in days)
+    {
+        <td>
+        @foreach (var t in Model.Cell(d, p.PeriodNo))
+        {
+            <div class="tt-cell"><b>@t.Subject!.SubjectCode</b> <span class="badge bg-info text-dark">@t.ClassType</span><br />@t.Faculty!.FullName<br /><small class="text-muted">@t.Section!.Name - @t.RoomNo</small>
+            @if (!Model.ReadOnly) { <div class="mt-1"><a class="small" asp-action="Edit" asp-route-id="@t.Id">Edit</a> |
+                <form asp-action="Remove" asp-route-id="@t.Id" asp-route-sectionId="@Model.SectionId" asp-route-branchId="@Model.BranchId" asp-route-semester="@Model.Semester" method="post" class="d-inline" data-confirm="Remove this slot?"><button class="btn btn-link btn-sm p-0 text-danger" type="submit">Remove</button></form></div> }</div>
+        }
+        @if (!Model.ReadOnly && !Model.Cell(d, p.PeriodNo).Any() && Model.SectionId != null) { <a class="small text-muted" asp-action="Create" asp-route-branchId="@Model.BranchId" asp-route-sectionId="@Model.SectionId" asp-route-semester="@Model.Semester" asp-route-day="@d" asp-route-period="@p.PeriodNo">+ add</a> }
+        </td>
+    }
+    </tr>
+}
+</tbody></table></div></div>
+}
+@section Scripts { <script src="~/js/timetable.js" asp-append-version="true"></script> }

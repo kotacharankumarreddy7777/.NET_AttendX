@@ -1,0 +1,127 @@
+FacultyID,FullName,Email,Phone,Department,Designation,IsHOD
+FAC-CSE-001,Dr. Ishaan Chauhan,ishaan.chauhan@attendx.edu.in,6399869879,CSE,Professor,true
+FAC-CSE-002,Dr. Khushi Desai,khushi.desai@attendx.edu.in,6911417075,CSE,Associate Professor,false
+FAC-CSE-003,Dhruv Dave,dhruv.dave@attendx.edu.in,8556815188,CSE,Assistant Professor,false
+FAC-CSE-004,Mohit Parmar,mohit.parmar@attendx.edu.in,9294055761,CSE,Assistant Professor,false
+FAC-CSE-005,Saanvi Bhalodiya,saanvi.bhalodiya@attendx.edu.in,9168976846,CSE,Assistant Professor,false
+FAC-CSE-006,Bhumi Nair,bhumi.nair@attendx.edu.in,6932081967,CSE,Lecturer,false
+FAC-CSE-007,Om Nair,om.nair@attendx.edu.in,7177848648,CSE,Lecturer,false
+FAC-CSE-008,Vidhi Nair,vidhi.nair@attendx.edu.in,9634400297,CSE,Assistant Professor,false
+FAC-CSE-009,Dr. Neha Iyer,neha.iyer@attendx.edu.in,8347787680,CSE,Associate Professor,false
+FAC-CSEAI-001,Dr. Mohit Chauhan,mohit.chauhan@attendx.edu.in,9178472671,CSEAI,Professor,true
+FAC-CSEAI-002,Dr. Ankit Iyer,ankit.iyer@attendx.edu.in,8136270107,CSEAI,Associate Professor,false
+FAC-CSEAI-003,Sonal Zala,sonal.zala@attendx.edu.in,6933190845,CSEAI,Assistant Professor,false
+FAC-CSEAI-004,Jay Reddy,jay.reddy@attendx.edu.in,8997283792,CSEAI,Assistant Professor,false
+FAC-CSEAI-005,Dipti Kulkarni,dipti.kulkarni@attendx.edu.in,8162294866,CSEAI,Assistant Professor,false
+FAC-CSEAI-006,Jay Modi,jay.modi@attendx.edu.in,7601610550,CSEAI,Lecturer,false
+FAC-CSEAI-007,Arjun Kulkarni,arjun.kulkarni@attendx.edu.in,9547517799,CSEAI,Lecturer,false
+FAC-CSEAI-008,Smit Shetty,smit.shetty@attendx.edu.in,7695793186,CSEAI,Assistant Professor,false
+FAC-CSEAI-009,Dr. Sai Shah,sai.shah@attendx.edu.in,7080737028,CSEAI,Associate Professor,false
+FAC-CSEAIML-001,Dr. Manav Modi,manav.modi@attendx.edu.in,7226468616,CSEAIML,Professor,true
+FAC-CSEAIML-002,Dr. Shreyas Jain,shreyas.jain@attendx.edu.in,8247764725,CSEAIML,Associate Professor,false
+FAC-CSEAIML-003,Neha Nair,neha.nair@attendx.edu.in,9188413301,CSEAIML,Assistant Professor,false
+FAC-CSEAIML-004,Dhruvi Kothari,dhruvi.kothari@attendx.edu.in,8682052589,CSEAIML,Assistant Professor,false
+FAC-CSEAIML-005,Meera Mehta,meera.mehta@attendx.edu.in,6948939494,CSEAIML,Assistant Professor,false
+FAC-CSEAIML-006,Komal Gowda,komal.gowda@attendx.edu.in,6416210521,CSEAIML,Lecturer,false
+FAC-CSEAIML-007,Vidhi Chauhan,vidhi.chauhan@attendx.edu.in,8914524410,CSEAIML,Lecturer,false
+FAC-CSEAIML-008,Tanvi Trivedi,tanvi.trivedi@attendx.edu.in,9001304118,CSEAIML,Assistant Professor,false
+FAC-CSEAIML-009,Dr. Ritu Bhatt,ritu.bhatt@attendx.edu.in,8799065939,CSEAIML,Associate Professor,false
+FAC-ADS-001,Dr. Janvi Jadeja,janvi.jadeja@attendx.edu.in,6584645060,ADS,Professor,true
+FAC-ADS-002,Dr. Gaurav Vyas,gaurav.vyas@attendx.edu.in,8146590853,ADS,Associate Professor,false
+FAC-ADS-003,Komal Verma,komal.verma@attendx.edu.in,6291102859,ADS,Assistant Professor,false
+FAC-ADS-004,Piyush Sharma,piyush.sharma@attendx.edu.in,9925666363,ADS,Assistant Professor,false
+FAC-ADS-005,Yash Jain,yash.jain@attendx.edu.in,6886423004,ADS,Assistant Professor,false
+FAC-ADS-006,Shweta Nair,shweta.nair@attendx.edu.in,9452912808,ADS,Lecturer,false
+FAC-ADS-007,Akash Vyas,akash.vyas@attendx.edu.in,8003703826,ADS,Lecturer,false
+FAC-ADS-008,Riya Joshi,riya.joshi@attendx.edu.in,8535577879,ADS,Assistant Professor,false
+FAC-ADS-009,Dr. Shreyas Shah,shreyas.shah@attendx.edu.in,7627058602,ADS,Associate Professor,false
+FAC-ECE-001,Dr. Siddharth Solanki,siddharth.solanki@attendx.edu.in,8842108394,ECE,Professor,true
+FAC-ECE-002,Dr. Ritu Patel,ritu.patel@attendx.edu.in,9688281126,ECE,Associate Professor,false
+FAC-ECE-003,Ananya Jani,ananya.jani@attendx.edu.in,8409324484,ECE,Assistant Professor,false
+FAC-ECE-004,Kavya Gowda,kavya.gowda@attendx.edu.in,9309765828,ECE,Assistant Professor,false
+FAC-ECE-005,Arjun Jain,arjun.jain@attendx.edu.in,8822018051,ECE,Assistant Professor,false
+FAC-ECE-006,Aanya Solanki,aanya.solanki@attendx.edu.in,7829932157,ECE,Lecturer,false
+FAC-ECE-007,Rohit Singh,rohit.singh@attendx.edu.in,9494157718,ECE,Lecturer,false
+FAC-ECE-008,Neha Desai,neha.desai@attendx.edu.in,8795111744,ECE,Assistant Professor,false
+FAC-ECE-009,Dr. Kunal Patil,kunal.patil@attendx.edu.in,8688557652,ECE,Associate Professor,false
+FAC-EEE-001,Dr. Parth Gupta,parth.gupta@attendx.edu.in,7556963279,EEE,Professor,true
+FAC-EEE-002,Dr. Yash Jadeja,yash.jadeja@attendx.edu.in,8515474284,EEE,Associate Professor,false
+FAC-EEE-003,Naman Vyas,naman.vyas@attendx.edu.in,7814497660,EEE,Assistant Professor,false
+FAC-EEE-004,Hetal Vyas,hetal.vyas@attendx.edu.in,9517883655,EEE,Assistant Professor,false
+FAC-EEE-005,Harsha Dave,harsha.dave@attendx.edu.in,7048425996,EEE,Assistant Professor,false
+FAC-EEE-006,Krupa Nair,krupa.nair@attendx.edu.in,8003145037,EEE,Lecturer,false
+FAC-EEE-007,Yashvi Pandya,yashvi.pandya@attendx.edu.in,8183801253,EEE,Lecturer,false
+FAC-EEE-008,Janvi Mehta,janvi.mehta@attendx.edu.in,7419689821,EEE,Assistant Professor,false
+FAC-EEE-009,Dr. Arjun Pandya,arjun.pandya@attendx.edu.in,9028837555,EEE,Associate Professor,false
+FAC-MECH-001,Dr. Priya Makwana,priya.makwana@attendx.edu.in,9475407207,MECH,Professor,true
+FAC-MECH-002,Dr. Riya Trivedi,riya.trivedi@attendx.edu.in,9354864390,MECH,Associate Professor,false
+FAC-MECH-003,Tanvi Singh,tanvi.singh@attendx.edu.in,8791889575,MECH,Assistant Professor,false
+FAC-MECH-004,Ishita Raval,ishita.raval@attendx.edu.in,7182488619,MECH,Assistant Professor,false
+FAC-MECH-005,Manav Sharma,manav.sharma@attendx.edu.in,9336882834,MECH,Assistant Professor,false
+FAC-MECH-006,Pranali Gowda,pranali.gowda@attendx.edu.in,8568983298,MECH,Lecturer,false
+FAC-MECH-007,Jay Shetty,jay.shetty@attendx.edu.in,7900442248,MECH,Lecturer,false
+FAC-MECH-008,Dhruvi Patil,dhruvi.patil@attendx.edu.in,7022697804,MECH,Assistant Professor,false
+FAC-MECH-009,Dr. Kunal Kulkarni,kunal.kulkarni@attendx.edu.in,8817625280,MECH,Associate Professor,false
+FAC-CIVIL-001,Dr. Krupa Reddy,krupa.reddy@attendx.edu.in,6159450283,CIVIL,Professor,true
+FAC-CIVIL-002,Dr. Teja Jadeja,teja.jadeja@attendx.edu.in,9323373528,CIVIL,Associate Professor,false
+FAC-CIVIL-003,Zoya Jadeja,zoya.jadeja@attendx.edu.in,9534789713,CIVIL,Assistant Professor,false
+FAC-CIVIL-004,Parth Naidu,parth.naidu@attendx.edu.in,6592123636,CIVIL,Assistant Professor,false
+FAC-CIVIL-005,Arjun Jani,arjun.jani@attendx.edu.in,7445607874,CIVIL,Assistant Professor,false
+FAC-CIVIL-006,Kavya Iyer,kavya.iyer@attendx.edu.in,7128357699,CIVIL,Lecturer,false
+FAC-CIVIL-007,Rahul Goswami,rahul.goswami@attendx.edu.in,8417758881,CIVIL,Lecturer,false
+FAC-CIVIL-008,Deepak Parmar,deepak.parmar@attendx.edu.in,6190187916,CIVIL,Assistant Professor,false
+FAC-CIVIL-009,Dr. Ritu Gupta,ritu.gupta@attendx.edu.in,9802520161,CIVIL,Associate Professor,false
+FAC-IT-001,Dr. Smit Zala,smit.zala@attendx.edu.in,8001981524,IT,Professor,true
+FAC-IT-002,Dr. Krupa Desai,krupa.desai@attendx.edu.in,8736385607,IT,Associate Professor,false
+FAC-IT-003,Tanmay Makwana,tanmay.makwana@attendx.edu.in,7731979678,IT,Assistant Professor,false
+FAC-IT-004,Aditya Iyer,aditya.iyer@attendx.edu.in,7608724385,IT,Assistant Professor,false
+FAC-IT-005,Ankit Jadeja,ankit.jadeja@attendx.edu.in,6598281953,IT,Assistant Professor,false
+FAC-IT-006,Payal Singh,payal.singh@attendx.edu.in,7761166033,IT,Lecturer,false
+FAC-IT-007,Rahul Trivedi,rahul.trivedi@attendx.edu.in,7845142038,IT,Lecturer,false
+FAC-IT-008,Karan Rathod,karan.rathod@attendx.edu.in,6578037041,IT,Assistant Professor,false
+FAC-IT-009,Dr. Smit Kothari,smit.kothari@attendx.edu.in,6430490741,IT,Associate Professor,false
+FAC-CYBER-001,Dr. Shweta Patil,shweta.patil@attendx.edu.in,7708538671,CYBER,Professor,true
+FAC-CYBER-002,Dr. Tanmay Patel,tanmay.patel@attendx.edu.in,6668179223,CYBER,Associate Professor,false
+FAC-CYBER-003,Smit Jani,smit.jani@attendx.edu.in,7856427105,CYBER,Assistant Professor,false
+FAC-CYBER-004,Varun Gowda,varun.gowda@attendx.edu.in,7725278120,CYBER,Assistant Professor,false
+FAC-CYBER-005,Diya Kumar,diya.kumar@attendx.edu.in,9695851904,CYBER,Assistant Professor,false
+FAC-CYBER-006,Pranav Naidu,pranav.naidu@attendx.edu.in,9349992480,CYBER,Lecturer,false
+FAC-CYBER-007,Arjun Vyas,arjun.vyas@attendx.edu.in,7791372987,CYBER,Lecturer,false
+FAC-CYBER-008,Karan Singh,karan.singh@attendx.edu.in,7098426407,CYBER,Assistant Professor,false
+FAC-CYBER-009,Dr. Nidhi Parmar,nidhi.parmar@attendx.edu.in,7607911357,CYBER,Associate Professor,false
+FAC-AIDS-001,Dr. Nikhil Thakkar,nikhil.thakkar@attendx.edu.in,8774479674,AIDS,Professor,true
+FAC-AIDS-002,Dr. Priya Patil,priya.patil@attendx.edu.in,6980334635,AIDS,Associate Professor,false
+FAC-AIDS-003,Smit Rao,smit.rao@attendx.edu.in,7629586398,AIDS,Assistant Professor,false
+FAC-AIDS-004,Piyush Zala,piyush.zala@attendx.edu.in,9457328409,AIDS,Assistant Professor,false
+FAC-AIDS-005,Parth Solanki,parth.solanki@attendx.edu.in,7692767094,AIDS,Assistant Professor,false
+FAC-AIDS-006,Sai Makwana,sai.makwana@attendx.edu.in,8846388498,AIDS,Lecturer,false
+FAC-AIDS-007,Pooja Bhatt,pooja.bhatt@attendx.edu.in,9830686695,AIDS,Lecturer,false
+FAC-AIDS-008,Tanmay Jani,tanmay.jani@attendx.edu.in,9501332796,AIDS,Assistant Professor,false
+FAC-AIDS-009,Dr. Krupa Patil,krupa.patil@attendx.edu.in,9835081113,AIDS,Associate Professor,false
+FAC-AIML-001,Dr. Kiara Naidu,kiara.naidu@attendx.edu.in,9958163540,AIML,Professor,true
+FAC-AIML-002,Dr. Charan Singh,charan.singh@attendx.edu.in,8276113875,AIML,Associate Professor,false
+FAC-AIML-003,Dipti Jain,dipti.jain@attendx.edu.in,6153277186,AIML,Assistant Professor,false
+FAC-AIML-004,Yash Kumar,yash.kumar@attendx.edu.in,6761770775,AIML,Assistant Professor,false
+FAC-AIML-005,Charan Verma,charan.verma@attendx.edu.in,9261488361,AIML,Assistant Professor,false
+FAC-AIML-006,Pooja Patil,pooja.patil@attendx.edu.in,6299446135,AIML,Lecturer,false
+FAC-AIML-007,Varun Gohil,varun.gohil@attendx.edu.in,6994569943,AIML,Lecturer,false
+FAC-AIML-008,Nidhi Modi,nidhi.modi@attendx.edu.in,7864089487,AIML,Assistant Professor,false
+FAC-AIML-009,Dr. Mohit Gohil,mohit.gohil@attendx.edu.in,8397258444,AIML,Associate Professor,false
+FAC-IOT-001,Dr. Karan Makwana,karan.makwana@attendx.edu.in,7039955156,IOT,Professor,true
+FAC-IOT-002,Dr. Zoya Barot,zoya.barot@attendx.edu.in,9961567959,IOT,Associate Professor,false
+FAC-IOT-003,Diya Bhatt,diya.bhatt@attendx.edu.in,6565470567,IOT,Assistant Professor,false
+FAC-IOT-004,Kiran Makwana,kiran.makwana@attendx.edu.in,6488015646,IOT,Assistant Professor,false
+FAC-IOT-005,Piyush Trivedi,piyush.trivedi@attendx.edu.in,6330132059,IOT,Assistant Professor,false
+FAC-IOT-006,Shweta Gupta,shweta.gupta@attendx.edu.in,6988904216,IOT,Lecturer,false
+FAC-IOT-007,Naman Naidu,naman.naidu@attendx.edu.in,6119602780,IOT,Lecturer,false
+FAC-IOT-008,Gaurav Gohil,gaurav.gohil@attendx.edu.in,8873064248,IOT,Assistant Professor,false
+FAC-IOT-009,Dr. Smit Makwana,smit.makwana@attendx.edu.in,9017967720,IOT,Associate Professor,false
+FAC-DS-001,Dr. Gaurav Rao,gaurav.rao@attendx.edu.in,7634789235,DS,Professor,true
+FAC-DS-002,Dr. Raj Parmar,raj.parmar@attendx.edu.in,6137615610,DS,Associate Professor,false
+FAC-DS-003,Riya Oza,riya.oza@attendx.edu.in,6483354148,DS,Assistant Professor,false
+FAC-DS-004,Komal Naidu,komal.naidu@attendx.edu.in,6378522238,DS,Assistant Professor,false
+FAC-DS-005,Vedant Dodiya,vedant.dodiya@attendx.edu.in,6649753325,DS,Assistant Professor,false
+FAC-DS-006,Krupa Singh,krupa.singh@attendx.edu.in,7948085347,DS,Lecturer,false
+FAC-DS-007,Sai Solanki,sai.solanki@attendx.edu.in,7476134146,DS,Lecturer,false
+FAC-DS-008,Varun Nair,varun.nair@attendx.edu.in,8442014613,DS,Assistant Professor,false
+FAC-DS-009,Dr. Parth Zala,parth.zala@attendx.edu.in,6053051478,DS,Associate Professor,false

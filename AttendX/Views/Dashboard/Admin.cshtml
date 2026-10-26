@@ -1,0 +1,51 @@
+@model AdminDashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; }
+<div class="mb-3"><h1>@(Model.IsHod ? "Department Dashboard" : "Dashboard")</h1><div class="text-muted small">@Model.ScopeName</div></div>
+<div class="row g-3 mb-3">
+    @{
+        void Tile(object value, string label, string? href = null)
+        {
+            <div class="col-6 col-md-4 col-xl-2"><div class="ax-card stat"><div><div class="v">@value</div><div class="l">@label</div></div></div></div>
+        }
+    }
+    @{ Tile(Model.ActiveStudents, "Students"); }
+    @{ Tile(Model.ActiveFaculty, "Faculty"); }
+    @{ Tile(Model.TodayClasses, "Classes Today"); }
+    @{ Tile(Model.TodaySessions, "Sessions Marked Today"); }
+    @{ Tile(Model.AvgAttendance + "%", "Average Attendance (30 days)"); }
+    @{ Tile(Model.LowAttendanceCount, "Below Minimum"); }
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">@Model.Charts.GroupTitle</div><div class="card-b"><div class="chart-box"><canvas id="chGroup"></canvas></div></div></div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Attendance by Semester (30 days)</div><div class="card-b"><div class="chart-box"><canvas id="chSem"></canvas></div></div></div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Daily Attendance (14 days)</div><div class="card-b"><div class="chart-box"><canvas id="chDaily"></canvas></div></div></div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Monthly Attendance</div><div class="card-b"><div class="chart-box"><canvas id="chMonthly"></canvas></div></div></div></div>
+    <div class="col-12"><div class="ax-card"><div class="card-h">Subjects with Lowest Attendance (30 days)</div><div class="card-b"><div class="chart-box"><canvas id="chSubject"></canvas></div></div></div></div>
+</div>
+<div class="row g-3">
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Low Attendance List <a class="btn btn-sm btn-outline-primary" asp-controller="Reports" asp-action="Index" asp-route-type="defaulter" asp-route-run="true">View All</a></div>
+        @if (!Model.LowStudents.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("all_good", "No students below minimum", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Student</th><th>Class</th><th>%</th><th>Required</th></tr></thead><tbody>
+        @foreach (var s in Model.LowStudents) { <tr><td><a asp-controller="Students" asp-action="Details" asp-route-id="@s.StudentId">@s.Name</a><br /><span class="mono text-muted">@s.Code</span></td><td>@(s.Semester.ToString() + s.Section)</td><td class="pct pct-bad">@s.Percent%</td><td>@(s.ClassesNeeded > 0 ? s.ClassesNeeded + " classes" : "-")</td></tr> }
+        </tbody></table></div> }
+    </div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Attendance Not Marked Today</div>
+        @if (!Model.MissingSlots.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("all_good", "Nothing pending", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Period</th><th>Subject</th><th>Branch / Sem / Section</th><th>Faculty</th><th></th></tr></thead><tbody>
+        @foreach (var s in Model.MissingSlots) { <tr><td>P@(s.Period)</td><td>@s.SubjectCode</td><td><b>@s.BranchCode</b> - Sem @s.Semester / @s.SectionName</td><td>@s.FacultyName</td><td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-controller="Attendance" asp-action="Mark" asp-route-id="@s.TimetableId">Open</a></td></tr> }
+        </tbody></table></div> }
+    </div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Section Alerts</div><div class="card-b">
+        @if (!Model.Anomalies.Any()) { <span class="text-muted">No alerts.</span> }
+        <ul class="mb-0 ps-3">@foreach (var a in Model.Anomalies) { <li>@a</li> }</ul>
+    </div></div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Faculty Activity (7 days)</div>
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Faculty</th><th>Sessions</th><th>Last Marked</th></tr></thead><tbody>
+        @foreach (var f in Model.FacultyActivity) { <tr><td>@f.Name</td><td>@f.Sessions</td><td>@f.LastMarked?.ToString("dd MMM HH:mm")</td></tr> }
+        </tbody></table></div>
+    </div></div>
+</div>
+<script id="chartData" type="application/json">@Json.Serialize(Model.Charts)</script>
+@section Scripts { <script src="~/js/dashboard.js" asp-append-version="true"></script> }

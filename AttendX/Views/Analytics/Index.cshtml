@@ -1,0 +1,29 @@
+@model AnalyticsViewModel
+@{ ViewData["Title"] = "Attendance Summary"; }
+<h1 class="page-title">Attendance Summary</h1>
+<p class="text-muted">Based on the last 8 weeks of recorded attendance.</p>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3"><div class="ax-card stat"><span class="ic" style="background:#dc2626"><i class="bi bi-exclamation-octagon"></i></span><div><div class="v">@Model.AtRiskCount</div><div class="l">Below minimum</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="ax-card stat"><span class="ic" style="background:#d97706"><i class="bi bi-graph-down-arrow"></i></span><div><div class="v">@Model.DecliningCount</div><div class="l">Declining attendance</div></div></div></div>
+</div>
+<div class="ax-card mb-3"><div class="card-h">Weekly Attendance</div><div class="card-b"><div class="chart-box"><canvas id="chWeekly"></canvas></div></div></div>
+<script id="weeklyData" type="application/json">@Json.Serialize(Model.Weekly)</script>
+<div class="ax-card mb-3"><div class="card-h">Low Attendance List</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Student</th><th>Section</th><th>%</th><th>Recent / previous (2 wk)</th><th>Trend</th><th>Projected (4 wk)</th><th>Need</th><th>Risk</th><th>Remarks</th></tr></thead><tbody>
+@foreach (var s in Model.Students)
+{
+    <tr><td>@s.Name<br /><small class="text-muted">@s.Code</small></td><td>@s.Section</td><td class="pct @UiHelpers.PctClass(s.Percent, s.Threshold)">@s.Percent%</td><td>@s.RecentPercent% / @s.PreviousPercent%</td>
+        <td>@(s.Trend == "Declining" ? "Declining" : s.Trend == "Improving" ? "Improving" : "Stable") <small class="text-muted">(@s.SlopePerWeek pts/wk)</small></td><td>@s.Projected%</td><td>@(s.ClassesNeeded > 0 ? s.ClassesNeeded.ToString() : "-")</td>
+        <td><span class="badge @UiHelpers.RiskBadge(s.Risk)">@s.Risk</span></td><td class="small" style="min-width:260px">@s.Recommendation</td></tr>
+}
+</tbody></table></div>
+@if (!Model.Students.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("all_good", "No students below minimum", "")' /> }
+</div>
+<div class="row g-3">
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Subject Summary (lowest attendance)</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Subject</th><th>%</th><th>Note</th></tr></thead><tbody>
+    @foreach (var s in Model.Subjects) { <tr><td>@s.Subject</td><td class="pct @UiHelpers.PctClass(s.Percent, s.Threshold)">@s.Percent%</td><td class="small">@s.Note</td></tr> }
+    </tbody></table></div></div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Section Comparison</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Section</th><th>Recent</th><th>Previous</th><th>z-score</th><th>Note</th></tr></thead><tbody>
+    @foreach (var s in Model.Sections) { <tr><td>@s.Section</td><td>@s.Recent%</td><td>@s.Previous%</td><td>@s.ZScore</td><td class="small @(s.Note == "Normal" ? "" : "text-danger")">@s.Note</td></tr> }
+    </tbody></table></div></div></div>
+</div>
+@section Scripts { <script src="~/js/dashboard.js" asp-append-version="true"></script> }

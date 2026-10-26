@@ -1,0 +1,20 @@
+@model PagerModel
+@{
+    string Link(int p)
+    {
+        var parts = Context.Request.Query.Where(kv => kv.Key != "page")
+            .SelectMany(kv => kv.Value.Select(v => Uri.EscapeDataString(kv.Key) + "=" + Uri.EscapeDataString(v ?? ""))).ToList();
+        parts.Add("page=" + p);
+        return Context.Request.Path + "?" + string.Join("&", parts);
+    }
+}
+@if (Model.TotalPages > 1)
+{
+    <nav class="d-flex justify-content-between align-items-center mt-3 no-print">
+        <small class="text-muted">@Model.TotalCount records - page @Model.Page of @Model.TotalPages</small>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")"><a class="page-link" href="@Link(Model.Page - 1)">Previous</a></li>
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")"><a class="page-link" href="@Link(Model.Page + 1)">Next</a></li>
+        </ul>
+    </nav>
+}

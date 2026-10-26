@@ -1,0 +1,26 @@
+@model WeekGridModel
+@{
+    var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday };
+    var today = DateTime.Today.DayOfWeek;
+}
+<div class="table-responsive">
+<table class="table table-bordered week mb-0">
+    <thead><tr><th>Period</th>@foreach (var d in days) { <th class="@(d == today ? "today" : "")">@d.ToString().Substring(0, 3)</th> }</tr></thead>
+    <tbody>
+    @foreach (var p in Model.Periods)
+    {
+        <tr><th class="text-nowrap" style="background:#EEF2F8;color:var(--text)">P@(p.PeriodNo)<br /><small class="text-muted" style="text-transform:none">@UiHelpers.Time(p.StartTime)-@UiHelpers.Time(p.EndTime)</small></th>
+        @foreach (var d in days)
+        {
+            <td class="@(d == today ? "today" : "")">
+            @if (Model.Week.TryGetValue($"{(int)d}-{p.PeriodNo}", out var c))
+            {
+                <div class="cell"><b>@c.SubjectCode</b><br />@c.Faculty<br /><span class="text-muted">@c.Room</span></div>
+            }
+            </td>
+        }
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

@@ -1,0 +1,7 @@
+@{ ViewData["Title"] = "Sign in"; Layout = "_AuthLayout"; }
+<h1 style="font-size:20px;margin-bottom:16px">Sign in</h1>
+<div class="role-grid">
+    <a class="role-tile" asp-controller="Account" asp-action="AdminLogin"><i class="bi bi-shield-lock"></i><b>Administrator</b><span>Administrators</span></a>
+    <a class="role-tile" asp-controller="Account" asp-action="FacultyLogin"><i class="bi bi-person-workspace"></i><b>Faculty / HOD</b><span>Faculty and department heads</span></a>
+    <a class="role-tile" asp-controller="Account" asp-action="StudentLogin"><i class="bi bi-mortarboard"></i><b>Student</b><span>Enrolled students</span></a>
+</div>

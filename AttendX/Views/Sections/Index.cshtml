@@ -1,0 +1,16 @@
+@model List<Section>
+@{ ViewData["Title"] = "Sections"; var branches = (List<SelectListItem>)ViewBag.Branches; var counts = (Dictionary<int, int>)ViewBag.Counts; int? bid = ViewBag.BranchId; }
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><h1 class="page-title">Sections</h1><a class="btn btn-ax" asp-action="Create"><i class="bi bi-plus-lg"></i> New section</a></div>
+<form method="get" class="ax-card card-b mb-3 d-flex gap-2 flex-wrap">
+    <select name="branchId" class="form-select w-auto"><option value="">All branches</option>@foreach (var b in branches) { <option value="@b.Value" selected="@(b.Value == bid?.ToString())">@b.Text</option> }</select>
+    <button class="btn btn-outline-primary" type="submit">Filter</button>
+</form>
+<div class="ax-card"><div class="table-responsive"><table class="table table-hover mb-0 dt"><thead><tr><th>Branch</th><th>Section</th><th>Active students</th><th>Status</th><th></th></tr></thead><tbody>
+@foreach (var s in Model)
+{
+    <tr><td>@s.Branch!.Name</td><td>@s.Name</td><td>@(counts.TryGetValue(s.Id, out var c) ? c : 0)</td>
+        <td>@if (s.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@s.Id">Edit</a>
+        <form asp-action="Toggle" asp-route-id="@s.Id" method="post" class="d-inline" data-confirm="Change active status?"><button class="btn btn-sm btn-outline-secondary" type="submit">@(s.IsActive ? "Deactivate" : "Activate")</button></form></td></tr>
+}
+</tbody></table></div></div>

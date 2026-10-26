@@ -1,0 +1,14 @@
+@model SubjectFormViewModel
+@{ ViewData["Title"] = Model.Id == null ? "New subject" : "Edit subject"; }
+<div class="ax-card" style="max-width:620px"><div class="card-h">@ViewData["Title"]</div><div class="card-b">
+<form asp-action="Save" method="post" data-once>
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3"><label asp-for="SubjectName" class="form-label"></label><input asp-for="SubjectName" class="form-control" /></div>
+    <div class="row"><div class="col-md-6 mb-3"><label asp-for="SubjectCode" class="form-label"></label><input asp-for="SubjectCode" class="form-control" /></div>
+    <div class="col-md-6 mb-3"><label asp-for="BranchId" class="form-label">Branch</label><select asp-for="BranchId" asp-items="Model.Branches" class="form-select"><option value="0">Select branch</option></select></div></div>
+    <div class="row"><div class="col-md-6 mb-3"><label asp-for="Semester" class="form-label"></label><input asp-for="Semester" type="number" min="1" max="8" class="form-control" /></div>
+    <div class="col-md-6 mb-3"><label asp-for="Credits" class="form-label"></label><input asp-for="Credits" type="number" min="0" max="12" class="form-control" /></div></div>
+    <div class="form-check mb-3"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label"></label></div>
+    <button class="btn btn-ax" type="submit">Save</button> <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+</form></div></div>

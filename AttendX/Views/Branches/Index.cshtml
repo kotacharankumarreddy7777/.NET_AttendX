@@ -1,0 +1,12 @@
+@model List<Branch>
+@{ ViewData["Title"] = "Branches"; var counts = (Dictionary<int, int>)ViewBag.SectionCounts; }
+<div class="d-flex justify-content-between mb-3"><h1 class="page-title">Branches</h1><a class="btn btn-ax" asp-action="Create"><i class="bi bi-plus-lg"></i> New branch</a></div>
+<div class="ax-card"><div class="table-responsive"><table class="table table-hover mb-0 dt"><thead><tr><th>Name</th><th>Code</th><th>Sections</th><th>Status</th><th></th></tr></thead><tbody>
+@foreach (var b in Model)
+{
+    <tr><td>@b.Name</td><td><code>@b.Code</code></td><td><a asp-controller="Sections" asp-action="Index" asp-route-branchId="@b.Id">@(counts.TryGetValue(b.Id, out var c) ? c : 0)</a></td>
+        <td>@if (b.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@b.Id">Edit</a>
+            <form asp-action="Toggle" asp-route-id="@b.Id" method="post" class="d-inline" data-confirm="Change active status of @b.Name?"><button class="btn btn-sm btn-outline-secondary" type="submit">@(b.IsActive ? "Deactivate" : "Activate")</button></form></td></tr>
+}
+</tbody></table></div></div>

@@ -1,0 +1,3 @@
+@model ErrorViewModel
+@{ ViewData["Title"] = Model.Title; Layout = "_AuthLayout"; }
+<div class="auth-panel text-center"><div style="font-size:34px;font-weight:600;color:var(--navy)">@Model.Code</div><h1 style="margin-top:4px">@Model.Title</h1><p class="text-muted">@Model.Message</p><a class="btn btn-ax" href="/">Back to Home</a></div>

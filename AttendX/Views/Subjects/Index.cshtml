@@ -1,0 +1,19 @@
+@model List<Subject>
+@{ ViewData["Title"] = "Subjects"; var branches = (List<SelectListItem>)ViewBag.Branches; bool locked = ViewBag.Locked; int? bid = ViewBag.BranchId; int? sem = ViewBag.Semester; }
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><h1 class="page-title">Subjects</h1>@if (User.IsInRole("Admin")) { <a class="btn btn-ax" asp-action="Create"><i class="bi bi-plus-lg"></i> New subject</a> }</div>
+<form method="get" class="ax-card card-b mb-3 d-flex gap-2 flex-wrap">
+    <select name="branchId" class="form-select w-auto" disabled="@locked"><option value="">All branches</option>@foreach (var b in branches) { <option value="@b.Value" selected="@(b.Value == bid?.ToString())">@b.Text</option> }</select>
+    @if (locked) { <input type="hidden" name="branchId" value="@bid" /> }
+    <select name="semester" class="form-select w-auto"><option value="">All semesters</option>@for (int i = 1; i <= 8; i++) { <option value="@i" selected="@(sem == i)">Semester @i</option> }</select>
+    <input name="search" value="@ViewBag.Search" class="form-control w-auto" placeholder="Search name / code" />
+    <button class="btn btn-outline-primary" type="submit">Filter</button>
+</form>
+<div class="ax-card"><div class="table-responsive"><table class="table table-hover mb-0 dt"><thead><tr><th>Code</th><th>Subject</th><th>Branch</th><th>Sem</th><th>Credits</th><th>Status</th><th></th></tr></thead><tbody>
+@foreach (var s in Model)
+{
+    <tr><td><code>@s.SubjectCode</code></td><td>@s.SubjectName</td><td>@s.Branch!.Code</td><td>@s.Semester</td><td>@s.Credits</td>
+        <td>@if (s.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</td>
+        <td class="text-end">@if (User.IsInRole("Admin")) { <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@s.Id">Edit</a>
+            <form asp-action="Toggle" asp-route-id="@s.Id" method="post" class="d-inline" data-confirm="Change active status?"><button class="btn btn-sm btn-outline-secondary" type="submit">@(s.IsActive ? "Deactivate" : "Activate")</button></form> }</td></tr>
+}
+</tbody></table></div></div>
