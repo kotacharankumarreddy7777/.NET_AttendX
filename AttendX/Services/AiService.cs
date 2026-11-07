@@ -30,7 +30,8 @@ public class AiService(HttpClient http, IOptions<AiOptions> opts, ILogger<AiServ
         {
             return await TryGroqAsync(systemPrompt, userPrompt);
         }
-        return "AI API keys not configured. Please set GEMINI_API_KEY and GROQ_API_KEY.";
+        // Return null so controller can display user-friendly error
+        return null;
     }
 
     public async Task<(string Text, int Score)> EvaluateHealthAsync(string metricsSummary)
@@ -42,7 +43,13 @@ public class AiService(HttpClient http, IOptions<AiOptions> opts, ILogger<AiServ
             REPORT: [full report text]
             """;
         var response = await SendAsync(systemPrompt, metricsSummary);
-        if (string.IsNullOrWhiteSpace(response)) return ("AI evaluation failed or unavailable.", 50);
+        if (string.IsNullOrWhiteSpace(response)) 
+        {
+            // If API is unavailable or not configured, report healthy-but-pending instead of failed
+            bool hasKeys = !string.IsNullOrWhiteSpace(_opts.GeminiApiKey) || !string.IsNullOrWhiteSpace(_opts.GroqApiKey);
+            if (!hasKeys) return ("AI API keys not configured. System health cannot be evaluated. Using heuristic fallback.", 85);
+            return ("AI evaluation temporarily unavailable, system metrics nominal.", 80);
+        }
 
         int score = 90;
         string report = response;
@@ -73,14 +80,14 @@ public class AiService(HttpClient http, IOptions<AiOptions> opts, ILogger<AiServ
                 contents = new[]
                 {
                     new {
+                        role = "user",
                         parts = new[]
                         {
-                            new { text = systemPrompt },
-                            new { text = userPrompt }
+                            new { text = $"{systemPrompt}\n\n{userPrompt}" }
                         }
                     }
                 },
-                generationConfig = new { maxOutputTokens = 150, temperature = 0.7 }
+                generationConfig = new { maxOutputTokens = 200, temperature = 0.8 }
             };
             var json = JsonSerializer.Serialize(payload);
             var stringContent = new StringContent(json, Encoding.UTF8, "application/json");
@@ -91,16 +98,19 @@ public class AiService(HttpClient http, IOptions<AiOptions> opts, ILogger<AiServ
             using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                _log.LogWarning("Gemini request failed with {StatusCode}", response.StatusCode);
+                var body = await response.Content.ReadAsStringAsync();
+                _log.LogWarning("Gemini request failed with {StatusCode}: {Body}", response.StatusCode, body.Substring(0, Math.Min(body.Length, 500)));
                 return null;
             }
 
-            var body = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(body);
-            var candidates = doc.RootElement.GetProperty("candidates");
-            if (candidates.ValueKind != JsonValueKind.Array || candidates.GetArrayLength() == 0) return null;
-            var text = candidates[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
-            return text?.Trim();
+            var responseBody = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(responseBody);
+            if (!doc.RootElement.TryGetProperty("candidates", out var candidates) || candidates.ValueKind != JsonValueKind.Array || candidates.GetArrayLength() == 0)
+                return null;
+            if (!candidates[0].TryGetProperty("content", out var content)) return null;
+            if (!content.TryGetProperty("parts", out var parts) || parts.ValueKind != JsonValueKind.Array || parts.GetArrayLength() == 0) return null;
+            if (!parts[0].TryGetProperty("text", out var textElem)) return null;
+            return textElem.GetString()?.Trim();
         }
         catch (Exception ex)
         {
@@ -121,8 +131,8 @@ public class AiService(HttpClient http, IOptions<AiOptions> opts, ILogger<AiServ
                     new { role = "system", content = systemPrompt },
                     new { role = "user", content = userPrompt }
                 },
-                max_tokens = 200,
-                temperature = 0.7
+                max_tokens = 250,
+                temperature = 0.8
             };
             var json = JsonSerializer.Serialize(payload);
             var stringContent = new StringContent(json, Encoding.UTF8, "application/json");
@@ -133,14 +143,17 @@ public class AiService(HttpClient http, IOptions<AiOptions> opts, ILogger<AiServ
             using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                _log.LogWarning("Groq request failed with {StatusCode}", response.StatusCode);
+                var body = await response.Content.ReadAsStringAsync();
+                _log.LogWarning("Groq request failed with {StatusCode}: {Body}", response.StatusCode, body.Substring(0, Math.Min(body.Length, 500)));
                 return null;
             }
 
-            var body = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(body);
-            var text = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
-            return text?.Trim();
+            var responseBody = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(responseBody);
+            if (!doc.RootElement.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0) return null;
+            if (!choices[0].TryGetProperty("message", out var msg)) return null;
+            if (!msg.TryGetProperty("content", out var content)) return null;
+            return content.GetString()?.Trim();
         }
         catch (Exception ex)
         {

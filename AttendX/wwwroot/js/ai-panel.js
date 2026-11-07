@@ -3,34 +3,38 @@ document.addEventListener('DOMContentLoaded', function () {
     const panel = document.getElementById('aiPanel');
     const panelContent = document.getElementById('aiPanelContent');
     const closeBtn = document.getElementById('aiPanelClose');
-    const resizer = document.querySelector('.ai-drawer-resizer');
 
     if (!panel || !fabBtn) return;
 
     let panelLoaded = false;
     let isDragging = false;
     let dragStartX, dragStartY, initialLeft, initialTop;
-    let debounceTimer;
     let isPanelOpen = false;
+    let debounceTimer;
 
-    // Open/Close Panel - Robust state machine
-    function togglePanel(show) {
+    function togglePanel() {
         clearTimeout(debounceTimer);
         
-        if (show) {
+        if (isPanelOpen) {
+            // Close
+            isPanelOpen = false;
+            panel.classList.remove('ai-panel-visible');
+            panel.style.opacity = '0';
+            panel.style.transform = 'translateY(30px) scale(0.95)';
+            debounceTimer = setTimeout(() => {
+                panel.classList.add('d-none');
+                panel.style.visibility = 'hidden';
+            }, 300);
+        } else {
+            // Open
             isPanelOpen = true;
             panel.classList.remove('d-none');
             panel.style.visibility = 'visible';
-            // Force reflow so transition works
-            void panel.offsetWidth;
+            void panel.offsetWidth; // Force reflow
+            panel.style.opacity = '1';
+            panel.style.transform = 'translateY(0) scale(1)';
             panel.classList.add('ai-panel-visible');
             if (!panelLoaded) loadPanelContent();
-        } else {
-            isPanelOpen = false;
-            panel.classList.remove('ai-panel-visible');
-            debounceTimer = setTimeout(() => {
-                panel.classList.add('d-none');
-            }, 250);
         }
     }
 
@@ -129,23 +133,23 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    // FAB Click - Robust toggle using isPanelOpen state
+    // FAB Click - Simple toggle without stopPropagation issues
     fabBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        togglePanel(!isPanelOpen);
+        togglePanel();
     });
 
     if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            togglePanel(false);
+            if (isPanelOpen) togglePanel();
         });
     }
 
     // Close on clicking outside
     document.addEventListener('click', (e) => {
         if (isPanelOpen && !panel.contains(e.target) && e.target !== fabBtn && !fabBtn.contains(e.target)) {
-            togglePanel(false);
+            togglePanel();
         }
     });
 

@@ -32,7 +32,7 @@ builder.Services.Configure<InstitutionOptions>(builder.Configuration.GetSection(
 builder.Services.Configure<AttendXOptions>(o => o.UseMigrations = false);
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("Ai"));
 
-var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? builder.Configuration["Ai:GeminApiKey"];
+var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? builder.Configuration["Ai:GeminiApiKey"];
 var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? builder.Configuration["Ai:GroqApiKey"];
 builder.Services.Configure<AiOptions>(o =>
 {
