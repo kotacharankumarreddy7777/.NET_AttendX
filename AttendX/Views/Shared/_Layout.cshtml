@@ -153,6 +153,8 @@
 </button>
 
 <!-- Glassy Floating AI Drawer -->
+@if (User.Identity?.IsAuthenticated == true)
+{
 <div id="aiPanel" class="glass-drawer d-none shadow-lg border rounded-4 overflow-hidden">
     <div class="glass-drawer-header p-3 d-flex justify-content-between align-items-center border-bottom bg-white bg-opacity-75 backdrop-blur">
         <div class="d-flex align-items-center gap-2">
@@ -186,6 +188,7 @@
     
     <div class="ai-drawer-resizer"></div>
 </div>
+}
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

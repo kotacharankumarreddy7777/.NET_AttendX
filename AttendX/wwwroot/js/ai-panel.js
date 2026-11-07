@@ -3,36 +3,28 @@ document.addEventListener('DOMContentLoaded', function () {
     const panel = document.getElementById('aiPanel');
     const panelContent = document.getElementById('aiPanelContent');
     const closeBtn = document.getElementById('aiPanelClose');
-    const chatForm = document.getElementById('aiPanelChatForm');
-    const chatInput = document.getElementById('aiPanelMessageInput');
     const resizer = document.querySelector('.ai-drawer-resizer');
+
+    if (!panel || !fabBtn) return;
 
     let panelLoaded = false;
     let isDragging = false;
     let dragStartX, dragStartY, initialLeft, initialTop;
 
-    // Open/Close Panel
     function togglePanel(show) {
         if (show) {
             panel.classList.remove('d-none');
-            // Trigger transition
             requestAnimationFrame(() => {
                 panel.classList.add('ai-panel-visible');
             });
-            if (!panelLoaded) {
-                loadPanelContent();
-            }
-            setTimeout(() => chatInput.focus(), 300);
+            if (!panelLoaded) loadPanelContent();
         } else {
             panel.classList.remove('ai-panel-visible');
-            setTimeout(() => {
-                panel.classList.add('d-none');
-            }, 300);
+            setTimeout(() => panel.classList.add('d-none'), 300);
         }
     }
 
     async function loadPanelContent() {
-        // Show skeleton loader
         panelContent.innerHTML = `
             <div class="skeleton-loader p-2">
                 <div class="skeleton-box" style="height: 60px;"></div>
@@ -56,58 +48,68 @@ document.addEventListener('DOMContentLoaded', function () {
         const input = document.getElementById('aiPanelMessageInput');
         const container = panelContent.querySelector('.chat-messages-list');
         const typingIndicator = document.getElementById('aiTypingIndicator');
+        const navAction = document.getElementById('aiNavAction');
+        const navBtn = document.getElementById('aiNavBtn');
 
-        if (!form || !container) return;
-
-        // Scroll to bottom initially
+        if (!form || !container || !input) return;
         panelContent.scrollTop = panelContent.scrollHeight;
+
+        if (navBtn) {
+            navBtn.onclick = () => {
+                const url = navBtn.getAttribute('data-target');
+                if (url) window.location.href = url;
+            };
+        }
 
         form.onsubmit = async function (e) {
             e.preventDefault();
             const message = input.value.trim();
             if (!message) return;
 
-            const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            if (navAction) navAction.classList.add('d-none');
             
-            // Add user message
+            const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
             const userBubble = document.createElement('div');
             userBubble.className = 'd-flex flex-column gap-1 mb-2 align-items-end';
-            userBubble.innerHTML = `<div class="chat-bubble-out p-2.5 px-3 rounded-3 text-white shadow-sm" style="max-width: 85%; font-size: 0.9rem; background: var(--navy);">
-                <small class="d-block text-white-50 mb-1" style="font-size: 0.65rem;">${now}</small>
-                ${message.replace(/</g, "&lt;")}
-            </div>`;
+            userBubble.innerHTML = `<div class="chat-bubble-out p-2.5 px-3 rounded-3 text-white shadow-sm" style="max-width: 85%; font-size: 0.9rem; background: var(--navy);"><small class="d-block text-white-50 mb-1" style="font-size: 0.65rem;">${now}</small>${message.replace(/</g, "&lt;")}</div>`;
             container.appendChild(userBubble);
             input.value = '';
             panelContent.scrollTop = panelContent.scrollHeight;
 
-            // Show typing indicator
             if (typingIndicator) typingIndicator.classList.remove('d-none');
 
             try {
-                const token = document.querySelector('#aiPanel input[name="__RequestVerificationToken"]')?.value || 
-                              document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
                 const response = await fetch('/Ai/Chat', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': token
-                    },
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
                     body: JSON.stringify({ message: message })
                 });
                 const data = await response.json();
                 if (typingIndicator) typingIndicator.classList.add('d-none');
-                
+
+                let replyText = data.success ? data.reply : data.message;
+                let navUrl = null;
+
+                // Intercept GO_TO: marker
+                if (replyText.includes('GO_TO:')) {
+                    const parts = replyText.split('GO_TO:');
+                    replyText = parts[0].trim();
+                    navUrl = parts[1].trim();
+                }
+
                 const aiBubble = document.createElement('div');
                 aiBubble.className = 'd-flex flex-column gap-1 mb-2 align-items-start';
-                aiBubble.innerHTML = `<div class="chat-bubble-in p-2.5 px-3 rounded-3 bg-white shadow-sm border" style="max-width: 85%; font-size: 0.9rem;">
-                    <small class="d-block text-muted mb-1" style="font-size: 0.65rem;">AI Assistant</small>
-                    ${data.success ? data.reply.replace(/</g, "&lt;").replace(/\n/g, '<br>') : data.message}
-                </div>`;
-                
-                // Insert before typing indicator
+                aiBubble.innerHTML = `<div class="chat-bubble-in p-2.5 px-3 rounded-3 bg-white shadow-sm border" style="max-width: 85%; font-size: 0.9rem;"><small class="d-block text-muted mb-1" style="font-size: 0.65rem;">AI Assistant</small>${replyText.replace(/</g, "&lt;").replace(/\n/g, '<br>')}</div>`;
                 if (typingIndicator) container.parentNode.insertBefore(aiBubble, typingIndicator);
                 else container.appendChild(aiBubble);
-                
+
+                // Show navigation button if present
+                if (navUrl && navBtn && navAction) {
+                    navBtn.setAttribute('data-target', navUrl);
+                    navAction.querySelector('button').innerHTML = `Go to Page <i class="bi bi-arrow-right-circle-fill ms-1"></i>`;
+                    navAction.classList.remove('d-none');
+                }
                 panelContent.scrollTop = panelContent.scrollHeight;
             } catch (err) {
                 if (typingIndicator) typingIndicator.classList.add('d-none');
@@ -119,78 +121,38 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    if (fabBtn) {
-        fabBtn.addEventListener('click', () => {
-            const isHidden = panel.classList.contains('d-none');
-            togglePanel(isHidden);
-        });
-    }
+    fabBtn.addEventListener('click', () => togglePanel(panel.classList.contains('d-none')));
+    if (closeBtn) closeBtn.addEventListener('click', () => togglePanel(false));
 
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => togglePanel(false));
-    }
-
-    // Close on clicking outside (optional, not on desktop interactive areas)
     document.addEventListener('click', (e) => {
         if (!panel.classList.contains('d-none') && !panel.contains(e.target) && e.target !== fabBtn && !fabBtn.contains(e.target)) {
             togglePanel(false);
         }
     });
 
-    // Draggable header functionality
     const header = panel.querySelector('.glass-drawer-header');
     if (header) {
         header.style.cursor = 'grab';
         header.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            dragStartX = e.clientX;
-            dragStartY = e.clientY;
-            initialLeft = panel.offsetLeft;
-            initialTop = panel.offsetTop;
-            
-            panel.style.position = 'fixed';
-            panel.style.right = 'auto';
-            panel.style.bottom = 'auto';
-            
-            header.style.cursor = 'grabbing';
+            isDragging = true; dragStartX = e.clientX; dragStartY = e.clientY; initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
+            panel.style.position = 'fixed'; panel.style.right = 'auto'; panel.style.bottom = 'auto'; header.style.cursor = 'grabbing';
         });
-
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            const dx = e.clientX - dragStartX;
-            const dy = e.clientY - dragStartY;
-            panel.style.left = (initialLeft + dx) + 'px';
-            panel.style.top = (initialTop + dy) + 'px';
+            panel.style.left = (initialLeft + (e.clientX - dragStartX)) + 'px';
+            panel.style.top = (initialTop + (e.clientY - dragStartY)) + 'px';
         });
+        document.addEventListener('mouseup', () => { isDragging = false; header.style.cursor = 'grab'; });
 
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            header.style.cursor = 'grab';
-        });
-
-        // Touch drag for mobile
         header.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            dragStartX = e.touches[0].clientX;
-            dragStartY = e.touches[0].clientY;
-            initialLeft = panel.offsetLeft;
-            initialTop = panel.offsetTop;
-            
-            panel.style.position = 'fixed';
-            panel.style.right = 'auto';
-            panel.style.bottom = 'auto';
-        });
-
+            isDragging = true; dragStartX = e.touches[0].clientX; dragStartY = e.touches[0].clientY; initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
+            panel.style.position = 'fixed'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
+        }, {passive: true});
         document.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
-            const dx = e.touches[0].clientX - dragStartX;
-            const dy = e.touches[0].clientY - dragStartY;
-            panel.style.left = (initialLeft + dx) + 'px';
-            panel.style.top = (initialTop + dy) + 'px';
-        });
-
-        document.addEventListener('touchend', () => {
-            isDragging = false;
-        });
+            panel.style.left = (initialLeft + (e.touches[0].clientX - dragStartX)) + 'px';
+            panel.style.top = (initialTop + (e.touches[0].clientY - dragStartY)) + 'px';
+        }, {passive: true});
+        document.addEventListener('touchend', () => isDragging = false);
     }
 });

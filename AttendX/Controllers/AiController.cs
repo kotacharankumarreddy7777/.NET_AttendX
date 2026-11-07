@@ -15,7 +15,7 @@ public class AiController(AppDbContext db, IAiService ai, ICurrentUser user, IOp
     private readonly AiOptions _opts = aiOpts.Value;
 
     [Authorize]
-    public async Task<IActionResult> Index([FromQuery] bool partial = false)
+    public async Task<IActionResult> Index([FromQuery] bool partial = false, [FromQuery] string? q = null)
     {
         var role = User.IsInRole(RoleNames.Admin) ? "Admin"
                  : User.IsInRole(RoleNames.Hod) ? "HOD"
@@ -36,8 +36,9 @@ public class AiController(AppDbContext db, IAiService ai, ICurrentUser user, IOp
         chatHistory.Reverse();
 
         ViewBag.Role = role;
+        ViewBag.Query = q ?? "";
 
-        if (partial) return PartialView(chatHistory);
+        if (partial) return PartialView("_ChatBubble", chatHistory);
         return View(chatHistory);
     }
 
@@ -52,12 +53,37 @@ public class AiController(AppDbContext db, IAiService ai, ICurrentUser user, IOp
                     : User.IsInRole(RoleNames.Faculty) ? "Faculty"
                     : User.IsInRole(RoleNames.Student) ? "Student" : "User";
 
+        // Detect navigation intents (e.g. "go to reports", "go to students", "show report")
+        string msgLower = request.Message.Trim().ToLowerInvariant();
+        string? navUrl = null;
+        if (msgLower.Contains("report") || msgLower.Contains("analytics"))
+        {
+            navUrl = role == "Student" ? "/Reports/Index" : "/Reports/Index";
+        }
+        else if (msgLower.Contains("student"))
+        {
+            navUrl = role is "Admin" or "HOD" or "Faculty" ? "/Students/Index" : "/Student/Index";
+        }
+        else if (msgLower.Contains("dashboard") || msgLower.Contains("home"))
+        {
+            navUrl = role == "Student" ? "/Student/Index" : "/Dashboard/Index";
+        }
+        else if (msgLower.Contains("timetable"))
+        {
+            navUrl = "/Timetable/Index";
+        }
+        else if (msgLower.Contains("notice"))
+        {
+            navUrl = "/Notices/Board";
+        }
+
         string systemPrompt = role switch
         {
             "Student" => """
                 You are a friendly tutor for a student in an Indian college (computer science engineering).
                 Answer their study questions clearly, step-by-step. Use simple English with occasional Hinglish examples if helpful.
                 Keep replies short (under 150 words) and focus on exam preparation.
+                If the student asks to navigate or view a page, give them the numeric classroom id in your helpful answer but no link.
                 """,
             "Faculty" => """
                 You are a teaching assistant for a college faculty member.
@@ -84,6 +110,13 @@ public class AiController(AppDbContext db, IAiService ai, ICurrentUser user, IOp
         };
         _db.AiChatMessages.Add(chatEntry);
         await _db.SaveChangesAsync();
+
+        // Append a URL marker if navigation was detected - the JS agent parses "GO_TO:" tag
+        // We do this server-side so the LLM answer still contains its own text
+        if (!string.IsNullOrEmpty(navUrl))
+        {
+            reply += $"\nGO_TO:{navUrl}";
+        }
 
         return Json(new { success = true, reply });
     }
