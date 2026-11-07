@@ -246,7 +246,7 @@ public class AccountController(SignInManager<ApplicationUser> signIn, UserManage
             pwdOk = true;
 
             await _users.ResetAccessFailedCountAsync(user);
-            user.LastLoginAt = DateTime.Now;
+            user.LastLoginAt = DateTime.UtcNow;
             await _users.UpdateAsync(user);
             await _signIn.SignInAsync(user, m.RememberMe);
             await _audit.LogAsync("Login", "Account", user.Email, actorName: user.Email, actorId: user.Id, details: role);
