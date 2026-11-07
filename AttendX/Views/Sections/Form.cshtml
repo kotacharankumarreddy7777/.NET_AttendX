@@ -1,0 +1,11 @@
+@model SectionFormViewModel
+@{ ViewData["Title"] = Model.Id == null ? "New section" : "Edit section"; }
+<div class="ax-card" style="max-width:560px"><div class="card-h">@ViewData["Title"]</div><div class="card-b">
+<form asp-action="Save" method="post" data-once>
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3"><label asp-for="BranchId" class="form-label">Branch</label><select asp-for="BranchId" asp-items="Model.Branches" class="form-select"><option value="0">Select branch</option></select></div>
+    <div class="mb-3"><label asp-for="Name" class="form-label"></label><input asp-for="Name" class="form-control" placeholder="EV7" /></div>
+    <div class="form-check mb-3"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label"></label></div>
+    <button class="btn btn-ax" type="submit">Save</button> <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+</form></div></div>

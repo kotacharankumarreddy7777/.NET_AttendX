@@ -1,0 +1,36 @@
+@model ReportPageViewModel
+@{ ViewData["Title"] = "Reports"; var f = Model.Filter; var t = Model.Table; bool admin = User.IsInRole("Admin") || User.IsInRole("HOD"); }
+<h1 class="page-title">Reports</h1>
+<form method="get" class="ax-card card-b mb-3 no-print"><input type="hidden" name="run" value="true" /><div class="row g-2">
+    <div class="col-md-3"><label class="form-label small">Report</label><select name="type" class="form-select" asp-items="Model.Types"></select></div>
+    <div class="col-md-3"><label class="form-label small">Branch</label><select name="branchId" id="BranchId" class="form-select" disabled="@Model.BranchLocked"><option value="">All</option>@foreach (var b in Model.Branches) { <option value="@b.Value" selected="@(b.Value == f.BranchId?.ToString())">@b.Text</option> }</select>@if (Model.BranchLocked) { <input type="hidden" name="branchId" value="@f.BranchId" /> }</div>
+    <div class="col-md-2"><label class="form-label small">Section</label><select name="sectionId" id="SectionId" class="form-select"><option value="">All</option>@foreach (var s in Model.Sections) { <option value="@s.Value" selected="@(s.Value == f.SectionId?.ToString())">@s.Text</option> }</select></div>
+    <div class="col-md-2"><label class="form-label small">Semester</label><select name="semester" id="Semester" class="form-select"><option value="">All</option>@for (int i = 1; i <= 8; i++) { <option value="@i" selected="@(f.Semester == i)">@i</option> }</select></div>
+    <div class="col-md-2"><label class="form-label small">Subject</label><select name="subjectId" id="SubjectId" class="form-select"><option value="">All</option>@foreach (var s in Model.Subjects) { <option value="@s.Value" selected="@(s.Value == f.SubjectId?.ToString())">@s.Text</option> }</select></div>
+    @if (admin) { <div class="col-md-3"><label class="form-label small">Faculty</label><select name="facultyId" class="form-select"><option value="">All</option>@foreach (var x in Model.Faculty) { <option value="@x.Value" selected="@(x.Value == f.FacultyId?.ToString())">@x.Text</option> }</select></div> }
+    <div class="col-md-2"><label class="form-label small">From</label><input type="date" name="from" value="@f.From?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-2"><label class="form-label small">To</label><input type="date" name="to" value="@f.To?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-2 d-flex align-items-end"><button class="btn btn-ax w-100" type="submit">Generate</button></div>
+</div></form>
+@if (t != null)
+{
+    var qs = Context.Request.QueryString.Value ?? "";
+    var baseUrl = Url.Action("Export", "Reports") + (qs.Length > 0 ? qs : "?type=" + f.Type);
+    <div class="ax-card"><div class="card-h"><div><b>@t.Title</b><div class="small text-muted">@t.Subtitle</div></div>
+        <div class="no-print d-flex gap-2"><a class="btn btn-sm btn-outline-success" href="@baseUrl&format=excel"><i class="bi bi-file-earmark-excel"></i> Excel</a><a class="btn btn-sm btn-outline-danger" href="@baseUrl&format=pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</a><a class="btn btn-sm btn-outline-secondary" href="@baseUrl&format=csv"><i class="bi bi-filetype-csv"></i> CSV</a><button class="btn btn-sm btn-outline-dark" onclick="window.print()"><i class="bi bi-printer"></i></button></div></div>
+    <div class="table-responsive"><table class="table table-sm table-hover mb-0 dt"><thead><tr>@foreach (var c in t.Columns) { <th>@c</th> }</tr></thead><tbody>
+    @foreach (var r in t.Rows)
+    {
+        <tr>@for (int i = 0; i < r.Length; i++)
+        {
+            if (i == t.PercentColumn && decimal.TryParse(r[i].TrimEnd('%'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var pv)) { <td class="pct @UiHelpers.PctClass(pv, t.Threshold)">@r[i]</td> }
+            else { <td>@r[i]</td> }
+        }</tr>
+    }
+    </tbody>
+    @if (t.Footer != null) { <tfoot><tr class="fw-bold">@foreach (var c in t.Footer) { <td>@c</td> }</tr></tfoot> }
+    </table></div>
+    @if (!t.Rows.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No results found", "Change the filters and try again.")' /> }
+    </div>
+}
+@section Scripts { <script src="~/js/reports.js" asp-append-version="true"></script> }

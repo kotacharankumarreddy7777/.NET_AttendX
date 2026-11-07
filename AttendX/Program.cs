@@ -1,0 +1,156 @@
+using Microsoft.AspNetCore.Identity;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+var urls = $"http://0.0.0.0:{port}";
+Environment.SetEnvironmentVariable("ASPNETCORE_URLS", urls);
+builder.WebHost.UseUrls(urls);
+
+builder.Services.AddResponseCompression(options => { options.EnableForHttps = true; });
+
+var rawCs = Environment.GetEnvironmentVariable("DATABASE_URL")
+          ?? Environment.GetEnvironmentVariable("POSTGRES_URL")
+          ?? builder.Configuration.GetConnectionString("DefaultConnection")
+          ?? "";
+
+if (string.IsNullOrWhiteSpace(rawCs))
+{
+    throw new InvalidOperationException("Connection string 'DefaultConnection' or environment variable DATABASE_URL is missing or empty.");
+}
+
+var cs = ConnectionHelper.ConvertToNpgsqlConnectionString(rawCs);
+
+var usePostgres = rawCs.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+              || rawCs.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+
+builder.Services.Configure<AttendXOptions>(builder.Configuration.GetSection("AttendX"));
+builder.Services.Configure<InstitutionOptions>(builder.Configuration.GetSection("Institution"));
+builder.Services.Configure<AttendXOptions>(o => o.UseMigrations = true);
+
+builder.Services.AddDbContextPool<AppDbContext>(o =>
+{
+    if (usePostgres)
+    {
+        o.UseNpgsql(cs, npgsql =>
+        {
+            npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+            npgsql.CommandTimeout(120);
+        });
+    }
+    else
+    {
+        o.UseSqlServer(cs, sql =>
+        {
+            sql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null);
+            sql.CommandTimeout(120);
+        });
+    }
+});
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
+    {
+        o.Password.RequiredLength = 8;
+        o.Password.RequireDigit = true;
+        o.Password.RequireUppercase = true;
+        o.Password.RequireLowercase = true;
+        o.Password.RequireNonAlphanumeric = true;
+        o.User.RequireUniqueEmail = true;
+        o.Lockout.MaxFailedAccessAttempts = 5;
+        o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+        o.Lockout.AllowedForNewUsers = true;
+    })
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(o =>
+{
+    o.LoginPath = "/Account/Login";
+    o.AccessDeniedPath = "/Account/AccessDenied";
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SameSite = SameSiteMode.Lax;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.ExpireTimeSpan = TimeSpan.FromHours(8);
+    o.SlidingExpiration = true;
+});
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(PolicyNames.AdminOnly, p => p.RequireRole(RoleNames.Admin))
+    .AddPolicy(PolicyNames.AdminOrHod, p => p.RequireRole(RoleNames.Admin, RoleNames.Hod))
+    .AddPolicy(PolicyNames.AnyStaff, p => p.RequireRole(RoleNames.Admin, RoleNames.Hod, RoleNames.Faculty))
+    .AddPolicy(PolicyNames.StudentOnly, p => p.RequireRole(RoleNames.Student));
+
+builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddControllersWithViews(o =>
+{
+    o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+    o.Filters.AddService<ForcePasswordChangeFilter>();
+});
+
+builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddScoped<ForcePasswordChangeFilter>();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IStudentIdService, StudentIdService>();
+builder.Services.AddScoped<IQrService, QrService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<IFacultyService, FacultyService>();
+builder.Services.AddScoped<ITimetableService, TimetableService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IBackupService, BackupService>();
+builder.Services.AddScoped<ICalendarService, CalendarService>();
+builder.Services.AddScoped<INoticeService, NoticeService>();
+builder.Services.AddScoped<IStudentPortalService, StudentPortalService>();
+builder.Services.AddScoped<IMasterDataExportService, MasterDataExportService>();
+builder.Services.AddScoped<DbSeeder>();
+
+var app = builder.Build();
+
+// Seed database on startup with extended timeout for cloud deployment
+using (var scope = app.Services.CreateScope())
+{
+    var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        await seeder.SeedAsync(cts.Token);
+    }
+    catch (OperationCanceledException ex)
+    {
+        log.LogError(ex, "Database seeding timed out after 10 minutes. Application will continue but data may be incomplete.");
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "Database creation/seeding encountered an issue during startup, but application startup continues.");
+    }
+}
+
+if (app.Environment.IsDevelopment()) app.UseDeveloperExceptionPage();
+else { app.UseExceptionHandler("/Error"); app.UseHsts(); }
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers.XContentTypeOptions = "nosniff";
+    ctx.Response.Headers.XFrameOptions = "SAMEORIGIN";
+    ctx.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    ctx.Response.Headers["Permissions-Policy"] = "camera=(self), geolocation=(self)";
+    await next();
+});
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+app.Run();

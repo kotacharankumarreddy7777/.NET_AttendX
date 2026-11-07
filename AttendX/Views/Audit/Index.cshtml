@@ -1,0 +1,19 @@
+@model PagedList<AuditLog>
+@{ ViewData["Title"] = "Audit log"; var actions = (List<string>)ViewBag.Actions; }
+<h1 class="page-title">Audit log</h1>
+<form method="get" class="ax-card card-b mb-3"><div class="row g-2">
+    <div class="col-md-2"><select name="action" class="form-select"><option value="">All actions</option>@foreach (var a in actions) { <option value="@a" selected="@(a == (string?)ViewBag.Action)">@a</option> }</select></div>
+    <div class="col-md-2"><input name="actor" value="@ViewBag.Actor" class="form-control" placeholder="User" /></div>
+    <div class="col-md-2"><input name="search" value="@ViewBag.Search" class="form-control" placeholder="Search id / reason" /></div>
+    <div class="col-md-2"><input type="date" name="from" value="@(((DateTime?)ViewBag.From)?.ToString("yyyy-MM-dd"))" class="form-control" /></div>
+    <div class="col-md-2"><input type="date" name="to" value="@(((DateTime?)ViewBag.To)?.ToString("yyyy-MM-dd"))" class="form-control" /></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+</div></form>
+<div class="ax-card"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Old</th><th>New</th><th>Reason / details</th><th>IP</th></tr></thead><tbody>
+@foreach (var a in Model.Items)
+{
+    <tr><td class="text-nowrap">@a.Timestamp.ToString("dd MMM yy HH:mm:ss")</td><td>@a.ActorName</td><td><span class="badge bg-secondary">@a.Action</span></td><td>@a.EntityType @a.EntityId</td>
+        <td class="small">@a.OldValues</td><td class="small">@a.NewValues</td><td class="small">@a.Reason @a.Details</td><td class="small">@a.IpAddress</td></tr>
+}
+</tbody></table></div></div>
+<partial name="_Pager" model="new PagerModel { Page = Model.Page, TotalPages = Model.TotalPages, TotalCount = Model.TotalCount }" />

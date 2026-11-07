@@ -1,0 +1,21 @@
+@model List<AttendanceQuery>
+@{ ViewData["Title"] = "Student queries"; string status = ViewBag.Status; }
+<h1 class="page-title">Attendance Queries</h1>
+<p class="text-muted">Students ask you to re-check a record. If they are right, fix it in <a asp-controller="Attendance" asp-action="Corrections">Corrections</a> (Admin/HOD) and reply here.</p>
+<div class="mb-3 d-flex gap-2 flex-wrap">@foreach (var st in new[] { "Open", "Resolved", "Rejected", "All" }) { <a class="btn btn-sm @(status == st ? "btn-ax" : "btn-outline-secondary")" asp-action="Index" asp-route-status="@st">@st</a> }</div>
+@if (!Model.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_queries", "No queries", "There are no attendance queries.")' /> }
+@foreach (var q in Model)
+{
+    <div class="ax-card mb-3"><div class="card-b">
+        <div class="d-flex justify-content-between flex-wrap"><div><b>@q.Student!.FullName</b> <code>@q.Student.StudentID</code> - @q.Subject!.SubjectCode on @q.RecordDate.ToString("dd MMM yyyy")</div><span class="badge @(q.Status == "Resolved" ? "bg-success" : q.Status == "Rejected" ? "bg-danger" : "bg-warning text-dark")">@q.Status</span></div>
+        <div class="my-2">@q.Message</div><div class="small text-muted">Sent @q.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
+        @if (q.Status == "Open")
+        {
+            <form asp-action="Respond" asp-route-id="@q.Id" method="post" class="row g-2 mt-2" data-once>
+                <div class="col-md-8"><input name="response" class="form-control" placeholder="Your answer to the student" maxlength="500" required /></div>
+                <div class="col-md-4 d-flex gap-2"><button class="btn btn-success flex-fill" name="decision" value="resolve" type="submit">Resolve</button><button class="btn btn-outline-danger flex-fill" name="decision" value="reject" type="submit">Reject</button></div>
+            </form>
+        }
+        else { <div class="small text-success mt-1"><i class="bi bi-reply"></i> @q.ResponderName: @q.Response</div> }
+    </div></div>
+}

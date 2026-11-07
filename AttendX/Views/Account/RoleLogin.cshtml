@@ -1,0 +1,92 @@
+@model RoleLoginViewModel
+@{
+    Layout = "_AuthLayout";
+    bool isAdmin = Model.Role == "admin", isFaculty = Model.Role == "faculty";
+    string title = isAdmin ? "Administrator Login" : isFaculty ? "Faculty Login" : "Student Login";
+    string idLabel = isFaculty ? "Faculty ID" : "Student ID";
+    ViewData["Title"] = title;
+    string roleVal = Model.Role ?? "";
+}
+@section Scripts {
+    <script>
+        (function () {
+            var role = '@roleVal';
+            if (role !== 'faculty' && role !== 'student') return;
+            var idInput = document.querySelector('#InstitutionId');
+            var emailInput = document.querySelector('#Email');
+            var statusMsg = document.getElementById('lookupStatus');
+            if (!idInput || !emailInput) return;
+
+            function normalizeId(val) {
+                return val.trim().replace(/^([1-8])\1+/, '$1');
+            }
+
+            async function lookup(kind, value) {
+                if (!value || value.length < 3) return;
+                try {
+                    var url = '/account/lookup?role=' + encodeURIComponent(role) +
+                        (kind === 'id' ? '&id=' + encodeURIComponent(normalizeId(value)) : '&email=' + encodeURIComponent(value));
+                    var r = await fetch(url);
+                    var j = await r.json();
+                    if (kind === 'id') {
+                        if (j.email) emailInput.value = j.email;
+                    } else {
+                        if (j.institutionId) idInput.value = j.institutionId;
+                    }
+                    if (statusMsg) {
+                        if (j.email || j.institutionId) {
+                            statusMsg.textContent = 'Account found (' + (j.fullName || '') + ')';
+                            statusMsg.className = 'small text-success mt-1';
+                        } else {
+                            statusMsg.textContent = 'No account found for this ' + kind;
+                            statusMsg.className = 'small text-warning mt-1';
+                        }
+                    }
+                } catch (e) { }
+            }
+
+            idInput.addEventListener('blur', function () { lookup('id', idInput.value); });
+            idInput.addEventListener('input', function () {
+                var val = normalizeId(idInput.value);
+                if (val.length >= 3) {
+                    var autoEmail = val + '@@attendx.edu.in';
+                    if (!emailInput.value) emailInput.value = autoEmail;
+                }
+                if (statusMsg) statusMsg.textContent = '';
+            });
+
+            emailInput.addEventListener('blur', function () { lookup('email', emailInput.value); });
+            emailInput.addEventListener('input', function () {
+                if (statusMsg) statusMsg.textContent = '';
+            });
+        })();
+    </script>
+}
+<div class="auth-panel">
+    <h1>@title</h1>
+    <form id="loginForm" asp-controller="Account" asp-action="Signin" method="post" novalidate>
+        @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+        {
+            <div class="alert alert-danger" role="alert">@ViewData.ModelState[string.Empty]!.Errors[0].ErrorMessage</div>
+        }
+        <input type="hidden" asp-for="Role" /><input type="hidden" asp-for="ReturnUrl" />
+        @if (!isAdmin)
+        {
+            <div class="mb-3"><label asp-for="InstitutionId" class="form-label">@idLabel</label><input asp-for="InstitutionId" class="form-control" autocomplete="off" maxlength="30" autofocus /><span asp-validation-for="InstitutionId" class="text-danger small"></span><div id="lookupStatus" class="small mt-1"></div></div>
+        }
+        <div class="mb-3"><label asp-for="Email" class="form-label">Email</label><input asp-for="Email" type="email" class="form-control" autocomplete="username" autofocus="@isAdmin" /><span asp-validation-for="Email" class="text-danger small"></span></div>
+        <div class="mb-2"><label asp-for="Password" class="form-label">Password</label><div class="pw-wrap"><input asp-for="Password" type="password" class="form-control" autocomplete="current-password" /><button type="button" class="toggle-pw" data-target="Password">Show</button></div><div id="capsHint" class="small text-muted d-none">Caps Lock is on.</div></div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="form-check"><input asp-for="RememberMe" class="form-check-input" /><label asp-for="RememberMe" class="form-check-label">Remember me</label></div>
+            <a href="#forgot" data-bs-toggle="collapse" class="small">Forgot password?</a>
+        </div>
+        <div class="collapse small text-muted mb-3" id="forgot">Contact the administrator to reset your password.</div>
+        <button class="btn btn-ax w-100" type="submit">Login</button>
+    </form>
+    <div class="auth-links">
+        <a asp-controller="Home" asp-action="Index">All logins</a>|
+        @if (!isAdmin) { <a asp-controller="Account" asp-action="AdminLogin">Administrator</a> }
+        @if (isAdmin || !isFaculty) { <a asp-controller="Account" asp-action="FacultyLogin">Faculty</a> }
+        @if (isFaculty || isAdmin) { <a asp-controller="Account" asp-action="StudentLogin">Student</a> }
+    </div>
+</div>

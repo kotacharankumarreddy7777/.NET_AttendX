@@ -1,0 +1,15 @@
+@model List<Holiday>
+@{ ViewData["Title"] = "Holidays & events"; }
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><div><h1 class="page-title mb-0">Holidays &amp; events</h1><small class="text-muted">Sundays are automatic. A "Holiday" blocks attendance and shows the holiday screen to everyone.</small></div><a class="btn btn-ax" asp-action="Create"><i class="bi bi-plus-lg"></i> Add</a></div>
+<div class="ax-card">
+@if (!Model.Any()) { <div class="card-b"><partial name="_EmptyState" model='new EmptyStateModel("holiday", "No holidays", "", "Add Holiday", Url.Action("Create"))' /></div> }
+else {
+<div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Day</th><th>Name</th><th>Type</th><th></th></tr></thead><tbody>
+@foreach (var h in Model)
+{
+    <tr><td>@h.Date.ToString("dd MMM yyyy")</td><td>@h.Date.DayOfWeek</td><td>@h.Name</td><td><span class="badge @(h.Type == "Holiday" ? "bg-danger" : h.Type == "Exam" ? "bg-warning text-dark" : "bg-info text-dark")">@h.Type</span></td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@h.Id">Edit</a>
+        <form asp-action="Delete" asp-route-id="@h.Id" method="post" class="d-inline" data-confirm="Delete this entry?"><button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form></td></tr>
+}
+</tbody></table></div> }
+</div>

@@ -1,0 +1,4 @@
+@model Student
+@{ ViewData["Title"] = "ID Card"; }
+<div class="no-print mb-3"><button class="btn btn-ax" onclick="window.print()">Print</button> <a class="btn btn-outline-secondary" asp-action="Index">Back</a></div>
+<div class="qr-card"><div class="fw-semibold">@Model.Branch!.Name</div><img src="@Url.Action("MyQr", "Student")" width="170" alt="QR code" /><div class="fw-semibold mt-1">@Model.FullName</div><div class="mono">@Model.StudentID</div><div class="small text-muted">@Model.Section!.Name | Semester @Model.Semester</div></div>

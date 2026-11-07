@@ -1,0 +1,11 @@
+@model BranchFormViewModel
+@{ ViewData["Title"] = Model.Id == null ? "New branch" : "Edit branch"; }
+<div class="ax-card" style="max-width:560px"><div class="card-h">@ViewData["Title"]</div><div class="card-b">
+<form asp-action="Save" method="post" data-once>
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3"><label asp-for="Name" class="form-label"></label><input asp-for="Name" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="Code" class="form-label"></label><input asp-for="Code" class="form-control" /><div class="form-text">Used inside Student IDs, e.g. 3EC2-<b>ECE</b>-014.</div></div>
+    <div class="form-check mb-3"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label"></label></div>
+    <button class="btn btn-ax" type="submit">Save</button> <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+</form></div></div>

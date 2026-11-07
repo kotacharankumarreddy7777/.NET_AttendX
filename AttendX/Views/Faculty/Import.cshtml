@@ -1,0 +1,16 @@
+@model ImportResult?
+@{ ViewData["Title"] = "Import faculty"; }
+<h1 class="page-title">Import faculty (CSV)</h1>
+<div class="ax-card mb-3" style="max-width:760px"><div class="card-b">
+    <p>Columns: <code>FacultyID,FullName,Email,Phone,Department,Designation,IsHOD</code> (Department = branch code or name). Valid rows are imported in one transaction; invalid rows are listed. <a asp-action="Template">Download template</a>.</p>
+    <form method="post" enctype="multipart/form-data" data-once>
+        <input type="file" name="file" accept=".csv" class="form-control mb-2" />
+        <input type="text" name="initialPassword" class="form-control mb-3" placeholder="Initial password for all imported accounts (min 8, Aa1@@)" />
+        <button class="btn btn-ax" type="submit">Import</button> <a class="btn btn-outline-secondary" asp-action="Index">Back</a>
+    </form>
+</div></div>
+@if (Model != null)
+{
+    <div class="alert @(Model.Imported > 0 ? "alert-success" : "alert-warning")">Imported @Model.Imported of @Model.Total rows. Imported users must change the initial password at first login.</div>
+    @if (Model.HasErrors) { <div class="ax-card"><div class="card-h">Issues</div><div class="card-b"><ul class="mb-0">@foreach (var e in Model.Errors.Take(100)) { <li>@e</li> }</ul></div></div> }
+}

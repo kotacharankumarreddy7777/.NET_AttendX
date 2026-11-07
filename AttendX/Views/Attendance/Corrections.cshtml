@@ -1,0 +1,19 @@
+@model CorrectionPickerViewModel
+@{ ViewData["Title"] = "Attendance corrections"; }
+<h1 class="page-title">Attendance corrections</h1>
+<p class="text-muted">Admin / HOD only. Pick a past class; every change needs a reason and is stored in the audit log with old and new value.</p>
+<form method="get" class="ax-card card-b mb-3"><div class="row g-2">
+    <div class="col-md-3"><input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-md-3"><select name="branchId" id="BranchId" class="form-select"><option value="">Branch</option>@foreach (var b in Model.Branches) { <option value="@b.Value" selected="@(b.Value == Model.BranchId?.ToString())">@b.Text</option> }</select></div>
+    <div class="col-md-3"><select name="sectionId" id="SectionId" class="form-select"><option value="">Section</option>@foreach (var s in Model.Sections) { <option value="@s.Value" selected="@(s.Value == Model.SectionId?.ToString())">@s.Text</option> }</select></div>
+    <div class="col-md-3"><button class="btn btn-outline-primary w-100" type="submit">Show classes</button></div>
+</div></form>
+@if (Model.SectionId != null)
+{
+    <div class="ax-card"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Period</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Marked</th><th></th></tr></thead><tbody>
+    @foreach (var s in Model.Slots) { <tr><td>@s.Period</td><td>@UiHelpers.Time(s.Start)-@UiHelpers.Time(s.End)</td><td>@s.SubjectCode @s.SubjectName</td><td>@s.FacultyName</td><td>@(s.HasSession ? s.MarkedCount.ToString() : "not marked")</td>
+        <td class="text-end"><a class="btn btn-sm btn-ax" asp-action="Mark" asp-route-id="@s.TimetableId" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")">Open</a></td></tr> }
+    @if (!Model.Slots.Any()) { <tr><td colspan="6" class="text-center text-muted">No classes that day.</td></tr> }
+    </tbody></table></div></div>
+}
+@section Scripts { <script>document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('BranchId'),s=document.getElementById('SectionId');b.addEventListener('change',function(){AttendX.loadSections(b,s,'',false);});});</script> }

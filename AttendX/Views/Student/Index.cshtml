@@ -1,0 +1,132 @@
+@model StudentDashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var s = Model.Student;
+    string bar(decimal p) => p >= Model.Threshold + 10 ? "ok" : p >= Model.Threshold ? "warn" : "bad";
+    int lead = ((int)Model.Heat.First().Date.DayOfWeek + 6) % 7;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+<h1 class="mb-3">Dashboard</h1>
+@if (Model.Total > 0 && Model.Percent < Model.Threshold)
+{
+    <div class="notice-row mb-3" role="alert">Your attendance is @Model.Percent%. The minimum required is @Model.Threshold%.@(Model.ClassesNeeded > 0 ? " Attend the next " + Model.ClassesNeeded + " classes to reach it." : "")</div>
+}
+<div class="ax-card mb-3"><div class="card-h">Student Details</div><div class="card-b"><div class="row g-3 align-items-start">
+    <div class="col-md"><dl class="dl two mb-0">
+        <dt>Name</dt><dd>@s.FullName</dd><dt>Student ID</dt><dd class="mono">@s.StudentID</dd>
+        <dt>Branch</dt><dd>@Model.BranchName</dd><dt>Section</dt><dd>@Model.SectionName</dd>
+        <dt>Semester</dt><dd>@s.Semester</dd><dt>Year</dt><dd>@s.Year</dd>
+        <dt>Email</dt><dd>@s.Email</dd><dt>Phone</dt><dd>@s.Phone</dd>
+        <dt>Date of Joining</dt><dd>@s.JoiningDate.ToString("dd MMM yyyy")</dd><dt>Class Strength</dt><dd>@Model.ClassStrength students</dd>
+        <dt>Last Login</dt><dd>@(Model.LastLogin?.ToString("dd MMM yyyy HH:mm") ?? "-")</dd><dt></dt><dd></dd>
+    </dl></div>
+    <div class="col-md-auto text-center"><img src="@Url.Action("MyQr", "Student")" width="120" height="120" alt="QR code" style="border:1px solid var(--border)" /><div class="small mt-1"><a asp-action="MyQr" asp-route-download="true">Download</a> | <a asp-action="Card" target="_blank">Print</a></div></div>
+</div></div></div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3 col-xl"><div class="ax-card stat"><div><div class="v pct @UiHelpers.PctClass(Model.Percent, Model.Threshold)">@Model.Percent%</div><div class="l">Overall Attendance</div></div></div></div>
+    <div class="col-6 col-md-3 col-xl"><div class="ax-card stat"><div><div class="v">@Model.Threshold%</div><div class="l">Minimum Required</div></div></div></div>
+    <div class="col-6 col-md-3 col-xl"><div class="ax-card stat"><div><div class="v">@Model.Total</div><div class="l">Classes Held</div></div></div></div>
+    <div class="col-6 col-md-3 col-xl"><div class="ax-card stat"><div><div class="v">@Model.Present</div><div class="l">Present</div></div></div></div>
+    <div class="col-6 col-md-3 col-xl"><div class="ax-card stat"><div><div class="v">@Model.Late</div><div class="l">Late</div></div></div></div>
+    <div class="col-6 col-md-3 col-xl"><div class="ax-card stat"><div><div class="v">@Model.Absent</div><div class="l">Absent</div></div></div></div>
+    <div class="col-6 col-md-3 col-xl"><div class="ax-card stat"><div><div class="v">@(Model.ClassesNeeded > 0 ? Model.ClassesNeeded.ToString() : "0")</div><div class="l">Classes Required for Minimum</div></div></div></div>
+</div>
+
+<div class="ax-card mb-3"><div class="card-h">Subject-wise Attendance</div>
+    @if (!Model.Subjects.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No attendance recorded", "Records appear after the first class.")' /> }
+    else {
+    <div class="table-responsive"><table class="table table-hover"><thead><tr><th>Code</th><th>Subject</th><th>Faculty</th><th>Held</th><th>Present</th><th>Late</th><th>Absent</th><th style="min-width:150px">Attendance</th></tr></thead><tbody>
+    @foreach (var x in Model.Subjects)
+    {
+        <tr><td class="mono">@x.Code</td><td>@x.Name</td><td>@x.FacultyName</td><td>@x.Total</td><td>@x.Present</td><td>@x.Late</td><td>@x.Absent</td>
+            <td><span class="pct @UiHelpers.PctClass(x.Percent, Model.Threshold)">@x.Percent%</span><div class="bar-track mt-1"><div class="bar-fill @bar(x.Percent)" style="width:@(x.Percent.ToString("0.#", inv))%"></div></div></td></tr>
+    }
+    </tbody></table></div> }
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">Today's Classes</div>
+        @if (Model.NonWorkingReason == "Sunday") { <partial name="_EmptyState" model='new EmptyStateModel("sunday", "No classes today", "Today is Sunday." + (Model.NextClassText == null ? "" : " Next class: " + Model.NextClassText))' /> }
+        else if (Model.NonWorkingReason != null) { <partial name="_EmptyState" model='new EmptyStateModel("holiday", "No classes today", "Holiday: " + Model.NonWorkingReason + "." + (Model.NextClassText == null ? "" : " Next class: " + Model.NextClassText))' /> }
+        else if (!Model.TodayClasses.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_classes", "No classes scheduled", "There are no periods today.")' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Period</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Room</th><th>Status</th></tr></thead><tbody>
+        @foreach (var c in Model.TodayClasses)
+        {
+            <tr><td>@c.Period</td><td>@UiHelpers.Time(c.Start)-@UiHelpers.Time(c.End)</td><td>@c.SubjectCode</td><td>@c.FacultyName</td><td>@c.Room</td>
+                <td>@if (c.MyStatus != null) { <span class="badge @(c.MyStatus == "Present" ? "bg-success" : c.MyStatus == "Late" ? "bg-warning" : "bg-danger")">@c.MyStatus</span> } else { <span class="text-muted">@(c.State == "Closed" ? "Not recorded" : c.State)</span> }</td></tr>
+        }
+        </tbody></table></div>
+        @if (Model.TodayClasses.All(c => c.State == "Closed")) { <div class="card-b pt-0 text-muted small">All periods for today are over.@(Model.NextClassText != null ? " Next class: " + Model.NextClassText : "")</div> } }
+    </div></div>
+    <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h">Attendance Calendar (last 5 weeks)</div><div class="card-b">
+        <div class="cal">
+            @foreach (var d in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }) { <div class="hd">@d</div> }
+            @for (int i = 0; i < lead; i++) { <div class="h blank"></div> }
+            @foreach (var h in Model.Heat) { <div class="h @h.Css" title="@h.Tip" aria-label="@h.Tip"></div> }
+        </div>
+        <div class="legend"><span><i style="background:#2E9467"></i>Present</span><span><i style="background:#E0A41F"></i>Late / partial</span><span><i style="background:#D1453B"></i>Absent</span><span><i style="background:#E3E8EF"></i>No class</span><span><i style="background:repeating-linear-gradient(45deg,#E3E8EF,#E3E8EF 3px,#F5F7FA 3px,#F5F7FA 6px)"></i>Holiday / Sunday</span></div>
+    </div></div></div>
+</div>
+
+<div class="ax-card mb-3"><div class="card-h">Weekly Timetable</div>
+    @if (!Model.Week.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_timetable", "Timetable not available", "The timetable has not been published.")' /> }
+    else { <partial name="_WeekGrid" model='new WeekGridModel { Periods = Model.Periods, Week = Model.Week, Caption = "Faculty" }' /> }
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">Recent Attendance</div>
+        @if (!Model.Recent.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No attendance recorded", "Records appear after the first class.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>Status</th><th>Source</th></tr></thead><tbody>
+        @foreach (var r in Model.Recent) { <tr><td>@r.Date.ToString("dd MMM yyyy")</td><td>@r.Period</td><td>@r.Subject!.SubjectCode</td><td><span class="badge @(r.Status == AttendanceStatus.Present ? "bg-success" : r.Status == AttendanceStatus.Late ? "bg-warning" : "bg-danger")">@r.Status</span></td><td>@r.Source</td></tr> }
+        </tbody></table></div> }
+    </div></div>
+    <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h">My Faculty</div>
+        @if (!Model.Faculty.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_timetable", "No faculty assigned", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Faculty</th><th>Subject</th></tr></thead><tbody>
+        @foreach (var f in Model.Faculty) { <tr><td>@f.Name<br /><a class="small" href="mailto:@f.Email">@f.Email</a></td><td>@f.Subject</td></tr> }
+        </tbody></table></div> }
+    </div></div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">Notices <a class="btn btn-sm btn-outline-primary" asp-controller="Notices" asp-action="Board">View All</a></div><div class="card-b">
+        @if (!Model.Notices.Any()) { <span class="text-muted">No notices.</span> }
+        @foreach (var n in Model.Notices) { <div class="mb-3"><b>@n.Title</b> <span class="small text-muted">@n.PublishedAt.ToString("dd MMM yyyy")</span><div class="small">@n.Body</div></div> }
+    </div></div></div>
+    <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h">Holidays and Events</div>
+        @if (!Model.Holidays.Any()) { <div class="card-b text-muted">No upcoming holidays or events.</div> }
+        else {
+        <div class="table-responsive"><table class="table table-sm"><tbody>
+        @foreach (var h in Model.Holidays) { <tr><td>@h.Date.ToString("ddd, dd MMM yyyy")</td><td>@h.Name</td><td><span class="badge bg-secondary">@h.Type</span></td></tr> }
+        </tbody></table></div> }
+    </div></div>
+</div>
+
+<div class="ax-card mb-3" id="queries"><div class="card-h">Attendance Query</div><div class="card-b">
+    <form asp-action="Query" method="post" class="row g-2 mb-3" data-once>
+        <div class="col-md-3"><label class="form-label">Class date</label><input type="date" name="date" class="form-control" max="@DateTime.Today.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd")" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+        <div class="col-md-4"><label class="form-label">Subject</label><select name="subjectId" class="form-select" asp-items="Model.SubjectOptions" required></select></div>
+        <div class="col-md-5"><label class="form-label">Remarks</label><input name="message" class="form-control" maxlength="500" required /></div>
+        <div class="col-12"><button class="btn btn-ax" type="submit">Submit Query</button></div>
+    </form>
+    @if (!Model.Queries.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_queries", "No queries", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+    else {
+    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Subject</th><th>Remarks</th><th>Status</th><th>Response</th></tr></thead><tbody>
+    @foreach (var q in Model.Queries) { <tr><td>@q.RecordDate.ToString("dd MMM yyyy")</td><td>@q.Subject!.SubjectCode</td><td>@q.Message</td><td><span class="badge @(q.Status == "Resolved" ? "bg-success" : q.Status == "Rejected" ? "bg-danger" : "bg-warning")">@q.Status</span></td><td>@q.Response</td></tr> }
+    </tbody></table></div> }
+</div></div>
+
+<div class="row g-3">
+    <div class="col-lg-6"><div class="ax-card h-100"><div class="card-h">Profile and Downloads</div><div class="card-b">
+        <form asp-action="UpdatePhone" method="post" class="row g-2 mb-3"><div class="col"><label class="form-label">Phone</label><input name="phone" class="form-control" value="@s.Phone" /></div><div class="col-auto d-flex align-items-end"><button class="btn btn-outline-primary" type="submit">Update</button></div></form>
+        <div class="d-flex flex-wrap gap-2"><a class="btn btn-ax" asp-action="Report">Download Attendance Report (PDF)</a><a class="btn btn-outline-secondary" asp-controller="Account" asp-action="ChangePassword">Change Password</a></div>
+    </div></div></div>
+    <div class="col-lg-6"><div class="ax-card h-100"><div class="card-h">Recent Sign-ins</div><div class="table-responsive"><table class="table table-sm"><tbody>
+        @foreach (var l in Model.Logins) { <tr><td>@l.Timestamp.ToString("dd MMM yyyy HH:mm")</td><td class="text-muted">@l.IpAddress</td></tr> }
+        @if (!Model.Logins.Any()) { <tr><td class="text-muted">No sign-ins recorded.</td></tr> }
+    </tbody></table></div></div></div>
+</div>

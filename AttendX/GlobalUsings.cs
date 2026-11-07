@@ -1,0 +1,9 @@
+global using System.ComponentModel.DataAnnotations;
+global using Microsoft.AspNetCore.Authorization;
+global using Microsoft.AspNetCore.Mvc;
+global using Microsoft.EntityFrameworkCore;
+global using AttendX.Data;
+global using AttendX.Infrastructure;
+global using AttendX.Models;
+global using AttendX.Services;
+global using AttendX.ViewModels;

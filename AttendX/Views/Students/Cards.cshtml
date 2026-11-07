@@ -1,0 +1,13 @@
+@model List<Student>
+@{ ViewData["Title"] = "QR ID cards"; }
+<div class="no-print mb-3"><button class="btn btn-ax" onclick="window.print()"><i class="bi bi-printer"></i> Print</button> <a class="btn btn-outline-secondary" href="javascript:history.back()">Back</a></div>
+@foreach (var s in Model)
+{
+    <div class="qr-card">
+        <div class="fw-bold">AttendX</div>
+        <img src="@Url.Action("Qr", "Students", new { id = s.Id })" width="170" alt="QR" />
+        <div class="fw-semibold mt-1">@s.FullName</div>
+        <code>@s.StudentID</code>
+        <div class="small text-muted">@s.Branch!.Name - @s.Section!.Name - Sem @s.Semester</div>
+    </div>
+}

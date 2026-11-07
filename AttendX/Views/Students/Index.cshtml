@@ -1,0 +1,31 @@
+@model StudentListViewModel
+@{ ViewData["Title"] = "Students"; bool locked = ViewBag.Locked; bool admin = User.IsInRole("Admin"); }
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><h1 class="page-title">Students</h1>
+@if (admin) { <div class="d-flex gap-2"><a class="btn btn-outline-primary" asp-action="Import"><i class="bi bi-upload"></i> Import CSV</a><a class="btn btn-ax" asp-action="Create"><i class="bi bi-plus-lg"></i> New student</a></div> }</div>
+<form method="get" class="ax-card card-b mb-3"><div class="row g-2">
+    <div class="col-md-3"><input name="search" value="@Model.Search" class="form-control" placeholder="Search name, ID, email, phone" /></div>
+    <div class="col-md-2"><select name="branchId" id="BranchId" class="form-select" disabled="@locked"><option value="">All branches</option>@foreach (var b in Model.Branches) { <option value="@b.Value" selected="@(b.Value == Model.BranchId?.ToString())">@b.Text</option> }</select>@if (locked) { <input type="hidden" name="branchId" value="@Model.BranchId" /> }</div>
+    <div class="col-md-2"><select name="sectionId" id="SectionId" class="form-select"><option value="">All sections</option>@foreach (var s in Model.Sections) { <option value="@s.Value" selected="@(s.Value == Model.SectionId?.ToString())">@s.Text</option> }</select></div>
+    <div class="col-md-1"><select name="semester" class="form-select"><option value="">Sem</option>@for (int i = 1; i <= 8; i++) { <option value="@i" selected="@(Model.Semester == i)">@i</option> }</select></div>
+    <div class="col-md-1"><select name="year" class="form-select"><option value="">Year</option>@for (int i = 1; i <= 4; i++) { <option value="@i" selected="@(Model.Year == i)">@i</option> }</select></div>
+    <div class="col-md-1"><select name="status" class="form-select"><option value="active" selected="@(Model.Status == "active")">Active</option><option value="inactive" selected="@(Model.Status == "inactive")">Inactive</option><option value="all" selected="@(Model.Status == "all")">All</option></select></div>
+    <div class="col-md-2 d-flex gap-2"><button class="btn btn-outline-primary flex-grow-1" type="submit">Filter</button><a class="btn btn-outline-secondary" asp-action="Index">Clear</a></div>
+</div></form>
+@if (Model.SectionId != null && Model.BranchId != null) { <p><a class="btn btn-sm btn-outline-dark" asp-action="Cards" asp-route-branchId="@Model.BranchId" asp-route-sectionId="@Model.SectionId" asp-route-semester="@Model.Semester"><i class="bi bi-printer"></i> Print QR ID cards for this section</a>
+@if (admin) { <form asp-action="BulkQr" method="post" class="d-inline"><input type="hidden" name="branchId" value="@Model.BranchId" /><input type="hidden" name="sectionId" value="@Model.SectionId" /><input type="hidden" name="semester" value="@Model.Semester" /><button class="btn btn-sm btn-outline-dark" type="submit">Generate missing QR codes</button></form> }</p> }
+<div class="ax-card"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th></th><th>Student ID</th><th>Name</th><th>Branch / Section</th><th>Sem / Year</th><th>Phone</th><th>Status</th><th></th></tr></thead><tbody>
+@foreach (var s in Model.Page.Items)
+{
+    <tr><td>@if (!string.IsNullOrEmpty(s.PhotoPath)) { <img class="avatar" src="~/@s.PhotoPath" alt="" /> } else { <span class="avatar">@UiHelpers.Initials(s.FullName)</span> }</td>
+        <td><code>@s.StudentID</code></td><td><a asp-action="Details" asp-route-id="@s.Id">@s.FullName</a><br /><small class="text-muted">@s.Email</small></td>
+        <td>@s.Branch!.Code / @s.Section!.Name</td><td>@s.Semester / @s.Year</td><td>@s.Phone</td>
+        <td>@if (s.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</td>
+        <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@s.Id">View</a>
+            @if (admin) { <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@s.Id">Edit</a>
+            <form asp-action="SetActive" asp-route-id="@s.Id" asp-route-active="@(!s.IsActive)" method="post" class="d-inline" data-confirm="@(s.IsActive ? "Deactivate this student? Attendance history is kept." : "Reactivate this student?")"><button class="btn btn-sm btn-outline-danger" type="submit">@(s.IsActive ? "Deactivate" : "Reactivate")</button></form> }</td></tr>
+}
+</tbody></table></div>
+@if (!Model.Page.Items.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No results found", "Change the filters and try again.", "Clear Filters", Url.Action("Index"))' /> }
+</div>
+<partial name="_Pager" model="new PagerModel { Page = Model.Page.Page, TotalPages = Model.Page.TotalPages, TotalCount = Model.Page.TotalCount }" />
+@section Scripts { <script>document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('BranchId'),s=document.getElementById('SectionId');if(b&&s&&!b.disabled)b.addEventListener('change',function(){AttendX.loadSections(b,s,'',true);});});</script> }

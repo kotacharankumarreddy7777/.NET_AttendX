@@ -1,0 +1,11 @@
+@model Holiday
+@{ ViewData["Title"] = Model.Id == 0 ? "Add holiday / event" : "Edit holiday / event"; }
+<div class="ax-card" style="max-width:520px"><div class="card-h">@ViewData["Title"]</div><div class="card-b">
+<form asp-action="Save" method="post" data-once>
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3"><label asp-for="Date" class="form-label"></label><input asp-for="Date" type="date" class="form-control" value="@Model.Date.ToString("yyyy-MM-dd")" /></div>
+    <div class="mb-3"><label asp-for="Name" class="form-label"></label><input asp-for="Name" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="Type" class="form-label"></label><select asp-for="Type" class="form-select"><option value="Holiday">Holiday (blocks attendance)</option><option value="Event">Event</option><option value="Exam">Exam</option></select></div>
+    <button class="btn btn-ax" type="submit">Save</button> <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+</form></div></div>

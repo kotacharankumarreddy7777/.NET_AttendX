@@ -1,0 +1,47 @@
+@model MarkPageViewModel
+@{ ViewData["Title"] = "Mark attendance"; }
+<div class="ax-card mb-3"><div class="card-b d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div><h4 class="mb-0">@Model.SubjectCode - @Model.SubjectName</h4>
+        <div class="text-muted">@Model.BranchCode / section @Model.SectionName - Period @Model.Period (@UiHelpers.Time(Model.Start)-@UiHelpers.Time(Model.End)) - room @Model.Room - @Model.Date.ToString("dd MMM yyyy") - @Model.FacultyName</div></div>
+    <div class="text-end">
+        @if (Model.IsCorrection) { <span class="badge bg-warning text-dark">Correction mode (reason required)</span> } else { <span id="countdown" class="badge bg-success"></span> }
+        @if (Model.CanScanQr) { <a class="btn btn-sm btn-outline-primary ms-2" asp-action="Scan" asp-route-id="@Model.TimetableId"><i class="bi bi-qr-code-scan"></i> Scan QR</a> }
+    </div>
+</div></div>
+<form id="markForm" method="post" asp-action="Mark" data-once-off data-tt="@Model.TimetableId" data-date="@Model.Date.ToString("yyyy-MM-dd")" data-end-ms="@Model.WindowEndMs" data-now-ms="@Model.ServerNowMs" data-location="@Model.LocationRequirement" data-offline="@(Model.OfflineEnabled ? "true" : "false")">
+    <input type="hidden" name="TimetableId" value="@Model.TimetableId" />
+    <input type="hidden" name="Date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+    <input type="hidden" name="DeviceId" id="DeviceId" /><input type="hidden" name="Latitude" id="Latitude" /><input type="hidden" name="Longitude" id="Longitude" />
+    <div class="ax-card">
+        <div class="card-h"><div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-success" id="allP">All Present</button>
+            <button type="button" class="btn btn-sm btn-danger" id="allA">All Absent</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="resetBtn">Reset</button></div>
+            <div class="small">Present <b id="cP">0</b> - Absent <b id="cA">0</b> - Late <b id="cL">0</b> - Unmarked <b id="cU">0</b></div></div>
+        <div class="card-b">
+        @foreach (var s in Model.Students)
+        {
+            <div class="mark-row d-flex flex-wrap align-items-center justify-content-between gap-2" data-id="@s.Id">
+                <div class="d-flex align-items-center gap-2">
+                    @if (!string.IsNullOrEmpty(s.PhotoPath)) { <img class="avatar" src="~/@s.PhotoPath" alt="" /> } else { <span class="avatar">@UiHelpers.Initials(s.FullName)</span> }
+                    <div><div class="fw-semibold">@s.FullName</div><small class="text-muted">@s.StudentID</small></div>
+                </div>
+                <div class="btn-group status-radio" role="group">
+                    @foreach (var opt in new[] { "Present", "Absent", "Late" })
+                    {
+                        var id = $"s{s.Id}_{opt}";
+                        <input type="radio" class="btn-check" name="Status[@s.Id]" id="@id" value="@opt" checked="@(s.CurrentStatus == opt)" />
+                        <label class="btn btn-sm @(opt == "Present" ? "btn-outline-success" : opt == "Absent" ? "btn-outline-danger" : "btn-outline-warning")" for="@id">@opt</label>
+                    }
+                </div>
+            </div>
+        }
+        @if (!Model.Students.Any()) { <p class="text-muted mb-0">No active students in this class.</p> }
+        </div>
+        <div class="sticky-save">
+            @if (Model.IsCorrection) { <input name="Reason" class="form-control mb-2" placeholder="Reason for correction (required, saved in the audit log)" required /> }
+            <button class="btn btn-ax btn-lg-mobile" type="submit"><i class="bi bi-save"></i> Save attendance</button>
+        </div>
+    </div>
+</form>
+@section Scripts { <script src="~/js/attendance.js" asp-append-version="true"></script> }

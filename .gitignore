@@ -1,0 +1,32 @@
+bin/
+obj/
+.vs/
+*.user
+AttendX/App_Data/
+AttendX/wwwroot/uploads/students/*
+AttendX/wwwroot/QRCodes/*
+!AttendX/wwwroot/uploads/students/.gitkeep
+!AttendX/wwwroot/QRCodes/.gitkeep
+
+# Local databases and database backups
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+*.bak
+
+# Secrets and local environment settings
+.env
+.env.*
+!.env.example
+**/secrets.json
+**/appsettings.Local.json
+
+# Certificates and private keys
+*.pfx
+*.p12
+*.key
+
+# Kilo agent state
+.kilo/

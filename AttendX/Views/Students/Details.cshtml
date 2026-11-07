@@ -1,0 +1,30 @@
+@model StudentDetailsViewModel
+@{ ViewData["Title"] = Model.Student.FullName; var s = Model.Student; }
+<div class="row g-3">
+    <div class="col-lg-4"><div class="ax-card"><div class="card-b text-center">
+        @if (!string.IsNullOrEmpty(s.PhotoPath)) { <img class="avatar avatar-lg mb-2" src="~/@s.PhotoPath" alt="" /> } else { <div class="avatar avatar-lg mb-2">@UiHelpers.Initials(s.FullName)</div> }
+        <h4 class="mb-0">@s.FullName</h4><code>@s.StudentID</code>
+        <div class="mt-2">@if (s.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</div>
+        <hr /><img src="@Url.Action("Qr", new { id = s.Id })" width="190" alt="QR code" />
+        <div class="d-flex gap-2 justify-content-center mt-2 flex-wrap">
+            <a class="btn btn-sm btn-outline-primary" href="@Url.Action("Qr", new { id = s.Id, download = true })">Download QR</a>
+            <a class="btn btn-sm btn-outline-dark" asp-action="Card" asp-route-id="@s.Id" target="_blank">Print card</a>
+            @if (User.IsInRole("Admin")) { <form asp-action="RegenerateQr" asp-route-id="@s.Id" method="post" data-confirm="Regenerate QR? The image is replaced."><button class="btn btn-sm btn-outline-warning" type="submit">Regenerate</button></form> }
+        </div>
+        <hr /><dl class="row text-start mb-0 small"><dt class="col-4">Branch</dt><dd class="col-8">@s.Branch!.Name</dd><dt class="col-4">Section</dt><dd class="col-8">@s.Section!.Name</dd><dt class="col-4">Sem / Year</dt><dd class="col-8">@s.Semester / @s.Year</dd><dt class="col-4">Email</dt><dd class="col-8">@s.Email</dd><dt class="col-4">Phone</dt><dd class="col-8">@s.Phone</dd><dt class="col-4">Joined</dt><dd class="col-8">@s.JoiningDate.ToString("dd MMM yyyy")</dd></dl>
+        @if (User.IsInRole("Admin")) { <a class="btn btn-sm btn-ax mt-3" asp-action="Edit" asp-route-id="@s.Id">Edit student</a> }
+    </div></div></div>
+    <div class="col-lg-8">
+        <div class="ax-card mb-3"><div class="card-b d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div><div class="text-muted small">Overall attendance</div><div class="display-6 pct @UiHelpers.PctClass(Model.OverallPercent, Model.Threshold)">@Model.OverallPercent%</div><small class="text-muted">@Model.Total classes - threshold @Model.Threshold%</small></div>
+            @if (Model.Total > 0) { <span class="badge fs-6 @UiHelpers.RiskBadge(Model.Risk)">@Model.Risk</span> }
+        </div></div>
+        <div class="ax-card mb-3"><div class="card-h">Subject-wise attendance</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Subject</th><th>Total</th><th>P</th><th>L</th><th>A</th><th>%</th></tr></thead><tbody>
+        @foreach (var x in Model.Subjects) { <tr><td>@x.Subject</td><td>@x.Total</td><td>@x.Present</td><td>@x.Late</td><td>@x.Absent</td><td class="pct @UiHelpers.PctClass(x.Percent, Model.Threshold)">@x.Percent%</td></tr> }
+        @if (!Model.Subjects.Any()) { <tr><td colspan="6" class="text-muted text-center">No attendance recorded yet.</td></tr> }
+        </tbody></table></div></div>
+        <div class="ax-card"><div class="card-h">Recent records</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>Status</th><th>Source</th></tr></thead><tbody>
+        @foreach (var r in Model.Recent) { <tr><td>@r.Date.ToString("dd MMM yyyy")</td><td>@r.Period</td><td>@r.Subject!.SubjectCode</td><td><span class="badge @(r.Status == AttendanceStatus.Present ? "bg-success" : r.Status == AttendanceStatus.Late ? "bg-warning text-dark" : "bg-danger")">@r.Status</span></td><td>@r.Source</td></tr> }
+        </tbody></table></div></div>
+    </div>
+</div>

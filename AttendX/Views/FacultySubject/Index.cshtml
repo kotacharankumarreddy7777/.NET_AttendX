@@ -1,0 +1,16 @@
+@model List<FacultySubjectMapping>
+@{ ViewData["Title"] = "Faculty - Subject mapping"; var fac = (List<SelectListItem>)ViewBag.Faculty; int? fid = ViewBag.FacultyId; bool admin = User.IsInRole("Admin"); }
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><div><h1 class="page-title mb-0">Faculty - Subject mapping</h1><small class="text-muted">Academic year @ViewBag.Year</small></div>
+@if (admin) { <a class="btn btn-ax" asp-action="Create"><i class="bi bi-plus-lg"></i> Assign subject</a> }</div>
+<form method="get" class="ax-card card-b mb-3 d-flex gap-2 flex-wrap">
+    <select name="facultyId" class="form-select w-auto"><option value="">All faculty</option>@foreach (var f in fac) { <option value="@f.Value" selected="@(f.Value == fid?.ToString())">@f.Text</option> }</select>
+    <button class="btn btn-outline-primary" type="submit">Filter</button>
+</form>
+<div class="ax-card"><div class="table-responsive"><table class="table table-hover mb-0 dt"><thead><tr><th>Faculty</th><th>Subject</th><th>Branch</th><th>Section</th><th>Sem</th><th>Status</th><th></th></tr></thead><tbody>
+@foreach (var m in Model)
+{
+    <tr class="@(m.Active ? "" : "text-muted")"><td>@m.Faculty!.FullName</td><td>@m.Subject!.SubjectCode - @m.Subject.SubjectName</td><td>@m.Branch!.Code</td><td>@m.Section!.Name</td><td>@m.Semester</td>
+        <td>@(m.Active ? "Active" : "Removed")</td>
+        <td class="text-end">@if (admin && m.Active) { <form asp-action="Remove" asp-route-id="@m.Id" method="post" data-confirm="Remove this assignment?"><button class="btn btn-sm btn-outline-danger" type="submit">Remove</button></form> }</td></tr>
+}
+</tbody></table></div></div>

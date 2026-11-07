@@ -1,0 +1,20 @@
+@model NoticeFormViewModel
+@{ ViewData["Title"] = Model.Id == null ? "New notice" : "Edit notice"; bool hod = User.IsInRole("HOD") && !User.IsInRole("Admin"); }
+<div class="ax-card" style="max-width:720px"><div class="card-h">@ViewData["Title"]</div><div class="card-b">
+<form asp-action="Save" method="post" data-once>
+    <div asp-validation-summary="All" class="text-danger small"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3"><label asp-for="Title" class="form-label"></label><input asp-for="Title" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="Body" class="form-label"></label><textarea asp-for="Body" rows="5" class="form-control"></textarea></div>
+    <div class="row g-3">
+        <div class="col-md-4"><label asp-for="Audience" class="form-label"></label><select asp-for="Audience" id="Audience" class="form-select">
+            @if (!hod) { <option value="All">Everyone</option><option value="Faculty">All faculty</option><option value="Student">All students</option> }
+            <option value="Branch">One branch</option><option value="Section">One section</option></select></div>
+        <div class="col-md-4"><label asp-for="BranchId" class="form-label">Branch</label><select asp-for="BranchId" id="BranchId" asp-items="Model.Branches" class="form-select"><option value="">-</option></select></div>
+        <div class="col-md-4"><label asp-for="SectionId" class="form-label">Section</label><select asp-for="SectionId" id="SectionId" asp-items="Model.Sections" class="form-select"><option value="">-</option></select></div>
+        <div class="col-md-4"><label asp-for="ExpiresAt" class="form-label">Expires on (optional)</label><input asp-for="ExpiresAt" type="date" class="form-control" /></div>
+        <div class="col-md-4 d-flex align-items-end"><div class="form-check"><input asp-for="IsPinned" class="form-check-input" /><label asp-for="IsPinned" class="form-check-label">Pin to the top</label></div></div>
+    </div>
+    <div class="mt-3"><button class="btn btn-ax" type="submit">Publish</button> <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a></div>
+</form></div></div>
+@section Scripts { <script>document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('BranchId'),s=document.getElementById('SectionId');if(b&&s)b.addEventListener('change',function(){AttendX.loadSections(b,s,'',true);});});</script> }

@@ -1,0 +1,14 @@
+@model List<Notice>
+@{ ViewData["Title"] = "Notice board"; }
+<h1 class="page-title">Notice board</h1>
+@if (!Model.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_notices", "No notices", "There are no notices.")' /> }
+<div class="row g-3">
+@foreach (var n in Model)
+{
+    <div class="col-md-6"><div class="ax-card h-100"><div class="card-b">
+        <div class="d-flex justify-content-between"><b>@if (n.IsPinned) { <i class="bi bi-pin-angle-fill text-warning"></i> } @n.Title</b><span class="badge bg-secondary">@n.Audience</span></div>
+        <div class="small text-muted mb-2">@n.PublishedAt.ToString("dd MMM yyyy HH:mm") - @n.CreatedBy@(n.ExpiresAt != null ? " - until " + n.ExpiresAt.Value.ToString("dd MMM") : "")</div>
+        <div style="white-space:pre-line">@n.Body</div>
+    </div></div></div>
+}
+</div>

@@ -1,0 +1,28 @@
+@model List<SlotView>
+@{ ViewData["Title"] = "Today's Classes"; DateTime today = ViewBag.Today; bool mine = ViewBag.Mine; }
+<h1 class="page-title">@(mine ? "My classes today" : "Classes today") <small class="text-muted fs-6">@today.ToString("dddd, dd MMM yyyy")</small></h1>
+<p class="text-muted">Attendance can be marked only while a period is open (period time +/- grace minutes, server clock). Closed periods can be corrected by Admin/HOD with a reason.</p>
+@{ string? nonWorking = ViewBag.NonWorking; }
+@if (!Model.Any())
+{
+    if (nonWorking == "Sunday") { <partial name="_EmptyState" model='new EmptyStateModel("sunday", "No classes today", "Today is Sunday.")' /> }
+    else if (nonWorking != null) { <partial name="_EmptyState" model='new EmptyStateModel("holiday", "No classes today", "Holiday: " + nonWorking + ".")' /> }
+    else { <partial name="_EmptyState" model='new EmptyStateModel("no_classes", "No classes scheduled", "There are no periods today.")' /> }
+}
+<div class="row g-3">
+@foreach (var s in Model)
+{
+    <div class="col-md-6 col-xl-4"><div class="ax-card h-100"><div class="card-b">
+        <div class="d-flex justify-content-between"><b>Period @s.Period</b><span class="badge @(s.State == "Open" ? "bg-success" : s.State == "Closed" ? "bg-secondary" : "bg-primary")">@s.State</span></div>
+        <div class="text-muted small">@UiHelpers.Time(s.Start) - @UiHelpers.Time(s.End) - room @s.Room</div>
+        <div class="fw-semibold mt-1">@s.SubjectCode @s.SubjectName</div>
+        <div class="small">@s.BranchCode / @s.SectionName - @s.FacultyName</div>
+        @if (s.HasSession) { <div class="small mt-1"><span class="badge bg-info text-dark">@s.MarkedCount students marked</span></div> }
+        @if (s.State == "Open") { <div class="small text-success mt-1">@s.RemainingMinutes minutes left</div> }
+        <div class="mt-2 d-flex gap-2 flex-wrap">
+            @if (s.State == "Open" || User.IsInRole("Admin") || User.IsInRole("HOD")) { <a class="btn btn-sm btn-ax" asp-action="Mark" asp-route-id="@s.TimetableId">@(s.State == "Open" ? "Mark attendance" : "Open / correct")</a> }
+            @if (s.State == "Open" && mine) { <a class="btn btn-sm btn-outline-primary" asp-action="Scan" asp-route-id="@s.TimetableId"><i class="bi bi-qr-code-scan"></i> Scan QR</a> }
+        </div>
+    </div></div></div>
+}
+</div>

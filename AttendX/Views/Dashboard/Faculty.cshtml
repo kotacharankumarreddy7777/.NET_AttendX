@@ -1,0 +1,83 @@
+@model FacultyDashboardViewModel
+@{ ViewData["Title"] = "Dashboard"; var ex = Model.Extra; var f = Model.Faculty; }
+<h1 class="mb-3">Dashboard</h1>
+<div class="ax-card mb-3"><div class="card-h">Faculty Details</div><div class="card-b">
+    <dl class="dl two mb-0">
+        <dt>Faculty ID</dt><dd class="mono">@f.FacultyID</dd><dt>Name</dt><dd>@f.FullName</dd>
+        <dt>Department</dt><dd>@Model.Department</dd><dt>Designation</dt><dd>@f.Designation@(f.IsHOD ? " (Head of Department)" : "")</dd>
+        <dt>Email</dt><dd>@f.Email</dd><dt>Phone</dt><dd>@f.Phone</dd>
+        <dt>Last Login</dt><dd>@(ex.LastLogin?.ToString("dd MMM yyyy HH:mm") ?? "-")</dd><dt></dt><dd></dd>
+    </dl>
+</div></div>
+@if (Model.Current != null)
+{
+    <div class="ax-card mb-3"><div class="card-h">Current Class</div><div class="card-b d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div><b>@Model.Current.SubjectCode @Model.Current.SubjectName</b><div class="text-muted">Class @Model.Current.SectionName | Period @Model.Current.Period (@UiHelpers.Time(Model.Current.Start) - @UiHelpers.Time(Model.Current.End)) | Room @Model.Current.Room | @Model.Current.RemainingMinutes minutes remaining</div></div>
+        <div class="d-flex gap-2"><a class="btn btn-ax" asp-controller="Attendance" asp-action="Mark" asp-route-id="@Model.Current.TimetableId">Mark Attendance</a><a class="btn btn-outline-primary" asp-controller="Attendance" asp-action="Scan" asp-route-id="@Model.Current.TimetableId">Scan QR</a></div>
+    </div></div>
+}
+else if (Model.Next != null)
+{
+    <div class="notice-row info mb-3">Next class: @Model.Next.SubjectCode @Model.Next.SubjectName (class @Model.Next.SectionName) at @UiHelpers.Time(Model.Next.Start).</div>
+}
+<div class="row g-3 mb-3">
+    @{
+        void Tile(object value, string label, string? href = null)
+        {
+            if (href == null) { <div class="col-6 col-md-4 col-xl-2"><div class="ax-card stat"><div><div class="v">@value</div><div class="l">@label</div></div></div></div> }
+            else { <div class="col-6 col-md-4 col-xl-2"><a class="ax-card stat" href="@href"><div><div class="v">@value</div><div class="l">@label</div></div></a></div> }
+        }
+    }
+    @{ Tile(Model.Today.Count, "Classes Today"); }
+    @{ Tile(ex.ClassesThisWeek, "Classes per Week"); }
+    @{ Tile(ex.StudentsTaught, "Students Taught"); }
+    @{ Tile(ex.AvgAttendance + "%", "Average Attendance (30 days)"); }
+    @{ Tile(ex.LowStudents.Count, "Below Minimum"); }
+    @{ Tile(ex.OpenQueries, "Open Queries", Url.Action("Index", "Queries")); }
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">Today's Schedule</div>
+        @if (ex.NonWorkingReason == "Sunday") { <partial name="_EmptyState" model='new EmptyStateModel("sunday", "No classes today", "Today is Sunday.")' /> }
+        else if (ex.NonWorkingReason != null) { <partial name="_EmptyState" model='new EmptyStateModel("holiday", "No classes today", "Holiday: " + ex.NonWorkingReason + ".")' /> }
+        else if (!Model.Today.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_classes", "No classes scheduled", "There are no periods today.")' /> }
+        else
+        {
+            <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Period</th><th>Time</th><th>Subject</th><th>Class</th><th>Room</th><th>Status</th><th></th></tr></thead><tbody>
+            @foreach (var s in Model.Today)
+            {
+                <tr><td>@s.Period</td><td>@UiHelpers.Time(s.Start)-@UiHelpers.Time(s.End)</td><td>@s.SubjectCode</td><td>@s.SectionName</td><td>@s.Room</td>
+                    <td><span class="badge @(s.State == "Open" ? "bg-success" : s.State == "Closed" ? "bg-secondary" : "bg-primary")">@s.State</span> @if (s.HasSession) { <span class="small text-muted">@s.MarkedCount marked</span> }</td>
+                    <td class="text-end">@if (s.State == "Open") { <a class="btn btn-sm btn-ax" asp-controller="Attendance" asp-action="Mark" asp-route-id="@s.TimetableId">Mark</a> }</td></tr>
+            }
+            </tbody></table></div>
+            @if (Model.Today.All(x => x.State == "Closed")) { <div class="card-b pt-0 text-muted small">All periods for today are over.</div> }
+        }
+    </div></div>
+    <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h">Classes Taught</div>
+        @if (!ex.Chips.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_timetable", "No classes assigned", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Class</th><th>Students</th><th>Avg %</th></tr></thead><tbody>
+        @foreach (var c in ex.Chips) { <tr><td class="mono">@c.Label</td><td>@c.Strength</td><td class="pct">@c.AvgPercent%</td></tr> }
+        </tbody></table></div> }
+    </div></div>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">Low Attendance List <a class="btn btn-sm btn-outline-primary" asp-controller="Reports" asp-action="Index" asp-route-type="defaulter" asp-route-run="true">Report</a></div>
+        @if (!ex.LowStudents.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("all_good", "No students below minimum", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Student</th><th>Class</th><th>%</th><th>Required</th></tr></thead><tbody>
+        @foreach (var s in ex.LowStudents) { <tr><td>@s.Name<br /><span class="mono text-muted">@s.Code</span></td><td>@(s.Semester.ToString() + s.Section)</td><td class="pct pct-bad">@s.Percent%</td><td>@(s.ClassesNeeded > 0 ? s.ClassesNeeded + " classes" : "-")</td></tr> }
+        </tbody></table></div> }
+        @foreach (var m in ex.Missing) { <div class="slot m-2">Attendance not marked: Period @m.Period, @m.SubjectCode (@m.SectionName) <a class="btn btn-sm btn-outline-primary float-end" asp-controller="Attendance" asp-action="Mark" asp-route-id="@m.TimetableId">Open</a></div> }
+    </div></div>
+    <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h">Notices</div><div class="card-b">
+        @if (!ex.Notices.Any()) { <span class="text-muted">No notices.</span> }
+        @foreach (var n in ex.Notices) { <div class="mb-2"><b>@n.Title</b> <span class="small text-muted">@n.PublishedAt.ToString("dd MMM yyyy")</span><div class="small">@n.Body</div></div> }
+        @if (ex.Holidays.Any()) { <hr /><div class="small text-muted mb-1">Upcoming holidays and events</div> }
+        @foreach (var h in ex.Holidays) { <div class="d-flex justify-content-between small"><span>@h.Name</span><span class="text-muted">@h.Date.ToString("ddd, dd MMM yyyy")</span></div> }
+    </div></div></div>
+</div>
+<div class="ax-card"><div class="card-h">Weekly Timetable</div>
+    @if (!ex.Week.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_timetable", "Timetable not available", "The timetable has not been published.")' /> }
+    else { <partial name="_WeekGrid" model='new WeekGridModel { Periods = ex.Periods, Week = ex.Week, Caption = "Class" }' /> }
+</div>

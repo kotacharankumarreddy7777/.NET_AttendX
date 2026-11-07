@@ -1,0 +1,16 @@
+@model EmptyStateModel
+@{
+    var icons = new Dictionary<string, string>
+    {
+        ["sunday"] = "bi-calendar-x", ["holiday"] = "bi-calendar-event", ["no_classes"] = "bi-calendar-x", ["day_done"] = "bi-check2-circle", ["no_data"] = "bi-journal-x",
+        ["no_timetable"] = "bi-calendar3", ["no_students"] = "bi-people", ["no_notices"] = "bi-bell-slash", ["no_queries"] = "bi-chat-square-text", ["no_results"] = "bi-search",
+        ["all_good"] = "bi-check2-circle", ["offline"] = "bi-wifi-off", ["camera_denied"] = "bi-camera-video-off"
+    };
+    var icon = icons.TryGetValue(Model.Key, out var found) ? found : "bi-inbox";
+}
+<div class="empty @(ViewData["compact"] is true ? "compact" : "")" role="status">
+    <i class="bi @icon" aria-hidden="true"></i>
+    <h3>@Model.Title</h3>
+    @if (!string.IsNullOrEmpty(Model.Message)) { <p>@Model.Message</p> }
+    @if (!string.IsNullOrEmpty(Model.ActionText) && !string.IsNullOrEmpty(Model.ActionUrl)) { <a class="btn btn-ax btn-sm" href="@Model.ActionUrl">@Model.ActionText</a> }
+</div>
