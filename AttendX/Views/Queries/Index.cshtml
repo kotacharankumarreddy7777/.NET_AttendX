@@ -8,7 +8,7 @@
 {
     <div class="ax-card mb-3"><div class="card-b">
         <div class="d-flex justify-content-between flex-wrap"><div><b>@q.Student!.FullName</b> <code>@q.Student.StudentID</code> - @q.Subject!.SubjectCode on @q.RecordDate.ToString("dd MMM yyyy")</div><span class="badge @(q.Status == "Resolved" ? "bg-success" : q.Status == "Rejected" ? "bg-danger" : "bg-warning text-dark")">@q.Status</span></div>
-        <div class="my-2">@q.Message</div><div class="small text-muted">Sent @q.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
+        <div class="my-2">@q.Message</div><div class="small text-muted">Sent @q.CreatedAt.ToString("dd MMM yyyy hh:mm tt")</div>
         @if (q.Status == "Open")
         {
             <form asp-action="Respond" asp-route-id="@q.Id" method="post" class="row g-2 mt-2" data-once>

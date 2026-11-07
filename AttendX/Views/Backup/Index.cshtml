@@ -10,12 +10,12 @@
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Restore</div><div class="card-b">
         <div class="alert alert-danger small">Restoring REPLACES all current data with the backup. The file is verified first. Take a fresh backup before restoring.</div>
         <form asp-action="Restore" method="post" data-confirm="Restore the database? All current data will be replaced.">
-            <select name="fileName" class="form-select mb-2" required><option value="">Select backup file</option>@foreach (var f in Model.Files) { <option value="@f.FileName">@f.FileName (@(f.SizeBytes / 1024) KB, @f.CreatedAt.ToString("dd MMM HH:mm"))</option> }</select>
+            <select name="fileName" class="form-select mb-2" required><option value="">Select backup file</option>@foreach (var f in Model.Files) { <option value="@f.FileName">@f.FileName (@(f.SizeBytes / 1024) KB, @f.CreatedAt.ToString("dd MMM hh:mm tt"))</option> }</select>
             <input name="confirm" class="form-control mb-2" placeholder="Type RESTORE to confirm" autocomplete="off" />
             <button class="btn btn-danger" type="submit">Restore</button>
         </form>
     </div></div></div>
 </div>
 <div class="ax-card mt-3"><div class="card-h">History</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>When</th><th>Action</th><th>File</th><th>Size</th><th>Status</th><th>By</th><th>Message</th></tr></thead><tbody>
-@foreach (var h in Model.History) { <tr><td>@h.At.ToString("dd MMM yy HH:mm")</td><td>@h.Action</td><td>@h.FileName</td><td>@(h.SizeBytes / 1024) KB</td><td><span class="badge @(h.Status == "Success" ? "bg-success" : "bg-danger")">@h.Status</span></td><td>@h.By</td><td class="small">@h.Message</td></tr> }
+@foreach (var h in Model.History) { <tr><td>@h.At.ToString("dd MMM yy hh:mm tt")</td><td>@h.Action</td><td>@h.FileName</td><td>@(h.SizeBytes / 1024) KB</td><td><span class="badge @(h.Status == "Success" ? "bg-success" : "bg-danger")">@h.Status</span></td><td>@h.By</td><td class="small">@h.Message</td></tr> }
 </tbody></table></div></div>

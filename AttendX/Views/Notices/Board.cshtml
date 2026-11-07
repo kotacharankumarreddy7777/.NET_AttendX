@@ -7,7 +7,7 @@
 {
     <div class="col-md-6"><div class="ax-card h-100"><div class="card-b">
         <div class="d-flex justify-content-between"><b>@if (n.IsPinned) { <i class="bi bi-pin-angle-fill text-warning"></i> } @n.Title</b><span class="badge bg-secondary">@n.Audience</span></div>
-        <div class="small text-muted mb-2">@n.PublishedAt.ToString("dd MMM yyyy HH:mm") - @n.CreatedBy@(n.ExpiresAt != null ? " - until " + n.ExpiresAt.Value.ToString("dd MMM") : "")</div>
+        <div class="small text-muted mb-2">@n.PublishedAt.ToString("dd MMM yyyy hh:mm tt") - @n.CreatedBy@(n.ExpiresAt != null ? " - until " + n.ExpiresAt.Value.ToString("dd MMM") : "")</div>
         <div style="white-space:pre-line">@n.Body</div>
     </div></div></div>
 }

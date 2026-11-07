@@ -22,8 +22,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Holiday> Holidays => Set<Holiday>();
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<AttendanceQuery> AttendanceQueries => Set<AttendanceQuery>();
-    public DbSet<AiDiagnosticReport> AiDiagnosticReports => Set<AiDiagnosticReport>();
-    public DbSet<AiChatMessage> AiChatMessages => Set<AiChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -100,10 +98,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         b.Entity<AuditLog>().HasIndex(x => x.Timestamp);
         b.Entity<AuditLog>().HasIndex(x => x.BranchId);
-
-        b.Entity<AiDiagnosticReport>().HasIndex(x => x.CreatedAt);
-        b.Entity<AiChatMessage>().HasIndex(x => x.SentAt);
-        b.Entity<AiChatMessage>().HasIndex(x => x.UserId);
 
         // SQL Server rejects "multiple cascade paths", so every relationship of OUR tables is Restrict (soft-delete is used anyway).
         foreach (var fk in b.Model.GetEntityTypes()

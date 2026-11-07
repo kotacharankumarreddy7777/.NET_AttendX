@@ -12,7 +12,7 @@
 <div class="ax-card"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Old</th><th>New</th><th>Reason / details</th><th>IP</th></tr></thead><tbody>
 @foreach (var a in Model.Items)
 {
-    <tr><td class="text-nowrap">@a.Timestamp.ToString("dd MMM yy HH:mm:ss")</td><td>@a.ActorName</td><td><span class="badge bg-secondary">@a.Action</span></td><td>@a.EntityType @a.EntityId</td>
+    <tr><td class="text-nowrap">@a.Timestamp.ToString("dd MMM yy hh:mm tt:ss tt")</td><td>@a.ActorName</td><td><span class="badge bg-secondary">@a.Action</span></td><td>@a.EntityType @a.EntityId</td>
         <td class="small">@a.OldValues</td><td class="small">@a.NewValues</td><td class="small">@a.Reason @a.Details</td><td class="small">@a.IpAddress</td></tr>
 }
 </tbody></table></div></div>

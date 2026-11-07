@@ -43,7 +43,7 @@
     </div></div></div>
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Faculty Activity (7 days)</div>
         <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Faculty</th><th>Sessions</th><th>Last Marked</th></tr></thead><tbody>
-        @foreach (var f in Model.FacultyActivity) { <tr><td>@f.Name</td><td>@f.Sessions</td><td>@f.LastMarked?.ToString("dd MMM HH:mm")</td></tr> }
+        @foreach (var f in Model.FacultyActivity) { <tr><td>@f.Name</td><td>@f.Sessions</td><td>@f.LastMarked?.ToString("dd MMM hh:mm tt")</td></tr> }
         </tbody></table></div>
     </div></div>
 </div>

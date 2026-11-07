@@ -6,7 +6,7 @@
         <dt>Faculty ID</dt><dd class="mono">@f.FacultyID</dd><dt>Name</dt><dd>@f.FullName</dd>
         <dt>Department</dt><dd>@Model.Department</dd><dt>Designation</dt><dd>@f.Designation@(f.IsHOD ? " (Head of Department)" : "")</dd>
         <dt>Email</dt><dd>@f.Email</dd><dt>Phone</dt><dd>@f.Phone</dd>
-        <dt>Last Login</dt><dd>@(ex.LastLogin?.ToString("dd MMM yyyy HH:mm") ?? "-")</dd><dt></dt><dd></dd>
+        <dt>Last Login</dt><dd>@(ex.LastLogin?.ToString("dd MMM yyyy hh:mm tt") ?? "-")</dd><dt></dt><dd></dd>
     </dl>
 </div></div>
 @if (Model.Current != null)

@@ -18,7 +18,7 @@
         <dt>Semester</dt><dd>@s.Semester</dd><dt>Year</dt><dd>@s.Year</dd>
         <dt>Email</dt><dd>@s.Email</dd><dt>Phone</dt><dd>@s.Phone</dd>
         <dt>Date of Joining</dt><dd>@s.JoiningDate.ToString("dd MMM yyyy")</dd><dt>Class Strength</dt><dd>@Model.ClassStrength students</dd>
-        <dt>Last Login</dt><dd>@(Model.LastLogin?.ToString("dd MMM yyyy HH:mm") ?? "-")</dd><dt></dt><dd></dd>
+        <dt>Last Login</dt><dd>@(Model.LastLogin?.ToString("dd MMM yyyy hh:mm tt") ?? "-")</dd><dt></dt><dd></dd>
     </dl></div>
     <div class="col-md-auto text-center"><img src="@Url.Action("MyQr", "Student")" width="120" height="120" alt="QR code" style="border:1px solid var(--border)" /><div class="small mt-1"><a asp-action="MyQr" asp-route-download="true">Download</a> | <a asp-action="Card" target="_blank">Print</a></div></div>
 </div></div></div>
@@ -126,7 +126,7 @@
         <div class="d-flex flex-wrap gap-2"><a class="btn btn-ax" asp-action="Report">Download Attendance Report (PDF)</a><a class="btn btn-outline-secondary" asp-controller="Account" asp-action="ChangePassword">Change Password</a></div>
     </div></div></div>
     <div class="col-lg-6"><div class="ax-card h-100"><div class="card-h">Recent Sign-ins</div><div class="table-responsive"><table class="table table-sm"><tbody>
-        @foreach (var l in Model.Logins) { <tr><td>@l.Timestamp.ToString("dd MMM yyyy HH:mm")</td><td class="text-muted">@l.IpAddress</td></tr> }
+        @foreach (var l in Model.Logins) { <tr><td>@l.Timestamp.ToString("dd MMM yyyy hh:mm tt")</td><td class="text-muted">@l.IpAddress</td></tr> }
         @if (!Model.Logins.Any()) { <tr><td class="text-muted">No sign-ins recorded.</td></tr> }
     </tbody></table></div></div></div>
 </div>
