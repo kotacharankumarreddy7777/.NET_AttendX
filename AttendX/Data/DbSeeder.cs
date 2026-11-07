@@ -56,6 +56,37 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         if (_o.UseMigrations) await _db.Database.MigrateAsync(cancellationToken);
         else await EnsureDatabaseSchemaAsync(cancellationToken);
 
+        // Ensure ExamTimetables table exists for Neon Postgres
+        if (_usePostgres)
+        {
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(@"
+                    CREATE TABLE IF NOT EXISTS ""ExamTimetables"" (
+                        ""Id"" serial PRIMARY KEY,
+                        ""AcademicYearId"" integer NOT NULL REFERENCES ""AcademicYears""(""Id"") ON DELETE RESTRICT,
+                        ""BranchId"" integer NOT NULL REFERENCES ""Branches""(""Id"") ON DELETE RESTRICT,
+                        ""SectionId"" integer REFERENCES ""Sections""(""Id"") ON DELETE RESTRICT,
+                        ""Semester"" integer NOT NULL,
+                        ""SubjectId"" integer NOT NULL REFERENCES ""Subjects""(""Id"") ON DELETE RESTRICT,
+                        ""FacultyId"" integer NOT NULL REFERENCES ""Faculty""(""Id"") ON DELETE RESTRICT,
+                        ""ExamType"" character varying(20) NOT NULL,
+                        ""ExamDate"" timestamp with time zone NOT NULL,
+                        ""StartTime"" interval NOT NULL,
+                        ""EndTime"" interval NOT NULL,
+                        ""RoomNo"" character varying(30) NOT NULL DEFAULT '',
+                        ""IsActive"" boolean NOT NULL DEFAULT TRUE
+                    );
+                    CREATE INDEX IF NOT EXISTS ""IX_ExamTimetables_Semester_Type_Date"" ON ""ExamTimetables"" (""AcademicYearId"", ""Semester"", ""ExamType"", ""ExamDate"");
+                    CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ExamTimetables_Unique"" ON ""ExamTimetables"" (""AcademicYearId"", ""BranchId"", ""Semester"", ""SubjectId"", ""ExamType"") WHERE ""IsActive"";
+                ");
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "ExamTimetables creation check failed, continuing");
+            }
+        }
+
         foreach (var r in RoleNames.All)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -74,6 +105,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         if (await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500)
         {
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Database already seeded. Skipping demo seeding.");
+            // Ensure exam timetables exist even if attendance is seeded
+            await SeedExamTimetableAsync(cancellationToken);
             return;
         }
 
@@ -86,6 +119,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         await SeedTimetableAsync(cancellationToken);
         await SeedNoticesAsync(cancellationToken);
         await SeedAttendanceHistoryAsync(cancellationToken);
+        await SeedExamTimetableAsync(cancellationToken);
         await SelfCheckAsync(cancellationToken);
         if (watch.Elapsed.TotalSeconds > 5 && _log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding finished in {Seconds:0} s", watch.Elapsed.TotalSeconds);
 
@@ -502,22 +536,25 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     // ------------------------------------------------------------------ attendance history (SqlBulkCopy)
     private async Task SeedAttendanceHistoryAsync(CancellationToken cancellationToken = default)
     {
-        if (await _db.Attendance.AnyAsync()) return;
         var tts = await _db.Timetables.AsNoTracking().ToListAsync();
         var students = await _db.Students.AsNoTracking().Select(s => new { s.Id, s.BranchId, s.SectionId, s.Semester }).ToListAsync();
         if (tts.Count == 0 || students.Count == 0) return;
-        if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding {Days} days of attendance history (this is the slowest step)...", _o.SeedHistoryDays);
+
+        var startDate = new DateTime(2026, 8, 1);
+        var today = DateTime.Today;
+        if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding attendance from {Start} to {Today} (real timetable mapping)...", startDate.ToString("yyyy-MM-dd"), today.ToString("yyyy-MM-dd"));
 
         var rnd = new Random(2026);
-        var today = DateTime.Today;
-        var holidays = await new CalendarService(_db, new SystemClock()).HolidayDatesAsync(today.AddDays(-_o.SeedHistoryDays - 1), today);
+        var holidays = await new CalendarService(_db, new SystemClock()).HolidayDatesAsync(startDate, today);
         var byClass = students.GroupBy(s => (s.BranchId, s.SectionId, s.Semester)).ToDictionary(g => g.Key, g => g.ToList());
         var prop = students.ToDictionary(s => s.Id, s => { var r = rnd.NextDouble(); return r < 0.2 ? 0.55 + rnd.NextDouble() * 0.17 : r < 0.8 ? 0.78 + rnd.NextDouble() * 0.12 : 0.92 + rnd.NextDouble() * 0.06; });
         var decliners = students.Where(_ => rnd.NextDouble() < 0.08).Select(s => s.Id).ToHashSet();
 
-        var days = Enumerable.Range(1, Math.Max(1, _o.SeedHistoryDays)).Select(i => today.AddDays(-i))
-            .Where(d => d.DayOfWeek != DayOfWeek.Sunday && !holidays.Contains(d)).OrderBy(d => d).ToList();
-        var jobs = days.SelectMany(d => tts.Where(t => t.Day == d.DayOfWeek).Select(t => (Date: d, T: t))).ToList();
+        var totalDays = (int)(today - startDate).TotalDays;
+        var jobs = Enumerable.Range(0, totalDays).Select(i => startDate.AddDays(i))
+            .Where(d => d.DayOfWeek != DayOfWeek.Sunday && !holidays.Contains(d))
+            .SelectMany(d => tts.Where(t => t.Day == d.DayOfWeek).Select(t => (Date: d, T: t)))
+            .ToList();
 
         await _db.Database.OpenConnectionAsync();
         try
@@ -627,6 +664,96 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             idx++;
         }
         if (changed) await _db.SaveChangesAsync();
+    }
+
+    private async Task SeedExamTimetableAsync(CancellationToken cancellationToken = default)
+    {
+        if (await _db.ExamTimetables.AnyAsync(cancellationToken)) return;
+
+        var academics = await _db.AcademicYears.ToListAsync(cancellationToken);
+        // Ensure 2 academic years exist
+        if (academics.Count < 2)
+        {
+            if (!academics.Any(a => a.Name == "2026-27"))
+            {
+                academics.Add(new AcademicYear { Name = "2026-27", StartDate = new DateTime(2026, 8, 1), EndDate = new DateTime(2027, 5, 31), IsCurrent = true });
+            }
+            if (!academics.Any(a => a.Name == "2027-28"))
+            {
+                academics.Add(new AcademicYear { Name = "2027-28", StartDate = new DateTime(2027, 8, 1), EndDate = new DateTime(2028, 5, 31), IsCurrent = false });
+            }
+            await _db.SaveChangesAsync(cancellationToken);
+            academics = await _db.AcademicYears.ToListAsync(cancellationToken);
+        }
+
+        var subjects = await _db.Subjects.AsNoTracking().Where(s => s.IsActive).ToListAsync(cancellationToken);
+        var mappings = await _db.FacultySubjectMappings.AsNoTracking().ToListAsync(cancellationToken);
+        var periods = await _db.PeriodDefinitions.AsNoTracking().OrderBy(p => p.PeriodNo).ToListAsync(cancellationToken);
+        var defaultStart = periods.FirstOrDefault()?.StartTime ?? new TimeSpan(9, 0, 0);
+        var defaultEnd = periods.FirstOrDefault()?.EndTime ?? new TimeSpan(9, 55, 0);
+
+        // Build faculty lookup: (BranchId, Semester, SubjectId) -> FacultyId
+        var facMap = mappings.GroupBy(m => (m.BranchId, m.Semester, m.SubjectId))
+            .ToDictionary(g => g.Key, g => g.First().FacultyId);
+
+        List<(DateTime Start, DateTime End, string Type)> examWindows = new();
+        foreach (var yearData in academics)
+        {
+            int y = int.TryParse(yearData.Name.Split('-')[0], out int startY) ? startY : 2026;
+            // Mid1: Sep 22-Oct 4, Mid2: Dec 8-Dec 20, Final: Apr 15-May 5
+            examWindows.Add((new DateTime(y, 9, 22), new DateTime(y, 10, 4), "Mid1"));
+            examWindows.Add((new DateTime(y, 12, 8), new DateTime(y, 12, 20), "Mid2"));
+            examWindows.Add((new DateTime(y + 1, 4, 15), new DateTime(y + 1, 5, 5), "Final"));
+        }
+
+        var exams = new List<ExamTimetable>();
+        var rnd = new Random(2026);
+        foreach (var year in academics)
+        {
+            var windows = examWindows.Where(w => w.Start.Year == int.Parse(year.Name.Split('-')[0]) || w.Start.Year == int.Parse(year.Name.Split('-')[0]) + 1926).ToList();
+            // Simpler: use year.Name to compute windows
+            int startY = int.Parse(year.Name.Split('-')[0]);
+            var windowsForYear = new List<(DateTime Start, DateTime End, string Type)>
+            {
+                (new DateTime(startY, 9, 22), new DateTime(startY, 10, 4), "Mid1"),
+                (new DateTime(startY, 12, 8), new DateTime(startY, 12, 20), "Mid2"),
+                (new DateTime(startY + 1, 4, 15), new DateTime(startY + 1, 5, 5), "Final")
+            };
+
+            foreach (var subj in subjects)
+            {
+                int facId = facMap.TryGetValue((subj.BranchId, subj.Semester, subj.Id), out int f) ? f : 0;
+                if (facId == 0) continue;
+
+                foreach (var w in windowsForYear)
+                {
+                    // Pick a weekday in window (Mon-Sat) based on subject hash for determinism
+                    int dayOffset = (subj.Id + subj.BranchId) % ((int)(w.End - w.Start).TotalDays + 1);
+                    var date = w.Start.AddDays(dayOffset);
+                    while (date.DayOfWeek == DayOfWeek.Sunday) date = date.AddDays(1);
+                    if (date > w.End) date = w.End;
+
+                    exams.Add(new ExamTimetable
+                    {
+                        AcademicYearId = year.Id,
+                        BranchId = subj.BranchId,
+                        Semester = subj.Semester,
+                        SubjectId = subj.Id,
+                        FacultyId = facId,
+                        ExamType = w.Type,
+                        ExamDate = date,
+                        StartTime = defaultStart,
+                        EndTime = defaultEnd,
+                        RoomNo = "Exam Hall A",
+                        IsActive = true
+                    });
+                }
+            }
+        }
+
+        _db.ExamTimetables.AddRange(exams);
+        await _db.SaveChangesAsync(cancellationToken);
+        if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeded {Count} exam timetable entries.", exams.Count);
     }
 
     // ------------------------------------------------------------------ self check (logged; also shown on the Health page)

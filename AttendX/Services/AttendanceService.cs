@@ -93,9 +93,12 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         }
         if (assigned)
         {
+            if (date < now.Date)
+                return new AccessCheck(AccessOutcome.OutsideTime, false,
+                    "To correct past attendance, send an AttendanceQuery to your branch HOD for approval.");
             var (s, e) = AttendanceWindow.For(date, t.StartTime, t.EndTime, settings.GraceMinutes);
             return new AccessCheck(AccessOutcome.OutsideTime, false,
-                $"Outside the attendance window ({s:HH:mm}-{e:HH:mm} on {date:dd MMM yyyy}). After the period only Admin/HOD can correct attendance.");
+                $"Outside the attendance window ({s:hh:mm tt}-{e:hh:mm tt} on {date:dd MMM yyyy}). After the period only Admin/HOD can correct attendance.");
         }
         return new AccessCheck(AccessOutcome.Unauthorized, false, "You are not authorised to mark attendance for this class.");
     }

@@ -113,6 +113,7 @@ builder.Services.AddScoped<ICalendarService, CalendarService>();
 builder.Services.AddScoped<INoticeService, NoticeService>();
 builder.Services.AddScoped<IStudentPortalService, StudentPortalService>();
 builder.Services.AddScoped<IMasterDataExportService, MasterDataExportService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<DbSeeder>();
 
 var app = builder.Build();
