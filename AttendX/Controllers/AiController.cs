@@ -15,7 +15,7 @@ public class AiController(AppDbContext db, IAiService ai, ICurrentUser user, IOp
     private readonly AiOptions _opts = aiOpts.Value;
 
     [Authorize]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] bool partial = false)
     {
         var role = User.IsInRole(RoleNames.Admin) ? "Admin"
                  : User.IsInRole(RoleNames.Hod) ? "HOD"
@@ -36,6 +36,8 @@ public class AiController(AppDbContext db, IAiService ai, ICurrentUser user, IOp
         chatHistory.Reverse();
 
         ViewBag.Role = role;
+
+        if (partial) return PartialView(chatHistory);
         return View(chatHistory);
     }
 
