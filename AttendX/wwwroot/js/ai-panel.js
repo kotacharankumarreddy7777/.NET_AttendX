@@ -10,17 +10,27 @@ document.addEventListener('DOMContentLoaded', function () {
     let panelLoaded = false;
     let isDragging = false;
     let dragStartX, dragStartY, initialLeft, initialTop;
+    let debounceTimer;
+    let isPanelOpen = false;
 
+    // Open/Close Panel - Robust state machine
     function togglePanel(show) {
+        clearTimeout(debounceTimer);
+        
         if (show) {
+            isPanelOpen = true;
             panel.classList.remove('d-none');
-            requestAnimationFrame(() => {
-                panel.classList.add('ai-panel-visible');
-            });
+            panel.style.visibility = 'visible';
+            // Force reflow so transition works
+            void panel.offsetWidth;
+            panel.classList.add('ai-panel-visible');
             if (!panelLoaded) loadPanelContent();
         } else {
+            isPanelOpen = false;
             panel.classList.remove('ai-panel-visible');
-            setTimeout(() => panel.classList.add('d-none'), 300);
+            debounceTimer = setTimeout(() => {
+                panel.classList.add('d-none');
+            }, 250);
         }
     }
 
@@ -91,7 +101,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 let replyText = data.success ? data.reply : data.message;
                 let navUrl = null;
 
-                // Intercept GO_TO: marker
                 if (replyText.includes('GO_TO:')) {
                     const parts = replyText.split('GO_TO:');
                     replyText = parts[0].trim();
@@ -104,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (typingIndicator) container.parentNode.insertBefore(aiBubble, typingIndicator);
                 else container.appendChild(aiBubble);
 
-                // Show navigation button if present
                 if (navUrl && navBtn && navAction) {
                     navBtn.setAttribute('data-target', navUrl);
                     navAction.querySelector('button').innerHTML = `Go to Page <i class="bi bi-arrow-right-circle-fill ms-1"></i>`;
@@ -121,21 +129,40 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    fabBtn.addEventListener('click', () => togglePanel(panel.classList.contains('d-none')));
-    if (closeBtn) closeBtn.addEventListener('click', () => togglePanel(false));
+    // FAB Click - Robust toggle using isPanelOpen state
+    fabBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePanel(!isPanelOpen);
+    });
 
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePanel(false);
+        });
+    }
+
+    // Close on clicking outside
     document.addEventListener('click', (e) => {
-        if (!panel.classList.contains('d-none') && !panel.contains(e.target) && e.target !== fabBtn && !fabBtn.contains(e.target)) {
+        if (isPanelOpen && !panel.contains(e.target) && e.target !== fabBtn && !fabBtn.contains(e.target)) {
             togglePanel(false);
         }
     });
 
+    // Draggable header functionality
     const header = panel.querySelector('.glass-drawer-header');
     if (header) {
         header.style.cursor = 'grab';
         header.addEventListener('mousedown', (e) => {
-            isDragging = true; dragStartX = e.clientX; dragStartY = e.clientY; initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
-            panel.style.position = 'fixed'; panel.style.right = 'auto'; panel.style.bottom = 'auto'; header.style.cursor = 'grabbing';
+            isDragging = true; 
+            dragStartX = e.clientX; 
+            dragStartY = e.clientY; 
+            initialLeft = panel.offsetLeft; 
+            initialTop = panel.offsetTop;
+            panel.style.position = 'fixed'; 
+            panel.style.right = 'auto'; 
+            panel.style.bottom = 'auto'; 
+            header.style.cursor = 'grabbing';
         });
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
@@ -145,8 +172,14 @@ document.addEventListener('DOMContentLoaded', function () {
         document.addEventListener('mouseup', () => { isDragging = false; header.style.cursor = 'grab'; });
 
         header.addEventListener('touchstart', (e) => {
-            isDragging = true; dragStartX = e.touches[0].clientX; dragStartY = e.touches[0].clientY; initialLeft = panel.offsetLeft; initialTop = panel.offsetTop;
-            panel.style.position = 'fixed'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
+            isDragging = true; 
+            dragStartX = e.touches[0].clientX; 
+            dragStartY = e.touches[0].clientY; 
+            initialLeft = panel.offsetLeft; 
+            initialTop = panel.offsetTop;
+            panel.style.position = 'fixed'; 
+            panel.style.right = 'auto'; 
+            panel.style.bottom = 'auto';
         }, {passive: true});
         document.addEventListener('touchmove', (e) => {
             if (!isDragging) return;

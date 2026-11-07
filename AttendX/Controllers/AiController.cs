@@ -48,6 +48,11 @@ public class AiController(AppDbContext db, IAiService ai, ICurrentUser user, IOp
         if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > _opts.MaxMessageLength)
             return Json(new { success = false, message = "Invalid message (max 500 chars)." });
 
+        // Basic check for API key availability
+        bool hasApiKey = !string.IsNullOrWhiteSpace(_opts.GeminiApiKey) || !string.IsNullOrWhiteSpace(_opts.GroqApiKey);
+        if (!hasApiKey)
+            return Json(new { success = false, message = "AI API keys not configured. Please add GEMINI_API_KEY or GROQ_API_KEY in Render." });
+
         string role = User.IsInRole(RoleNames.Admin) ? "Admin"
                     : User.IsInRole(RoleNames.Hod) ? "HOD"
                     : User.IsInRole(RoleNames.Faculty) ? "Faculty"
