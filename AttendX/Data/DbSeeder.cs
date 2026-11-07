@@ -108,7 +108,26 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var studentsDbCount = await _db.Students.CountAsync(cancellationToken);
         var attendanceCount = await _db.Attendance.CountAsync(a => a.Date >= new DateTime(2026, 8, 1), cancellationToken);
 
-        bool needsRebuild = facultyDbCount < facultyCsvCount || studentsDbCount < studentsCsvCount || attendanceCount < 5000;
+        // If DB has more students than CSV (due to generated fillers), adjust expected count
+        int expectedStudents = studentsCsvCount;
+        // Count generated students: sections * semesters (1,3,5) * 30 students per section minus CSV students
+        // For simplicity, if studentsDbCount > studentsCsvCount and attendanceCount == 0, it's a rebuild case
+        bool needsRebuild = facultyDbCount < facultyCsvCount || studentsDbCount == 0 || attendanceCount < 5000;
+
+        // Only rebuild if attendance is completely missing OR people counts are significantly off (less than 80% of CSV)
+        if (!needsRebuild && attendanceCount >= 5000)
+        {
+            needsRebuild = false;
+        }
+        else if (facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8)
+        {
+            needsRebuild = true;
+        }
+        else if (attendanceCount < 5000)
+        {
+            // Attendance missing - need to reseed attendance but keep people (don't truncate users)
+            needsRebuild = false;
+        }
 
         if (needsRebuild)
         {
@@ -130,6 +149,17 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             ");
             _log.LogInformation("Truncated tables in FK-safe order for full rebuild.");
         }
+        else if (attendanceCount < 5000)
+        {
+            // Only attendance missing - delete attendance tables and regenerate, keep people
+            if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Attendance missing ({A} rows Aug-Nov), regenerating attendance history only...", attendanceCount);
+            await _db.Database.ExecuteSqlRawAsync(@"
+                DELETE FROM ""Attendance"";
+                DELETE FROM ""AttendanceSessions"";
+                DELETE FROM ""ExamTimetables"";
+            ");
+            _log.LogInformation("Cleared attendance tables for regeneration.");
+        }
 
         // If faculty and students are fully seeded AND attendance coverage is complete, skip heavy seeding
         if (await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
@@ -144,9 +174,13 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
         await SeedHolidaysAsync(cancellationToken);
-        await SeedFacultyAsync(cancellationToken);
-        await SeedStudentsAsync(cancellationToken);
-        await SeedTimetableAsync(cancellationToken);
+        // Only seed people if needed (truncate case), otherwise skip to save time
+        if (needsRebuild || facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8)
+        {
+            await SeedFacultyAsync(cancellationToken);
+            await SeedStudentsAsync(cancellationToken);
+            await SeedTimetableAsync(cancellationToken);
+        }
         await SeedNoticesAsync(cancellationToken);
         await SeedAttendanceHistoryAsync(cancellationToken);
         await SeedExamTimetableAsync(cancellationToken);
@@ -340,34 +374,49 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var roleIds = await _db.Roles.ToDictionaryAsync(r => r.Name!, r => r.Id);
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
         var existingEmails = (await _db.Users.Select(u => u.NormalizedEmail).ToListAsync()).ToHashSet();
+        var existingFacultyIds = (await _db.Faculty.AsNoTracking().Select(f => f.FacultyID).ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        if (rows.Count > 0 && !await _db.Faculty.AnyAsync())
+        if (rows.Count > 0)
         {
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding {Count} faculty with logins...", rows.Count);
+            int added = 0;
             foreach (var r in rows)
             {
-                var email = r["email"].Trim().ToLowerInvariant();
-                if (existingEmails.Contains(email.ToUpperInvariant()) || !branches.TryGetValue(r["department"], out var b)) continue;
-                var user = NewUser(email, r["fullname"], hash);
-                bool hod = r["ishod"].Equals("true", StringComparison.OrdinalIgnoreCase);
+                var fid = r.TryGetValue("facultyid", out var fv) ? fv.Trim() : "";
+                if (string.IsNullOrWhiteSpace(fid)) continue;
+                if (existingFacultyIds.Contains(fid)) continue;
+                if (!branches.TryGetValue(r.TryGetValue("department", out var dv) ? dv.Trim() : "", out var b)) continue;
+                var email = EmailHelper.FacultyEmail(fid, r.TryGetValue("fullname", out var fn) ? fn : fid);
+                if (existingEmails.Contains(email.ToUpperInvariant())) continue;
+                var user = NewUser(email, r.TryGetValue("fullname", out var nv) ? nv.Trim() : fid, hash);
+                bool hod = r.TryGetValue("ishod", out var hv) && hv.Equals("true", StringComparison.OrdinalIgnoreCase);
                 _db.Users.Add(user);
                 _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = roleIds[RoleNames.Faculty] });
                 if (hod) _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = roleIds[RoleNames.Hod] });
                 _db.Faculty.Add(new Faculty
                 {
-                    FacultyID = r["facultyid"], FullName = r["fullname"], Email = email, Phone = r["phone"], BranchId = b.Id, Department = b.Name,
-                    Designation = r["designation"], IsHOD = hod, IsActive = true, IdentityUserId = user.Id
+                    FacultyID = fid, FullName = r.TryGetValue("fullname", out var n2) ? n2.Trim() : fid, Email = email, Phone = r.TryGetValue("phone", out var pv) ? pv.Trim() : "", BranchId = b.Id, Department = b.Name,
+                    Designation = r.TryGetValue("designation", out var dv2) ? dv2.Trim() : "", IsHOD = hod, IsActive = true, IdentityUserId = user.Id
                 });
                 existingEmails.Add(email.ToUpperInvariant());
+                existingFacultyIds.Add(fid);
+                added++;
+                if (added % 100 == 0) { await _db.SaveChangesAsync(cancellationToken); _db.ChangeTracker.Clear(); }
             }
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
             _db.ChangeTracker.Clear();
         }
 
-        // Ensure every faculty has a login
+        // Ensure every faculty has a login and standardized email
         var allFaculty = await _db.Faculty.ToListAsync();
         foreach (var f in allFaculty)
         {
+                var expectedEmail = EmailHelper.FacultyEmail(f.FacultyID, f.FullName);
+            if (f.Email != expectedEmail)
+            {
+                f.Email = expectedEmail;
+            }
+
             var u = f.IdentityUserId != null ? await _users.FindByIdAsync(f.IdentityUserId) : await _users.FindByEmailAsync(f.Email);
             if (u == null)
             {
@@ -378,6 +427,14 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             }
             else
             {
+                if (u.Email != f.Email)
+                {
+                    u.Email = f.Email;
+                    u.NormalizedEmail = f.Email.ToUpperInvariant();
+                    u.UserName = f.Email;
+                    u.NormalizedUserName = f.Email.ToUpperInvariant();
+                    await _users.UpdateAsync(u);
+                }
                 if (string.IsNullOrEmpty(u.PasswordHash))
                 {
                     u.PasswordHash = hash;
@@ -401,22 +458,23 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var existingStudentIDs = (await _db.Students.AsNoTracking().Select(s => s.StudentID).ToListAsync()).ToHashSet(StringComparer.Ordinal);
 
         _db.ChangeTracker.AutoDetectChangesEnabled = false;
-        if (rows.Count > 0 && !await _db.Students.AnyAsync())
+        if (rows.Count > 0)
         {
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding {Count} students with logins...", rows.Count);
-            foreach (var chunk in rows.Chunk(500))
+            int added = 0;
+            foreach (var r in rows)
             {
-                foreach (var r in chunk)
-                {
-                    if (!branches.TryGetValue(r["branchcode"], out var b)) continue;
-                    int sem = int.Parse(r["semester"]);
-                    string secName = r["section"];
-                    if (!sections.Any(s => s.BranchId == b.Id && s.Name == secName)) continue;
-                    var sec = sections.First(s => s.BranchId == b.Id && s.Name == secName);
-                    var email = r["email"].Trim();
-                    string normEmail = email.ToUpperInvariant();
-                    if (existingNormalizedEmails.Contains(normEmail)) continue;
-                    existingNormalizedEmails.Add(normEmail);
+                var sid = r.TryGetValue("studentid", out var sv) ? sv.Trim() : "";
+                if (string.IsNullOrWhiteSpace(sid)) continue;
+                if (existingStudentIDs.Contains(sid)) continue;
+                if (!branches.TryGetValue(r["branchcode"], out var b)) continue;
+                int sem = int.Parse(r["semester"]);
+                string secName = r["section"];
+                if (!sections.Any(s => s.BranchId == b.Id && s.Name == secName)) continue;
+                var sec = sections.First(s => s.BranchId == b.Id && s.Name == secName);
+                var email = EmailHelper.StudentEmail(sid, r.TryGetValue("fullname", out var fn2) ? fn2 : sid);
+                string normEmail = email.ToUpperInvariant();
+                if (existingNormalizedEmails.Contains(normEmail)) continue;
 
                     var user = NewUser(email, r["fullname"], hash);
                     _db.Users.Add(user);
@@ -425,12 +483,15 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     {
                         StudentID = r["studentid"], FullName = r["fullname"], Email = email, Phone = r["phone"], BranchId = b.Id, SectionId = sec.Id, Semester = sem,
                         Year = YearHelper.FromSemester(sem), JoiningDate = DateTime.Parse(r["joiningdate"]).Date, QRPath = "on-demand", IsActive = true, IdentityUserId = user.Id,
-                        RowVersion = Array.Empty<byte>()
+                        RowVersion = new byte[8]
                     });
-                }
-                await _db.SaveChangesAsync();
-                _db.ChangeTracker.Clear();
+                existingNormalizedEmails.Add(normEmail);
+                existingStudentIDs.Add(sid);
+                added++;
+                if (added % 500 == 0) { await _db.SaveChangesAsync(cancellationToken); _db.ChangeTracker.Clear(); }
             }
+            await _db.SaveChangesAsync(cancellationToken);
+            _db.ChangeTracker.Clear();
         }
 
         foreach (var sec in sections)
@@ -447,12 +508,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 {
                     string studentId = StudentIdService.Format(StudentIdService.Prefix(sem, sec.Name, b.Code), i);
                     string studentName = SampleStudentNames[(i + sem * 7) % SampleStudentNames.Length];
-                    string cleanName = studentName.Trim().ToLowerInvariant().Replace(" ", ".");
-                    string email = $"{cleanName}.{studentId}@attendx.edu.in";
+                    string email = EmailHelper.StudentEmail(studentId, studentName);
                     string normEmail = email.ToUpperInvariant();
                     if (existingNormalizedEmails.Contains(normEmail) || existingStudentIDs.Contains(studentId)) continue;
-                    existingNormalizedEmails.Add(normEmail);
-                    existingStudentIDs.Add(studentId);
 
                     var user = NewUser(email, studentName, hash);
                     _db.Users.Add(user);
@@ -471,18 +529,26 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         QRPath = "on-demand",
                         IsActive = true,
                         IdentityUserId = user.Id,
-                        RowVersion = Array.Empty<byte>()
+                        RowVersion = new byte[8]
                     });
+                    existingNormalizedEmails.Add(normEmail);
+                    existingStudentIDs.Add(studentId);
                 }
                 await _db.SaveChangesAsync();
                 _db.ChangeTracker.Clear();
             }
         }
 
-        // Ensure every student has a login
+        // Ensure every student has a login and standardized email
         var allStudents = await _db.Students.ToListAsync();
         foreach (var s in allStudents)
         {
+            var expectedEmail = EmailHelper.StudentEmail(s.StudentID, s.FullName);
+            if (s.Email != expectedEmail)
+            {
+                s.Email = expectedEmail;
+            }
+
             var u = s.IdentityUserId != null ? await _users.FindByIdAsync(s.IdentityUserId) : await _users.FindByEmailAsync(s.Email);
             if (u == null)
             {
@@ -492,6 +558,14 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             }
             else
             {
+                if (u.Email != s.Email)
+                {
+                    u.Email = s.Email;
+                    u.NormalizedEmail = s.Email.ToUpperInvariant();
+                    u.UserName = s.Email;
+                    u.NormalizedUserName = s.Email.ToUpperInvariant();
+                    await _users.UpdateAsync(u);
+                }
                 if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
                 {
                     u.PasswordHash = hash;
@@ -688,7 +762,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 changed = true;
             }
             string cleanName = (s.FullName ?? "student").Trim().ToLowerInvariant().Replace(" ", ".");
-            string expectedEmail = $"{cleanName}.{s.StudentID}@attendx.edu.in";
+            string expectedEmail = EmailHelper.StudentEmail(s.StudentID, s.FullName);
             if (s.Email != expectedEmail)
             {
                 s.Email = expectedEmail;

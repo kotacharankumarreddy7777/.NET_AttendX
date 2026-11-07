@@ -43,8 +43,22 @@ public class AccountController(SignInManager<ApplicationUser> signIn, UserManage
             m.Role = role;
             m.InstitutionId = (m.InstitutionId ?? "").Trim();
             m.InstitutionId = System.Text.RegularExpressions.Regex.Replace(m.InstitutionId, @"^([1-8])\1+", "$1");
+            m.InstitutionId = m.InstitutionId.ToUpperInvariant();
             m.Email = (m.Email ?? "").Trim();
             m.Password = (m.Password ?? "").Trim();
+
+            // Auto-fetch email from ID if empty, or ID from email if ID empty
+            if (role == "faculty" || role == "student")
+            {
+                if (string.IsNullOrWhiteSpace(m.InstitutionId) && !string.IsNullOrWhiteSpace(m.Email))
+                {
+                    m.InstitutionId = EmailHelper.NormalizeToId(m.Email);
+                }
+                if (!string.IsNullOrWhiteSpace(m.InstitutionId) && string.IsNullOrWhiteSpace(m.Email))
+                {
+                    m.Email = EmailHelper.FromId(m.InstitutionId);
+                }
+            }
 
             bool needsId = role != "admin";
             if (needsId && string.IsNullOrWhiteSpace(m.InstitutionId))
@@ -272,37 +286,73 @@ public class AccountController(SignInManager<ApplicationUser> signIn, UserManage
     public async Task<IActionResult> Lookup(string role, string id, string? email)
     {
         if (string.IsNullOrWhiteSpace(role)) return Json(new { email = "", institutionId = "" });
-        id = id?.Trim() ?? "";
-        id = System.Text.RegularExpressions.Regex.Replace(id, @"^([1-8])\1+", "$1");
-        email = email?.Trim() ?? "";
+            id = id?.Trim() ?? "";
+            id = System.Text.RegularExpressions.Regex.Replace(id, @"^([1-8])\1+", "$1");
+            id = id.ToUpperInvariant();
+            email = email?.Trim() ?? "";
 
-        if (role == "student")
-        {
-            if (!string.IsNullOrEmpty(email))
+            if (role == "student")
             {
-                var student = await _db.Students.AsNoTracking().FirstOrDefaultAsync(x => x.Email == email);
-                if (student != null) return Json(new { email = student.Email, institutionId = student.StudentID, fullName = student.FullName });
-                // try by studentid as email
-                var student2 = await _db.Students.AsNoTracking().FirstOrDefaultAsync(x => x.StudentID.ToLower() == email.ToLower());
-                if (student2 != null) return Json(new { email = student2.Email, institutionId = student2.StudentID, fullName = student2.FullName });
-                return Json(new { email = "", institutionId = id, fullName = "" });
+                if (!string.IsNullOrEmpty(email) && string.IsNullOrWhiteSpace(id))
+                {
+                    id = EmailHelper.NormalizeToId(email);
+                }
+
+                if (string.IsNullOrWhiteSpace(id) && !string.IsNullOrEmpty(email))
+                {
+                    return Json(new { email = "", institutionId = id, fullName = "" });
+                }
+
+                var studentRec = await _db.Students.AsNoTracking().FirstOrDefaultAsync(x => x.StudentID.ToUpper() == id.ToUpper());
+                if (studentRec != null)
+                {
+                    var stdEmail = EmailHelper.StudentEmail(studentRec.StudentID, studentRec.FullName);
+                    return Json(new { email = stdEmail, institutionId = studentRec.StudentID, fullName = studentRec.FullName });
+                }
+
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    var sByEmail = await _db.Students.AsNoTracking().FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower());
+                    if (sByEmail != null)
+                    {
+                        var stdEmail = EmailHelper.StudentEmail(sByEmail.StudentID, sByEmail.FullName);
+                        return Json(new { email = stdEmail, institutionId = sByEmail.StudentID, fullName = sByEmail.FullName });
+                    }
+                }
+
+                return Json(new { email = EmailHelper.StudentEmail(id), institutionId = id, fullName = "" });
             }
-            var studentRec = await _db.Students.AsNoTracking().FirstOrDefaultAsync(x => x.StudentID == id);
-            if (studentRec != null) return Json(new { email = studentRec.Email, institutionId = studentRec.StudentID, fullName = studentRec.FullName });
-            return Json(new { email = $"{id}@attendx.edu.in", institutionId = id, fullName = "" });
-        }
-        else if (role == "faculty")
-        {
-            if (!string.IsNullOrEmpty(email))
+            else if (role == "faculty")
             {
-                var faculty = await _db.Faculty.AsNoTracking().FirstOrDefaultAsync(x => x.Email == email);
-                if (faculty != null) return Json(new { email = faculty.Email, institutionId = faculty.FacultyID, fullName = faculty.FullName });
-                return Json(new { email = "", institutionId = id, fullName = "" });
+                if (!string.IsNullOrEmpty(email) && string.IsNullOrWhiteSpace(id))
+                {
+                    id = EmailHelper.NormalizeToId(email);
+                }
+
+                if (string.IsNullOrWhiteSpace(id) && !string.IsNullOrEmpty(email))
+                {
+                    return Json(new { email = "", institutionId = id, fullName = "" });
+                }
+
+                var facultyRec = await _db.Faculty.AsNoTracking().FirstOrDefaultAsync(x => x.FacultyID.ToUpper() == id.ToUpper());
+                if (facultyRec != null)
+                {
+                    var facEmail = EmailHelper.FacultyEmail(facultyRec.FacultyID, facultyRec.FullName);
+                    return Json(new { email = facEmail, institutionId = facultyRec.FacultyID, fullName = facultyRec.FullName });
+                }
+
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    var fByEmail = await _db.Faculty.AsNoTracking().FirstOrDefaultAsync(x => x.Email.ToLower() == email.ToLower());
+                    if (fByEmail != null)
+                    {
+                        var facEmail = EmailHelper.FacultyEmail(fByEmail.FacultyID, fByEmail.FullName);
+                        return Json(new { email = facEmail, institutionId = fByEmail.FacultyID, fullName = fByEmail.FullName });
+                    }
+                }
+
+                return Json(new { email = EmailHelper.FacultyEmail(id), institutionId = id, fullName = "" });
             }
-            var facultyRec = await _db.Faculty.AsNoTracking().FirstOrDefaultAsync(x => x.FacultyID == id);
-            if (facultyRec != null) return Json(new { email = facultyRec.Email, institutionId = facultyRec.FacultyID, fullName = facultyRec.FullName });
-            return Json(new { email = "", institutionId = id, fullName = "" });
-        }
         return Json(new { email = "", institutionId = "", fullName = "" });
     }
 

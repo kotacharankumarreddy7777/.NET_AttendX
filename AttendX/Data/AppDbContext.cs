@@ -105,8 +105,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         // RowVersion: EF Core with Npgsql requires explicit byte[] default for inserts to avoid null violations
         // We provide a HasDefaultValue that EF Core sends as a parameter (not null) so Postgres not-null constraint is satisfied
-        b.Entity<Student>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]);
-        b.Entity<Attendance>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]);
+        // ValueGeneratedOnAdd() ensures EF Core includes the column in INSERT statements with the default value
+        b.Entity<Student>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]).ValueGeneratedOnAdd();
+        b.Entity<Attendance>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]).ValueGeneratedOnAdd();
 
         // SQL Server rejects "multiple cascade paths"
         foreach (var fk in b.Model.GetEntityTypes()

@@ -24,7 +24,15 @@
         if (st != null)
         {
             displayName = st.FullName.StartsWith("Student ") ? st.StudentID : st.FullName;
-            emailDisplay = st.Email;
+            emailDisplay = AttendX.Infrastructure.EmailHelper.StudentEmail(st.StudentID, st.FullName);
+        }
+    }
+    if (fac && appUser != null)
+    {
+        var facRec = await Db.Faculty.AsNoTracking().FirstOrDefaultAsync(x => x.IdentityUserId == appUser.Id);
+        if (facRec != null)
+        {
+            emailDisplay = AttendX.Infrastructure.EmailHelper.FacultyEmail(facRec.FacultyID, facRec.FullName);
         }
     }
     if (string.IsNullOrEmpty(emailDisplay)) emailDisplay = roleText;
