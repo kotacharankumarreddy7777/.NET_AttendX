@@ -61,6 +61,7 @@
     <div class="pt-brand"><div class="pt-brand-text"><b>@inst.Name</b><span>@inst.SystemName</span></div></div>
     <div class="pt-right">
         <span id="offlineBadge" class="badge bg-warning d-none"></span>
+        <span id="liveTime" class="badge bg-success d-none d-md-inline-block" style="font-size: 11px; padding: 4px 8px;"></span>
         <a class="pt-bell" asp-controller="Notices" asp-action="Board" aria-label="Notices"><i class="bi bi-bell"></i>@if (bell > 0) { <span class="n">@bell</span> }</a>
         <div class="pt-user d-none d-md-block"><b>@displayName</b><span>@emailDisplay</span></div>
         <form id="logoutForm" asp-controller="Account" asp-action="Logout" method="post" class="m-0"><button class="pt-out" type="submit">Sign out</button></form>
@@ -152,6 +153,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 <script src="~/js/offline-sync.js" asp-append-version="true"></script>
+<script src="~/js/live-sync.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

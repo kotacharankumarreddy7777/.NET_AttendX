@@ -2,6 +2,63 @@
 html{scroll-behavior:smooth}
 body{transition:background-color .3s ease}
 
+/* Live indicator dot pulse */
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(30,127,79,.4); }
+  70% { box-shadow: 0 0 0 6px rgba(30,127,79,0); }
+  100% { box-shadow: 0 0 0 0 rgba(30,127,79,0); }
+}
+
+/* Toast slide */
+.toast-slide {
+  animation: toastSlide .4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes toastSlide {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Bell shake animation on live update */
+.pt-bell.shake {
+  animation: bellShake .5s ease;
+}
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-15deg); }
+  40% { transform: rotate(15deg); }
+  60% { transform: rotate(-10deg); }
+  80% { transform: rotate(10deg); }
+}
+
+/* Staggered card entrance */
+.ax-card, .role-tile, .slot-card {
+  animation: smoothFadeIn .5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--stagger-index, 0) * 40ms);
+}
+.slot-card:nth-child(1) { --stagger-index: 1; }
+.slot-card:nth-child(2) { --stagger-index: 2; }
+.slot-card:nth-child(3) { --stagger-index: 3; }
+.slot-card:nth-child(4) { --stagger-index: 4; }
+.slot-card:nth-child(5) { --stagger-index: 5; }
+.slot-card:nth-child(6) { --stagger-index: 6; }
+
+/* Chart container fade */
+.chart-container, canvas[id^="ch"] {
+  animation: chartFadeIn .6s ease both;
+}
+@keyframes chartFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Targeted transitions for interactive and layout elements */
 .pt-menu, .pt-bell, .pt-out, .pt-side a, .pt-tabbar a, .btn, .ax-card, .role-tile, .form-control, .form-select, .badge, .form-check-input, .slot, .qr-card, .timeline .tl {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease !important;
