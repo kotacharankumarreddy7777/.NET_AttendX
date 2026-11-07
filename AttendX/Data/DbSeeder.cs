@@ -101,8 +101,38 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         await SeedSubjectsAsync(cancellationToken);
         await FixMalformedStudentIdsAsync(cancellationToken);
 
-        // If faculty and students are fully seeded, skip demo seeding & heavy login verification loops on subsequent startups
-        if (await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500)
+        // Force rebuild check: if CSV counts != DB counts, force DELETE and reseed all people + attendance
+        var facultyCsvCount = Read("faculty.csv").Count;
+        var studentsCsvCount = Read("students.csv").Count;
+        var facultyDbCount = await _db.Faculty.CountAsync(cancellationToken);
+        var studentsDbCount = await _db.Students.CountAsync(cancellationToken);
+        var attendanceCount = await _db.Attendance.CountAsync(a => a.Date >= new DateTime(2026, 8, 1), cancellationToken);
+
+        bool needsRebuild = facultyDbCount < facultyCsvCount || studentsDbCount < studentsCsvCount || attendanceCount < 5000;
+
+        if (needsRebuild)
+        {
+            if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Force rebuild needed: Faculty DB {F} vs CSV {CF}, Students DB {S} vs CSV {CS}, Attendance Aug-Nov {A}", facultyDbCount, facultyCsvCount, studentsDbCount, studentsCsvCount, attendanceCount);
+            // Truncate in FK-safe order (children first) to avoid duplicates/missing
+            await _db.Database.ExecuteSqlRawAsync(@"
+                DELETE FROM ""Attendance"";
+                DELETE FROM ""AttendanceSessions"";
+                DELETE FROM ""ExamTimetables"";
+                DELETE FROM ""Timetables"";
+                DELETE FROM ""FacultySubjectMappings"";
+                DELETE FROM ""Students"";
+                DELETE FROM ""Faculty"";
+                DELETE FROM ""AspNetUserRoles"";
+                DELETE FROM ""AspNetUserTokens"";
+                DELETE FROM ""AspNetUserClaims"";
+                DELETE FROM ""AspNetUserLogins"";
+                DELETE FROM ""AspNetUsers"";
+            ");
+            _log.LogInformation("Truncated tables in FK-safe order for full rebuild.");
+        }
+
+        // If faculty and students are fully seeded AND attendance coverage is complete, skip heavy seeding
+        if (await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
         {
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Database already seeded. Skipping demo seeding.");
             // Ensure exam timetables exist even if attendance is seeded
@@ -364,6 +394,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var rows = Read("students.csv");
         var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), _o.SeedStudentPassword);
         var studentRole = (await _db.Roles.FirstAsync(r => r.Name == RoleNames.Student)).Id;
+
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
         var sections = await _db.Sections.AsNoTracking().ToListAsync();
         var existingNormalizedEmails = (await _db.Users.AsNoTracking().Select(u => u.NormalizedEmail!).ToListAsync()).ToHashSet(StringComparer.Ordinal);
@@ -393,7 +424,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     _db.Students.Add(new Student
                     {
                         StudentID = r["studentid"], FullName = r["fullname"], Email = email, Phone = r["phone"], BranchId = b.Id, SectionId = sec.Id, Semester = sem,
-                        Year = YearHelper.FromSemester(sem), JoiningDate = DateTime.Parse(r["joiningdate"]).Date, QRPath = "on-demand", IsActive = true, IdentityUserId = user.Id
+                        Year = YearHelper.FromSemester(sem), JoiningDate = DateTime.Parse(r["joiningdate"]).Date, QRPath = "on-demand", IsActive = true, IdentityUserId = user.Id,
+                        RowVersion = Array.Empty<byte>()
                     });
                 }
                 await _db.SaveChangesAsync();
@@ -438,7 +470,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         JoiningDate = DateTime.Today.AddMonths(-6),
                         QRPath = "on-demand",
                         IsActive = true,
-                        IdentityUserId = user.Id
+                        IdentityUserId = user.Id,
+                        RowVersion = Array.Empty<byte>()
                     });
                 }
                 await _db.SaveChangesAsync();

@@ -63,9 +63,9 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         vm.LowAttendanceCount = below.Count;
         vm.LowStudents = [.. below.Take(8)];
 
-        // today's classes whose window already closed but nobody marked attendance
+        // today's classes not marked yet (all states: Upcoming/Open/Closed, not just Closed)
         var slots = await attendance.GetSlotsAsync(today, null, scope, null);
-        vm.MissingSlots = [.. slots.Where(s => s.State == "Closed" && !s.HasSession).Take(10)];
+        vm.MissingSlots = [.. slots.Where(s => !s.HasSession).OrderBy(s => s.Period).ThenBy(s => s.BranchCode)];
 
         // faculty activity (last 7 days): sessions are counted straight from AttendanceSessions instead of
         // COUNT(DISTINCT AttendanceSessionId) over every attendance row.

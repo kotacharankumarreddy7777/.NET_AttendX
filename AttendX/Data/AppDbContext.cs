@@ -103,7 +103,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.Semester, x.ExamType, x.ExamDate });
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.BranchId, x.Semester, x.SubjectId, x.ExamType }).IsUnique();
 
-        // SQL Server rejects "multiple cascade paths", so every relationship of OUR tables is Restrict (soft-delete is used anyway).
+        // RowVersion: EF Core with Npgsql requires explicit byte[] default for inserts to avoid null violations
+        // We provide a HasDefaultValue that EF Core sends as a parameter (not null) so Postgres not-null constraint is satisfied
+        b.Entity<Student>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]);
+        b.Entity<Attendance>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]);
+
+        // SQL Server rejects "multiple cascade paths"
         foreach (var fk in b.Model.GetEntityTypes()
                      .Where(e => e.ClrType.Namespace == typeof(Student).Namespace)
                      .SelectMany(e => e.GetForeignKeys()))
