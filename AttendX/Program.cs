@@ -29,7 +29,7 @@ var usePostgres = rawCs.StartsWith("postgres://", StringComparison.OrdinalIgnore
 
 builder.Services.Configure<AttendXOptions>(builder.Configuration.GetSection("AttendX"));
 builder.Services.Configure<InstitutionOptions>(builder.Configuration.GetSection("Institution"));
-builder.Services.Configure<AttendXOptions>(o => o.UseMigrations = true);
+builder.Services.Configure<AttendXOptions>(o => o.UseMigrations = false);
 
 builder.Services.AddDbContextPool<AppDbContext>(o =>
 {
@@ -49,6 +49,7 @@ builder.Services.AddDbContextPool<AppDbContext>(o =>
             sql.CommandTimeout(120);
         });
     }
+    o.ConfigureWarnings(wb => wb.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 });
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
