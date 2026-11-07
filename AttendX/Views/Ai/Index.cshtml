@@ -1,0 +1,159 @@
+@model List<AiChatMessage>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = User.IsInRole("Admin") || User.IsInRole("HOD") ? "AI Assistant & Diagnostics" : "AI Study Helper";
+    bool isAdmin = User.IsInRole("Admin") || User.IsInRole("HOD");
+    var latest = ViewBag.LatestReport as AiDiagnosticReport;
+}
+
+<div class="container-fluid py-4 px-3 px-md-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2 class="mb-0 fw-bold text-dark">@ViewData["Title"]</h2>
+        <span class="badge bg-primary">Role: @ViewBag.Role</span>
+    </div>
+
+    <!-- AI Diagnostics (Admin/HOD Only) -->
+    @if (isAdmin)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100 @(latest?.HealthScore < 70 ? "border-warning" : "border-success")">
+                    <div class="card-body">
+                        <h3 class="card-title h5 d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-activity me-2 text-success"></i>System Health Score</span>
+                            @if (latest != null)
+                            {
+                                <span class="badge fs-4 rounded-full @(latest.HealthScore < 70 ? "bg-danger" : "bg-success")">@latest.HealthScore</span>
+                            }
+                        </h3>
+                        <p class="text-muted small mb-1">Last checked: @((latest?.CreatedAt.ToString("dd MMM yyyy HH:mm:ss") ?? "N/A"))</p>
+                        <div class="mt-3">
+                            @if (latest != null)
+                            {
+                                <div class="progress" style="height: 8px; border-radius: 4px;">
+                                    <div class="progress-bar @(latest.HealthScore < 70 ? "bg-danger" : "bg-success")" role="progressbar" style="width: @latest.HealthScore%" aria-valuenow="@latest.HealthScore" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            }
+                        </div>
+                        <p class="mt-3 mb-0 small @(latest?.HealthScore < 70 ? "text-danger fw-medium" : "text-success fw-medium")">
+                            @(latest?.HealthScore < 70 ? "⚠️ Attention needed! Check issues below." : "✅ System healthy.")
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body">
+                        <h3 class="card-title h5"><i class="bi bi-clipboard2-data me-2 text-primary"></i>AI Diagnostic Report</h3>
+                        @if (latest != null)
+                        {
+                            <div class="alert alert-info small mt-2" style="white-space: pre-wrap;">@latest.ReportText</div>
+                        }
+                        else
+                        {
+                            <p class="text-muted small mt-2">Generating report in background... Refresh in a few minutes.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- AI Chat Interface -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header d-flex justify-content-between align-items-center py-3 bg-white">
+            <h3 class="h5 mb-0 fw-bold"><i class="bi bi-robot me-2 text-primary"></i>Ask AI</h3>
+            <span class="text-muted small d-none d-sm-inline">Powered by Gemini & Groq</span>
+        </div>
+        <div class="card-body p-0">
+            <div id="chatMessages" class="chat-messages p-3 p-md-4">
+                @foreach (var msg in Model)
+                {
+                    <div class="d-flex flex-column gap-2 mb-3 align-items-end">
+                        <div class="chat-bubble-out p-3 rounded-3 text-white bg-primary shadow-sm" style="max-width: 85%; font-size: 0.95rem;">
+                            <small class="d-block text-white-50 mb-1" style="font-size: 0.7rem;">@msg.SentAt.ToString("HH:mm")</small>
+                            @msg.MessageText
+                        </div>
+                    </div>
+                }
+                <div id="aiReplyPlaceholder" class="d-none">
+                    <div class="d-flex flex-column gap-2 mb-3 align-items-start">
+                        <div class="chat-bubble-in p-3 rounded-3 bg-light shadow-sm border" style="max-width: 85%; font-size: 0.95rem;">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Thinking...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer p-3 p-md-4 bg-white border-top">
+            <form id="aiChatForm" class="d-flex gap-2">
+                @Html.AntiForgeryToken()
+                <input type="text" id="aiMessageInput" class="form-control rounded-pill" placeholder="Type your message here..." maxlength="500" autocomplete="off" required />
+                <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="bi bi-send d-md-none"></i><span class="d-none d-md-inline ms-1">Send</span></button>
+            </form>
+            <div class="text-muted text-center mt-2" style="font-size: 0.75rem;">Max 500 characters • Free Tier</div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatForm = document.getElementById('aiChatForm');
+            const chatInput = document.getElementById('aiMessageInput');
+            const chatContainer = document.getElementById('chatMessages');
+            const typingIndicator = document.getElementById('aiReplyPlaceholder');
+
+            function scrollToBottom() {
+                let doc = document.documentElement;
+                let bottom = chatContainer.scrollHeight - chatContainer.clientHeight;
+                chatContainer.scrollTo({ top: bottom, behavior: 'smooth' });
+            }
+
+            function addMessageBubble(text, isUser, timeStr) {
+                const wrapper = document.createElement('div');
+                wrapper.className = isUser ? 'd-flex flex-column gap-2 mb-3 align-items-end' : 'd-flex flex-column gap-2 mb-3 align-items-start';
+                wrapper.innerHTML = isUser
+                    ? `<div class="chat-bubble-out p-3 rounded-3 text-white bg-primary shadow-sm" style="max-width: 85%; font-size: 0.95rem;"><small class="d-block text-white-50 mb-1" style="font-size: 0.7rem;">${timeStr}</small>${text.replace(/</g, "&lt;")}</div>`
+                    : `<div class="chat-bubble-in p-3 rounded-3 bg-light shadow-sm border" style="max-width: 85%; font-size: 0.95rem;"><small class="d-block text-muted mb-1" style="font-size: 0.7rem;">AI Assistant</small>${text.replace(/</g, "&lt;").replace(/\n/g, '<br>')}</div>`;
+                chatContainer.insertBefore(wrapper, typingIndicator);
+                scrollToBottom();
+            }
+
+            chatForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const message = chatInput.value.trim();
+                if (!message) return;
+
+                const now = new Date().toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'});
+                addMessageBubble(message, true, now);
+                chatInput.value = '';
+                typingIndicator.classList.remove('d-none');
+                scrollToBottom();
+
+                try {
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                    const response = await fetch('/Ai/Chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': token
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+                    const data = await response.json();
+                    typingIndicator.classList.add('d-none');
+                    if (data.success) {
+                        addMessageBubble(data.reply, false, now);
+                    } else {
+                        addMessageBubble(data.message, false, now);
+                    }
+                } catch (err) {
+                    typingIndicator.classList.add('d-none');
+                    addMessageBubble("Network error. Please check your connection.", false, now);
+                }
+            });
+            scrollToBottom();
+        });
+    </script>
+}

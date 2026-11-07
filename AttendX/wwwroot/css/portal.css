@@ -431,3 +431,44 @@ textarea.form-control{min-height:90px}
   .pt-main { overflow-x: hidden; }
   .pt-content { overflow-x: hidden; }
 }
+
+/* ---------- AI Chat Responsive ---------- */
+.chat-messages {
+  max-height: clamp(300px, 60vh, 600px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.chat-messages::-webkit-scrollbar {
+  display: none;
+}
+.chat-bubble-out, .chat-bubble-in {
+  max-width: 85%;
+  width: auto;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+@media (max-width: 576px) {
+  .chat-bubble-out, .chat-bubble-in {
+    max-width: 92%;
+    font-size: 0.9rem;
+  }
+  .chat-messages {
+    max-height: 55vh;
+  }
+}
+@media (max-width: 768px) {
+  .row.g-3.mb-4 > div[class*="col-"] {
+    margin-bottom: 0.75rem;
+  }
+}
+@media (min-width: 769px) {
+  .chat-messages {
+    min-height: 350px;
+  }
+}

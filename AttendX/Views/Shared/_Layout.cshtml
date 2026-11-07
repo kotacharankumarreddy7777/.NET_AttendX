@@ -70,6 +70,7 @@
     @if (student)
     {
         <a class="@A("Student", "Index", "Query", "MyQr", "Card", "UpdatePhone")" asp-controller="Student" asp-action="Index" title="Dashboard"><i class="bi bi-speedometer2"></i> <span class="nav-text">Dashboard</span></a>
+        <a class="@A("Ai", "Index")" asp-controller="Ai" asp-action="Index" title="AI Study Helper"><i class="bi bi-robot"></i> <span class="nav-text">AI Study Helper</span></a>
         <a class="@A("Notices", "Board")" asp-controller="Notices" asp-action="Board" title="Notices"><i class="bi bi-megaphone"></i> <span class="nav-text">Notices</span></a>
         <a class="@A("Student", "Report")" asp-controller="Student" asp-action="Report" title="Attendance Report"><i class="bi bi-file-earmark-pdf"></i> <span class="nav-text">Attendance Report</span></a>
         <a class="@A("Account", "ChangePassword")" asp-controller="Account" asp-action="ChangePassword" title="Change Password"><i class="bi bi-key"></i> <span class="nav-text">Change Password</span></a>
@@ -77,6 +78,7 @@
     @if (staff)
     {
         <a class="@A("Dashboard")" asp-controller="Dashboard" asp-action="Index" title="Dashboard"><i class="bi bi-speedometer2"></i> <span class="nav-text">Dashboard</span></a>
+        <a class="@A("Ai", "Index")" asp-controller="Ai" asp-action="Index" title="AI Assistant & Diagnostics"><i class="bi bi-robot"></i> <span class="nav-text">AI Assistant &amp; Diagnostics</span></a>
         <div class="grp"><span class="nav-text">Attendance</span></div>
         <a class="@A("Attendance", todayActions)" asp-controller="Attendance" asp-action="Index" title="Today's Classes"><i class="bi bi-check2-square"></i> <span class="nav-text">Today's Classes</span></a>
         @if (admin || hod) { <a class="@A("Attendance", "Corrections")" asp-controller="Attendance" asp-action="Corrections" title="Corrections"><i class="bi bi-pencil-square"></i> <span class="nav-text">Corrections</span></a> }
@@ -132,12 +134,14 @@
     @if (student)
     {
         <a class="@A("Student", "Index", "Query", "MyQr", "Card", "UpdatePhone")" asp-controller="Student" asp-action="Index"><i class="bi bi-house"></i>Home</a>
+        <a class="@A("Ai", "Index")" asp-controller="Ai" asp-action="Index"><i class="bi bi-robot"></i>AI</a>
         <a class="@A("Notices", "Board")" asp-controller="Notices" asp-action="Board"><i class="bi bi-megaphone"></i>Notices</a>
         <a class="@A("Student", "Report")" asp-controller="Student" asp-action="Report"><i class="bi bi-file-earmark-pdf"></i>Report</a>
     }
     else
     {
         <a class="@A("Dashboard")" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-house"></i>Home</a>
+        <a class="@A("Ai", "Index")" asp-controller="Ai" asp-action="Index"><i class="bi bi-robot"></i>AI</a>
         <a class="@A("Attendance", todayActions)" asp-controller="Attendance" asp-action="Index"><i class="bi bi-check2-square"></i>Today</a>
         <a class="@A("Timetable")" asp-controller="Timetable" asp-action="Index"><i class="bi bi-calendar3-week"></i>Timetable</a>
     }

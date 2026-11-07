@@ -30,6 +30,15 @@ var usePostgres = rawCs.StartsWith("postgres://", StringComparison.OrdinalIgnore
 builder.Services.Configure<AttendXOptions>(builder.Configuration.GetSection("AttendX"));
 builder.Services.Configure<InstitutionOptions>(builder.Configuration.GetSection("Institution"));
 builder.Services.Configure<AttendXOptions>(o => o.UseMigrations = false);
+builder.Services.Configure<AiOptions>(builder.Configuration.GetSection("Ai"));
+
+var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? builder.Configuration["Ai:GeminApiKey"];
+var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? builder.Configuration["Ai:GroqApiKey"];
+builder.Services.Configure<AiOptions>(o =>
+{
+    if (!string.IsNullOrEmpty(geminiKey)) o.GeminiApiKey = geminiKey;
+    if (!string.IsNullOrEmpty(groqKey)) o.GroqApiKey = groqKey;
+});
 
 builder.Services.AddDbContextPool<AppDbContext>(o =>
 {
@@ -114,6 +123,12 @@ builder.Services.AddScoped<INoticeService, NoticeService>();
 builder.Services.AddScoped<IStudentPortalService, StudentPortalService>();
 builder.Services.AddScoped<IMasterDataExportService, MasterDataExportService>();
 builder.Services.AddScoped<DbSeeder>();
+builder.Services.AddHttpClient<IAiService, AiService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("AttendX-AI/1.0");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHostedService<AiDiagnosticsBackgroundService>();
 
 var app = builder.Build();
 
