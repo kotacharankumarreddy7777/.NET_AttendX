@@ -33,7 +33,7 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
             .Where(m => m.StudentId == me.Id && examIds.Contains(m.ExamTimetableId))
             .ToDictionaryAsync(m => m.ExamTimetableId, m => m);
 
-        var viewModel = exams.Select(e => new
+        var viewModel = exams.Select(e => new ExamResultViewModel
         {
             Exam = e,
             Mark = marks.GetValueOrDefault(e.Id)
@@ -74,7 +74,7 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
         ViewBag.ExamType = examType;
         ViewBag.BranchId = branchId;
         ViewBag.Branches = await _db.Branches.AsNoTracking().OrderBy(b => b.Name).Select(b => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
-        return View("Index", exams.Select(e => new { Exam = e, Mark = (ExamMark?)null }).ToList());
+        return View("Index", exams.Select(e => new ExamResultViewModel { Exam = e, Mark = null }).ToList());
     }
 
     [Authorize(Policy = PolicyNames.AdminOrHod)]
