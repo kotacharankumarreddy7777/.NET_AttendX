@@ -7,13 +7,13 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
     private readonly AppDbContext _db = db;
     private readonly ICurrentUser _user = user;
 
-    [Authorize(Policy = PolicyNames.StudentOnly)]
+    [Authorize]
     public async Task<IActionResult> Index(string examType, int? semester)
     {
         return await Results(examType, semester);
     }
 
-    [Authorize(Policy = PolicyNames.StudentOnly)]
+    [Authorize]
     public async Task<IActionResult> Results(string examType, int? semester)
     {
         var uid = _user.UserId;

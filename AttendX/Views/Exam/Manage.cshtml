@@ -72,12 +72,12 @@
                                         }
                                         else if (!canModify)
                                         {
-                                            <form method="post" asp-action="RequestUnlock" class="d-inline"><input type="hidden" name="id" value="@m.Id" /><button type="submit" class="btn btn-sm btn-outline-warning">Request Unlock</button></form>
+                                            <form method="post" asp-action="RequestUnlock" class="d-inline"><input type="hidden" name="id" value="@m.Id" /><button type="submit" class="btn btn-sm btn-outline-warning" formaction="/Exam/RequestUnlock">Request Unlock</button></form>
                                         }
                                     }
                                     @if (canModify && m.IsLocked)
                                     {
-                                        <form method="post" asp-action="GrantUnlock" class="d-inline"><input type="hidden" name="id" value="@m.Id" /><button type="submit" class="btn btn-sm btn-outline-success">Grant 24h</button></form>
+                                        <form method="post" asp-action="GrantUnlock" class="d-inline"><input type="hidden" name="id" value="@m.Id" /><button type="submit" class="btn btn-sm btn-outline-success" formaction="/Exam/GrantUnlock">Grant 24h</button></form>
                                     }
                                     @if (isUnlocked)
                                     {

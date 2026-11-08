@@ -100,8 +100,13 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         {
             ch.GroupTitle = "Section-wise attendance % (30 days)";
             var g = await last30.GroupBy(a => a.SectionId).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
-            var names = await db.Sections.AsNoTracking().ToDictionaryAsync(s => s.Id, s => s.Name);
-            foreach (var r in g.OrderBy(q => names[q.Key])) { ch.Group.Labels.Add(names[r.Key]); ch.Group.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
+            var attendanceMap = g.ToDictionary(x => x.Key, x => AttendanceMath.Percent(x.P, x.L, x.T, w));
+            var allSections = await db.Sections.AsNoTracking().Where(s => s.BranchId == scope && s.IsActive).OrderBy(s => s.Name).ToListAsync();
+            foreach (var sec in allSections)
+            {
+                ch.Group.Labels.Add(sec.Name);
+                ch.Group.Values.Add(attendanceMap.GetValueOrDefault(sec.Id, 0m));
+            }
         }
         var sg = await last30.GroupBy(a => a.Semester).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
         foreach (var r in sg.OrderBy(q => q.Key)) { ch.Semester.Labels.Add("Sem " + r.Key); ch.Semester.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }

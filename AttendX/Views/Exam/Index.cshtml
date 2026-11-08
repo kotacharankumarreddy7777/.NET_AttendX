@@ -12,36 +12,36 @@
 
 <div class="ax-card mb-3">
     <div class="card-h">
-        <span>Exam Schedule <small class="text-muted">Semester @(sem ?? 0)</small></span>
-        <div class="d-flex gap-2">
-            <a href="?examType=Mid1&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid1" ? "btn-primary" : "btn-outline-secondary")">Mid Sem 1</a>
-            <a href="?examType=Mid2&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid2" ? "btn-primary" : "btn-outline-secondary")">Mid Sem 2</a>
-            <a href="?examType=Final&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Final" ? "btn-primary" : "btn-outline-secondary")">Final Sem</a>
+        <span>Exam Schedule @if (sem.HasValue && sem.Value > 0) { <small class="text-muted">Semester @sem</small> }</span>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="?examType=Mid1&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid1" ? "btn-primary" : "btn-outline-secondary")">Mid 1</a>
+            <a href="?examType=Mid2&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid2" ? "btn-primary" : "btn-outline-secondary")">Mid 2</a>
+            <a href="?examType=Final&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Final" ? "btn-primary" : "btn-outline-secondary")">Final</a>
             <a href="?examType=&semester=@sem" class="btn btn-sm btn-outline-secondary">All</a>
         </div>
     </div>
     <div class="card-b">
         @if (!Model.Any())
         {
-            <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No exams found", "Exams are generated for each semester. Please contact admin if missing.")' />
+            <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No exams found", "Exams are generated for each semester.")' />
         }
         else
         {
             if (completed.Any())
             {
-                <h6 class="fw-semibold mt-1 mb-2"><i class="bi bi-check-circle text-success me-2"></i>Completed & Declared</h6>
+                <h6 class="fw-semibold mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i> Completed & Declared</h6>
                 <div class="table-responsive mb-4">
                     <table class="table table-sm table-hover mb-0">
-                        <thead><tr><th>Date</th><th>Subject</th><th>Faculty</th><th>Room</th><th>Marks</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Subject</th><th>Room</th><th>Status</th><th>Marks</th></tr></thead>
                         <tbody>
                             @foreach (var item in completed)
                             {
                                 var e = item.Exam; var m = item.Mark!;
                                 <tr>
                                     <td class="fw-semibold">@e.ExamDate.ToString("dd MMM")</td>
-                                    <td><b>@e.Subject?.SubjectCode</b> @e.Subject?.SubjectName <span class="badge ms-1 @(e.ExamType == "Final" ? "bg-danger" : e.ExamType == "Mid2" ? "bg-warning text-dark" : "bg-info text-dark")">@e.ExamType</span></td>
-                                    <td>@e.Faculty?.FullName</td>
+                                    <td><b>@e.Subject?.SubjectCode</b> @e.Subject?.SubjectName</td>
                                     <td>@e.RoomNo</td>
+                                    <td><span class="badge bg-success">Completed</span></td>
                                     <td><span class="badge @(m.MarksObtained >= m.MaxMarks * 0.75m ? "bg-success" : m.MarksObtained >= m.MaxMarks * 0.4m ? "bg-warning text-dark" : "bg-danger")">@m.MarksObtained / @m.MaxMarks</span></td>
                                 </tr>
                             }
@@ -51,21 +51,21 @@
             }
             if (upcoming.Any())
             {
-                <h6 class="fw-semibold mb-2"><i class="bi bi-calendar3 text-primary me-2"></i>Upcoming Exams</h6>
+                <h6 class="fw-semibold mb-2"><i class="bi bi-calendar3 text-info me-1"></i> Upcoming Exams</h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0">
-                        <thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Room</th><th>Type</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Room</th><th>Status</th></tr></thead>
                         <tbody>
                             @foreach (var item in upcoming)
                             {
                                 var e = item.Exam;
+                                bool isToday = e.ExamDate.Date == DateTime.Today;
                                 <tr>
                                     <td class="fw-semibold">@e.ExamDate.ToString("ddd, dd MMM")</td>
                                     <td>@UiHelpers.Time(e.StartTime) – @UiHelpers.Time(e.EndTime)</td>
-                                    <td><b>@e.Subject?.SubjectCode</b> @e.Subject?.SubjectName</td>
-                                    <td>@e.Faculty?.FullName</td>
+                                    <td><b>@e.Subject?.SubjectCode</b><br><small class="text-muted">@e.Subject?.SubjectName</small></td>
                                     <td>@e.RoomNo</td>
-                                    <td><span class="badge @(e.ExamType == "Final" ? "bg-danger" : e.ExamType == "Mid2" ? "bg-warning text-dark" : "bg-info text-dark")">@e.ExamType</span></td>
+                                    <td><span class="badge @(isToday ? "bg-warning text-dark" : "bg-info text-dark")">@(isToday ? "Today" : "Upcoming")</span></td>
                                 </tr>
                             }
                         </tbody>

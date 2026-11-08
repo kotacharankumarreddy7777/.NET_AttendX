@@ -857,6 +857,12 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     while (date.DayOfWeek == DayOfWeek.Sunday) date = date.AddDays(1);
                     if (date > w.End) date = w.End;
 
+                    var roomPool = new[] { "Exam Hall A", "Exam Hall B", "Exam Hall C", "Exam Hall D", "Exam Hall E" };
+                    int roomIdx = (subj.BranchId * 3 + subj.Id + date.DayOfYear) % roomPool.Length;
+                    var room = roomPool[roomIdx];
+                    var startTime = (roomIdx % 2 == 0) ? defaultStart : new TimeSpan(13, 0, 0);
+                    var endTime = startTime.Add(TimeSpan.FromHours(3));
+
                     exams.Add(new ExamTimetable
                     {
                         AcademicYearId = year.Id,
@@ -866,9 +872,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         FacultyId = facId,
                         ExamType = w.Type,
                         ExamDate = date,
-                        StartTime = defaultStart,
-                        EndTime = defaultEnd,
-                        RoomNo = "Exam Hall A",
+                        StartTime = startTime,
+                        EndTime = endTime,
+                        RoomNo = room,
                         IsActive = true
                     });
                 }
