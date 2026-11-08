@@ -5,7 +5,7 @@ body{transition:background-color .3s ease}
 /* Smooth touch scrolling + desktop hover scrollbar */
 .pt-content, .pt-side, .table-responsive, .ax-card, .chat-messages {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
   scroll-behavior: smooth;
 }
 @media (hover: hover) {
@@ -345,7 +345,7 @@ body.sb-collapsed .pt-brand-text {
 body.sb-collapsed .pt-side{transform:none}
 .pt-ctx{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap;font-size:12.5px;color:var(--muted);flex-shrink:0}
 .pt-ctx .crumb a{color:var(--muted)}.pt-ctx .crumb b{color:var(--text);font-weight:500}.pt-ctx .info{display:flex;gap:16px}
-.pt-content{padding:20px 24px;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth;padding-bottom:calc(60px + env(safe-area-inset-bottom));max-width:100%;width:100%}
+.pt-content{padding:20px 24px;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:auto;scroll-behavior:smooth;padding-bottom:calc(60px + env(safe-area-inset-bottom));max-width:100%;width:100%}
 .pt-footer{padding:12px 24px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
 .pt-tabbar{display:none}
 
