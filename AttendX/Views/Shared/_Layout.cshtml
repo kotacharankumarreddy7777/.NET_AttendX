@@ -69,7 +69,6 @@
     <div class="pt-brand"><div class="pt-brand-text"><b>@inst.Name</b><span>@inst.SystemName</span></div></div>
     <div class="pt-right">
         <span id="offlineBadge" class="badge bg-warning d-none"></span>
-        <span id="liveTime" class="badge bg-success d-none d-md-inline-block" style="font-size: 11px; padding: 4px 8px;"></span>
         <a class="pt-bell" asp-controller="Notices" asp-action="Board" aria-label="Notices"><i class="bi bi-bell"></i>@if (bell > 0) { <span class="n">@bell</span> }</a>
         <div class="pt-user d-none d-md-block"><b>@displayName</b><span>@emailDisplay</span></div>
         <form id="logoutForm" asp-controller="Account" asp-action="Logout" method="post" class="m-0"><button class="pt-out" type="submit">Sign out</button></form>
@@ -127,7 +126,7 @@
 <div class="pt-main">
     <div class="pt-ctx">
         <div class="crumb"><a href="/">Home</a> / <b>@ViewData["Title"]</b></div>
-        <div class="info"><span>Academic Year @year.Name</span><span>@DateTime.Now.ToString("dddd, dd MMM yyyy")</span></div>
+        <div class="info"><span>Academic Year @year.Name</span></div>
     </div>
     <main class="pt-content" id="main">
         @if (TempData["Success"] is string ok) { <div class="alert alert-success alert-dismissible fade show" role="status">@ok<button class="btn-close" data-bs-dismiss="alert" type="button" aria-label="Close"></button></div> }

@@ -96,10 +96,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (bell) {
     pollBell();
     setInterval(pollBell, 15000);
-    setInterval(pollHealth, 30000);
     setInterval(pollSlots, 30000);
   }
-
-  // Initial health poll
-  pollHealth();
 });

@@ -148,6 +148,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 DELETE FROM ""AspNetUserClaims"";
                 DELETE FROM ""AspNetUserLogins"";
                 DELETE FROM ""AspNetUsers"";
+                ALTER TABLE ""Attendance"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
+                ALTER TABLE ""Students"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
             ");
             _log.LogInformation("Truncated tables in FK-safe order for full rebuild.");
         }
@@ -159,6 +161,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 DELETE FROM ""Attendance"";
                 DELETE FROM ""AttendanceSessions"";
                 DELETE FROM ""ExamTimetables"";
+                ALTER TABLE ""Attendance"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
+                ALTER TABLE ""Students"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
             ");
             _log.LogInformation("Cleared attendance tables for regeneration.");
         }
