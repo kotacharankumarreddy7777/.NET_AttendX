@@ -106,21 +106,23 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var studentsCsvCount = Read("students.csv").Count;
         var facultyDbCount = await _db.Faculty.CountAsync(cancellationToken);
         var studentsDbCount = await _db.Students.CountAsync(cancellationToken);
-        var attendanceCount = await _db.Attendance.CountAsync(a => a.Date >= new DateTime(2026, 8, 1), cancellationToken);
+        var attendanceCount = await _db.Attendance.CountAsync(cancellationToken);
+        var timetableCount = await _db.Timetables.CountAsync(cancellationToken);
 
-        // If DB has more students than CSV (due to generated fillers), adjust expected count
-        int expectedStudents = studentsCsvCount;
         // Count generated students: sections * semesters (1,3,5) * 30 students per section minus CSV students
         // For simplicity, if studentsDbCount > studentsCsvCount and attendanceCount == 0, it's a rebuild case
-        bool needsRebuild = facultyDbCount < facultyCsvCount || studentsDbCount == 0 || attendanceCount < 5000;
+        // FIXED: timetableCount == 0 was the root cause of the "No data" graphs - attendance history needs timetable rows to exist.
+        // Previously, needsRebuild was false when counts were OK but timetable was empty, blocking re-seeding.
+        bool needsRebuild = facultyDbCount < facultyCsvCount || studentsDbCount == 0 || attendanceCount < 5000 || timetableCount == 0;
 
         // Only rebuild if attendance is completely missing OR people counts are significantly off (less than 80% of CSV)
         if (!needsRebuild && attendanceCount >= 5000)
         {
             needsRebuild = false;
         }
-        else if (facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8)
+        else if (facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0)
         {
+            // FIX: Triggers a full rebuild, which was preventing the mandatory attendance history generation for the charts.
             needsRebuild = true;
         }
         else if (attendanceCount < 5000)
@@ -175,7 +177,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var watch = System.Diagnostics.Stopwatch.StartNew();
         await SeedHolidaysAsync(cancellationToken);
         // Only seed people if needed (truncate case), otherwise skip to save time
-        if (needsRebuild || facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8)
+        // FIXED: Also check timetableCount because attendance history requires timetable rows to exist.
+        if (needsRebuild || facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0)
         {
             await SeedFacultyAsync(cancellationToken);
             await SeedStudentsAsync(cancellationToken);
