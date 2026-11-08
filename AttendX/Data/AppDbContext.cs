@@ -29,8 +29,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         base.OnModelCreating(b);
 
-        b.Entity<ExamMark>().Property(x => x.MarksObtained).HasPrecision(5, 2);
-        b.Entity<ExamMark>().Property(x => x.MaxMarks).HasPrecision(5, 2);
+        b.Entity<ExamMark>(e => {
+            e.Property(x => x.MarksObtained).HasPrecision(5, 2);
+            e.Property(x => x.MaxMarks).HasPrecision(5, 2);
+        });
 
         b.Entity<AcademicYear>().HasIndex(x => x.Name).IsUnique();
 
