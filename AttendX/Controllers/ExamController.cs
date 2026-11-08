@@ -8,6 +8,12 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
     [Authorize(Policy = PolicyNames.StudentOnly)]
     public async Task<IActionResult> Index(string examType, int? semester)
     {
+        return await Results(examType, semester);
+    }
+
+    [Authorize(Policy = PolicyNames.StudentOnly)]
+    public async Task<IActionResult> Results(string examType, int? semester)
+    {
         var uid = _user.UserId;
         var me = uid == null ? null : await _db.Students.AsNoTracking().FirstOrDefaultAsync(s => s.IdentityUserId == uid && s.IsActive);
         if (me == null) return NotFound();
@@ -20,10 +26,53 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
         if (!string.IsNullOrEmpty(examType)) q = q.Where(x => x.ExamType == examType);
 
         var exams = await q.OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime).ToListAsync();
+        var examIds = exams.Select(e => e.Id).ToList();
+        var marks = await _db.ExamMarks.AsNoTracking()
+            .Where(m => m.StudentId == me.Id && examIds.Contains(m.ExamTimetableId))
+            .ToDictionaryAsync(m => m.ExamTimetableId, m => m);
+
+        var viewModel = exams.Select(e => new
+        {
+            Exam = e,
+            Mark = marks.GetValueOrDefault(e.Id)
+        }).ToList();
+
         ViewBag.Semester = sem;
         ViewBag.ExamType = examType;
         ViewBag.IsStudent = true;
-        return View(exams);
+        return View("Index", viewModel);
+    }
+
+    [Authorize]
+    public async Task<IActionResult> Timetable(string examType, int? semester)
+    {
+        var scope = await _user.GetScopeBranchIdAsync();
+        bool isStudentOnly = !_user.IsAdmin && !_user.IsHod && !_user.IsFaculty;
+        int? branchId = scope;
+        int? mySem = semester;
+
+        if (isStudentOnly)
+        {
+            var me = await _db.Students.AsNoTracking().FirstOrDefaultAsync(s => s.IdentityUserId == _user.UserId && s.IsActive);
+            if (me == null) return NotFound();
+            branchId = me.BranchId;
+            mySem = semester ?? me.Semester;
+        }
+
+        var q = _db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Subject).Include(x => x.Faculty).Include(x => x.AcademicYear).Include(x => x.Branch)
+            .Where(x => x.IsActive);
+
+        if (branchId != null && branchId != -1) q = q.Where(x => x.BranchId == branchId);
+        if (mySem != null) q = q.Where(x => x.Semester == mySem);
+        if (!string.IsNullOrEmpty(examType)) q = q.Where(x => x.ExamType == examType);
+
+        var exams = await q.OrderBy(x => x.ExamDate).ToListAsync();
+        ViewBag.Semester = mySem;
+        ViewBag.ExamType = examType;
+        ViewBag.BranchId = branchId;
+        ViewBag.Branches = await _db.Branches.AsNoTracking().OrderBy(b => b.Name).Select(b => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
+        return View("Index", exams.Select(e => new { Exam = e, Mark = (ExamMark?)null }).ToList());
     }
 
     [Authorize(Policy = PolicyNames.AdminOrHod)]
@@ -34,7 +83,7 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
             .Include(x => x.Subject).Include(x => x.Faculty).Include(x => x.AcademicYear).Include(x => x.Branch)
             .Where(x => x.IsActive);
 
-        if (scope != null) q = q.Where(x => x.BranchId == scope);
+        if (scope != null && scope != -1) q = q.Where(x => x.BranchId == scope);
         if (branchId != null && _user.IsAdmin) q = q.Where(x => x.BranchId == branchId);
         if (semester != null) q = q.Where(x => x.Semester == semester);
         if (yearId != null) q = q.Where(x => x.AcademicYearId == yearId);
@@ -47,5 +96,81 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
         ViewBag.YearId = yearId;
         ViewBag.Branches = await _db.Branches.AsNoTracking().OrderBy(b => b.Name).Select(b => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
         return View(exams);
+    }
+
+    [Authorize(Policy = PolicyNames.AnyStaff)]
+    public async Task<IActionResult> Manage(int? examTimetableId, int? branchId, int? semester, string examType)
+    {
+        var scope = await _user.GetScopeBranchIdAsync();
+        var q = _db.ExamMarks.AsNoTracking()
+            .Include(m => m.ExamTimetable).ThenInclude(e => e!.Subject)
+            .Include(m => m.ExamTimetable).ThenInclude(e => e!.Branch)
+            .Include(m => m.Student)
+            .Where(m => true);
+
+        if (!_user.IsAdmin)
+        {
+            if (scope != null && scope != -1) q = q.Where(m => m.ExamTimetable!.BranchId == scope);
+            else
+            {
+                var fid = await _db.Faculty.AsNoTracking().Where(f => f.IdentityUserId == _user.UserId).Select(f => f.Id).FirstOrDefaultAsync();
+                if (fid > 0) q = q.Where(m => m.ExamTimetable!.FacultyId == fid);
+            }
+        }
+
+        if (examTimetableId != null) q = q.Where(m => m.ExamTimetableId == examTimetableId);
+        if (branchId != null) q = q.Where(m => m.ExamTimetable!.BranchId == branchId);
+        if (semester != null) q = q.Where(m => m.ExamTimetable!.Semester == semester);
+        if (!string.IsNullOrEmpty(examType)) q = q.Where(m => m.ExamTimetable!.ExamType == examType);
+
+        var marks = await q.OrderBy(m => m.ExamTimetable!.ExamDate).ThenBy(m => m.Student!.FullName).ToListAsync();
+
+        ViewBag.ExamTimetableId = examTimetableId;
+        ViewBag.BranchId = branchId;
+        ViewBag.Semester = semester;
+        ViewBag.ExamType = examType;
+        ViewBag.CanModify = _user.IsAdmin || _user.IsHod;
+        ViewBag.Exams = await _db.ExamTimetables.AsNoTracking().Where(e => e.IsActive).OrderBy(e => e.ExamDate).Select(e => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem($"{e.Subject!.SubjectCode} - {e.ExamType} ({e.ExamDate:dd MMM})", e.Id.ToString())).ToListAsync();
+        ViewBag.Branches = await _db.Branches.AsNoTracking().OrderBy(b => b.Name).Select(b => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
+
+        return View(marks);
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PolicyNames.AnyStaff)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateMarks(List<ExamMark> marks)
+    {
+        if (marks != null)
+        {
+            foreach (var m in marks)
+            {
+                if (m.Id == 0) continue;
+                var dbMark = await _db.ExamMarks.FirstOrDefaultAsync(x => x.Id == m.Id);
+                if (dbMark == null) continue;
+
+                bool isStaff = _user.IsAdmin || _user.IsHod;
+                bool isOwnerFaculty = false;
+                if (!_user.IsAdmin && !_user.IsHod)
+                {
+                    var ec = await _db.ExamTimetables.AsNoTracking().FirstOrDefaultAsync(e => e.Id == dbMark.ExamTimetableId);
+                    var fid = await _db.Faculty.AsNoTracking().Where(f => f.IdentityUserId == _user.UserId).Select(f => f.Id).FirstOrDefaultAsync();
+                    isOwnerFaculty = ec != null && ec.FacultyId == fid;
+                }
+
+                if (!isStaff && !isOwnerFaculty) continue;
+                if (dbMark.IsLocked && !isStaff) continue;
+
+                dbMark.MarksObtained = m.MarksObtained;
+                dbMark.MaxMarks = m.MaxMarks;
+                dbMark.Remarks = m.Remarks;
+                dbMark.IsLocked = m.IsLocked && isStaff;
+                dbMark.LastModifiedBy = _user.DisplayName ?? "Faculty";
+                dbMark.LastModifiedAt = DateTime.UtcNow;
+            }
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "Exam marks updated successfully.";
+        }
+        return RedirectToAction("Manage");
     }
 }

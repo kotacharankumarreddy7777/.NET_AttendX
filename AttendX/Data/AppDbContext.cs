@@ -23,10 +23,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<AttendanceQuery> AttendanceQueries => Set<AttendanceQuery>();
     public DbSet<ExamTimetable> ExamTimetables => Set<ExamTimetable>();
+    public DbSet<ExamMark> ExamMarks => Set<ExamMark>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
+
+        b.Entity<ExamMark>().Property(x => x.MarksObtained).HasPrecision(5, 2);
+        b.Entity<ExamMark>().Property(x => x.MaxMarks).HasPrecision(5, 2);
 
         b.Entity<AcademicYear>().HasIndex(x => x.Name).IsUnique();
 

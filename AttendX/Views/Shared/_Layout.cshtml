@@ -78,6 +78,7 @@
     @if (student)
     {
         <a class="@A("Student", "Index", "Query", "MyQr", "Card", "UpdatePhone")" asp-controller="Student" asp-action="Index" title="Dashboard"><i class="bi bi-speedometer2"></i> <span class="nav-text">Dashboard</span></a>
+        <a class="@A("Exam", "Results")" asp-controller="Exam" asp-action="Results" title="Exams & Results"><i class="bi bi-file-earmark-bar-graph"></i> <span class="nav-text">Exams & Results</span></a>
         <a class="@A("Notices", "Board")" asp-controller="Notices" asp-action="Board" title="Notices"><i class="bi bi-megaphone"></i> <span class="nav-text">Notices</span></a>
         <a class="@A("Student", "Report")" asp-controller="Student" asp-action="Report" title="Attendance Report"><i class="bi bi-file-earmark-pdf"></i> <span class="nav-text">Attendance Report</span></a>
         <a class="@A("Account", "ChangePassword")" asp-controller="Account" asp-action="ChangePassword" title="Change Password"><i class="bi bi-key"></i> <span class="nav-text">Change Password</span></a>
@@ -89,6 +90,9 @@
         <a class="@A("Attendance", todayActions)" asp-controller="Attendance" asp-action="Index" title="Today's Classes"><i class="bi bi-check2-square"></i> <span class="nav-text">Today's Classes</span></a>
         @if (admin || hod) { <a class="@A("Attendance", "Corrections")" asp-controller="Attendance" asp-action="Corrections" title="Corrections"><i class="bi bi-pencil-square"></i> <span class="nav-text">Corrections</span></a> }
         <a class="@A("Timetable")" asp-controller="Timetable" asp-action="Index" title="Timetable"><i class="bi bi-calendar3-week"></i> <span class="nav-text">Timetable</span></a>
+        <a class="@A("Exam", "Timetable")" asp-controller="Exam" asp-action="Timetable" title="Exam Timetable"><i class="bi bi-calendar-event"></i> <span class="nav-text">Exam Timetable</span></a>
+        @if (admin || hod) { <a class="@A("Exam", "Admin")" asp-controller="Exam" asp-action="Admin" title="Exam Management"><i class="bi bi-shield-check"></i> <span class="nav-text">Exam Management</span></a> }
+        <a class="@A("Exam", "Manage")" asp-controller="Exam" asp-action="Manage" title="Manage Exam Marks"><i class="bi bi-pencil-square"></i> <span class="nav-text">Manage Exam Marks</span></a>
         <a class="@A("Queries")" asp-controller="Queries" asp-action="Index" title="Student Queries"><i class="bi bi-chat-square-text"></i> <span class="nav-text">Student Queries</span></a>
         <div class="grp"><span class="nav-text">Reports</span></div>
         <a class="@A("Reports")" asp-controller="Reports" asp-action="Index" title="Reports"><i class="bi bi-file-earmark-bar-graph"></i> <span class="nav-text">Reports</span></a>

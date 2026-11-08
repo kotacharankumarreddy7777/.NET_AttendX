@@ -29,3 +29,22 @@ public class ExamTimetable
     [StringLength(30)] public string RoomNo { get; set; } = "";
     public bool IsActive { get; set; } = true;
 }
+
+public class ExamMark
+{
+    public long Id { get; set; }
+    public int ExamTimetableId { get; set; }
+    public ExamTimetable? ExamTimetable { get; set; }
+
+    public int StudentId { get; set; }
+    public Student? Student { get; set; }
+
+    [Range(0, 1000)] public decimal MarksObtained { get; set; }
+    [Range(1, 1000)] public decimal MaxMarks { get; set; } = 100;
+    public bool IsLocked { get; set; } = false;
+    public string? Remarks { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? LastModifiedBy { get; set; }
+    public DateTime? LastModifiedAt { get; set; }
+}

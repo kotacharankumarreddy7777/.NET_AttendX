@@ -1,20 +1,21 @@
-@model List<ExamTimetable>
+@model List<dynamic>
 @{
-    ViewData["Title"] = "Exam Timetable";
+    ViewData["Title"] = "Exam Timetable & Results";
     var sem = ViewBag.Semester as int?;
+    bool isStudent = ViewBag.IsStudent == true;
 }
 
 <div class="container-fluid py-4 px-3 px-md-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <h2 class="fw-bold text-dark mb-0">
-            <i class="bi bi-calendar-check me-2 text-primary"></i>Exam Timetable
+            <i class="bi bi-calendar-check me-2 text-primary"></i>Exam Timetable & Results
             <small class="text-muted fs-6">Semester @(sem ?? 0)</small>
         </h2>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="?examType=Mid1" class="btn btn-sm @(ViewBag.ExamType as string == "Mid1" ? "btn-primary" : "btn-outline-primary") rounded-pill">Mid Sem 1</a>
-            <a href="?examType=Mid2" class="btn btn-sm @(ViewBag.ExamType as string == "Mid2" ? "btn-primary" : "btn-outline-primary") rounded-pill">Mid Sem 2</a>
-            <a href="?examType=Final" class="btn btn-sm @(ViewBag.ExamType as string == "Final" ? "btn-primary" : "btn-outline-primary") rounded-pill">Final Sem</a>
-            <a href="?examType=" class="btn btn-sm btn-outline-secondary rounded-pill">All</a>
+            <a href="?examType=Mid1&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid1" ? "btn-primary" : "btn-outline-primary") rounded-pill">Mid Sem 1</a>
+            <a href="?examType=Mid2&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid2" ? "btn-primary" : "btn-outline-primary") rounded-pill">Mid Sem 2</a>
+            <a href="?examType=Final&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Final" ? "btn-primary" : "btn-outline-primary") rounded-pill">Final Sem</a>
+            <a href="?examType=&semester=@sem" class="btn btn-sm btn-outline-secondary rounded-pill">All</a>
         </div>
     </div>
 
@@ -35,11 +36,14 @@
                             <th>Faculty</th>
                             <th>Room</th>
                             <th>Type</th>
+                            <th>Marks</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var e in Model)
+                        @foreach (var item in Model)
                         {
+                            var e = item.Exam as ExamTimetable;
+                            var m = item.Mark as ExamMark;
                             <tr>
                                 <td class="fw-semibold">@e.ExamDate.ToString("ddd, dd MMM")</td>
                                 <td>@UiHelpers.Time(e.StartTime) – @UiHelpers.Time(e.EndTime)</td>
@@ -50,6 +54,18 @@
                                     <span class="badge @(e.ExamType == "Final" ? "bg-danger" : e.ExamType == "Mid2" ? "bg-warning text-dark" : "bg-info text-dark")">
                                         @e.ExamType
                                     </span>
+                                </td>
+                                <td>
+                                    @if (m != null)
+                                    {
+                                        <span class="badge @(m.MarksObtained >= m.MaxMarks * 0.75m ? "bg-success" : m.MarksObtained >= m.MaxMarks * 0.4m ? "bg-warning text-dark" : "bg-danger")">
+                                            @m.MarksObtained / @m.MaxMarks
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Upcoming</span>
+                                    }
                                 </td>
                             </tr>
                         }

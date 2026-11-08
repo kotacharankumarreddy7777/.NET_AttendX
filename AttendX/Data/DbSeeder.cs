@@ -136,6 +136,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Force rebuild needed: Faculty DB {F} vs CSV {CF}, Students DB {S} vs CSV {CS}, Attendance Aug-Nov {A}", facultyDbCount, facultyCsvCount, studentsDbCount, studentsCsvCount, attendanceCount);
             // Truncate in FK-safe order (children first) to avoid duplicates/missing
             await _db.Database.ExecuteSqlRawAsync(@"
+                DELETE FROM ""ExamMarks"";
                 DELETE FROM ""Attendance"";
                 DELETE FROM ""AttendanceSessions"";
                 DELETE FROM ""ExamTimetables"";
@@ -158,6 +159,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             // Only attendance missing - delete attendance tables and regenerate, keep people
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Attendance missing ({A} rows Aug-Nov), regenerating attendance history only...", attendanceCount);
             await _db.Database.ExecuteSqlRawAsync(@"
+                DELETE FROM ""ExamMarks"";
                 DELETE FROM ""Attendance"";
                 DELETE FROM ""AttendanceSessions"";
                 DELETE FROM ""ExamTimetables"";
@@ -868,6 +870,62 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         _db.ExamTimetables.AddRange(exams);
         await _db.SaveChangesAsync(cancellationToken);
         if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeded {Count} exam timetable entries.", exams.Count);
+
+        await SeedExamMarksAsync(cancellationToken);
+    }
+
+    private async Task SeedExamMarksAsync(CancellationToken cancellationToken = default)
+    {
+        if (await _db.ExamMarks.AnyAsync(cancellationToken)) return;
+
+        var exams = await _db.ExamTimetables.AsNoTracking().ToListAsync(cancellationToken);
+        var students = await _db.Students.AsNoTracking().ToListAsync(cancellationToken);
+        if (exams.Count == 0 || students.Count == 0) return;
+
+        var rnd = new Random(2026);
+        var byClass = students.GroupBy(s => (s.BranchId, s.Semester)).ToDictionary(g => g.Key, g => g.Select(s => s.Id).ToList());
+
+        var marksToInsert = new List<ExamMark>();
+        foreach (var exam in exams)
+        {
+            if (!byClass.TryGetValue((exam.BranchId, exam.Semester), out var sIds)) continue;
+
+            foreach (var sId in sIds)
+            {
+                var isLocked = rnd.NextDouble() < 0.85; // 85% locked (Admin/HOD finalized)
+                // Normal distribution for marks: 55-95 range
+                var mObtained = (decimal)Math.Round(55 + (rnd.NextDouble() * 40), 2);
+                if (mObtained > 95) mObtained = 95; // Cap
+
+                // Ensure varied distribution (some low, some high)
+                var roll = rnd.NextDouble();
+                if (roll < 0.08) mObtained = (decimal)Math.Round(15 + (rnd.NextDouble() * 20), 2); // Failures
+                else if (roll > 0.92) mObtained = (decimal)Math.Round(96 + (rnd.NextDouble() * 4), 2); // Toppers
+
+                marksToInsert.Add(new ExamMark
+                {
+                    ExamTimetableId = exam.Id,
+                    StudentId = sId,
+                    MarksObtained = mObtained,
+                    MaxMarks = 100,
+                    IsLocked = isLocked,
+                    Remarks = isLocked ? "Locked" : "Draft",
+                    CreatedAt = DateTime.UtcNow,
+                    LastModifiedBy = isLocked ? "HOD" : "Faculty",
+                    LastModifiedAt = DateTime.UtcNow.AddDays(-rnd.NextDouble() * 10)
+                });
+            }
+        }
+
+        // Bulk insert in chunks to prevent memory issues
+        foreach (var chunk in marksToInsert.Chunk(1000))
+        {
+            _db.ExamMarks.AddRange(chunk);
+            await _db.SaveChangesAsync(cancellationToken);
+            _db.ChangeTracker.Clear();
+        }
+
+        if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeded {Count} exam marks for students.", marksToInsert.Count);
     }
 
     // ------------------------------------------------------------------ self check (logged; also shown on the Health page)
