@@ -412,7 +412,8 @@ textarea.form-control{min-height:90px}
 .badge.bg-warning,.badge.bg-orange{background:var(--warning-bg)!important;color:var(--warning)!important;border-color:#EBD59D}
 .badge.bg-info,.badge.bg-primary{background:var(--info-bg)!important;color:var(--info)!important;border-color:#BCD4EE}
 .badge.bg-secondary{background:#ECEFF3!important;color:#4A5666!important;border-color:var(--border)}
-.alert{border-radius:var(--radius);font-size:13.5px;padding:10px 14px;border-width:1px}
+.alert{border-radius:var(--radius);font-size:13.5px;padding:10px 36px 10px 14px;border-width:1px;position:relative}
+.alert .btn-close{position:absolute;top:10px;right:10px}
 .alert-success{background:var(--success-bg);border-color:#BFE0CD;color:var(--success)}.alert-danger{background:var(--danger-bg);border-color:#F0C3BE;color:var(--danger)}
 .alert-warning{background:var(--warning-bg);border-color:#EBD59D;color:var(--warning)}.alert-info{background:var(--info-bg);border-color:#BCD4EE;color:var(--info)}
 .dropdown-menu{border-radius:var(--radius);font-size:13.5px}
