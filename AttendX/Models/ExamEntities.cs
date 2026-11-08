@@ -41,7 +41,9 @@ public class ExamMark
 
     [Range(0, 1000)] public decimal MarksObtained { get; set; }
     [Range(1, 1000)] public decimal MaxMarks { get; set; } = 100;
-    public bool IsLocked { get; set; } = false;
+    public bool IsLocked { get; set; } = true;
+    public DateTime? UnlockRequestedAt { get; set; }
+    public DateTime? UnlockUntil { get; set; }
     public string? Remarks { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

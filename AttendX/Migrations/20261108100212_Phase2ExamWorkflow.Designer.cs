@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AttendX.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261108083054_AddExamMarks")]
-    partial class AddExamMarks
+    [Migration("20261108100212_Phase2ExamWorkflow")]
+    partial class Phase2ExamWorkflow
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -569,6 +569,12 @@ namespace AttendX.Migrations
 
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("UnlockRequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UnlockUntil")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 

@@ -18,7 +18,9 @@ public class CalendarService(AppDbContext db, IClock clock) : ICalendarService
         date = date.Date;
         if (date.DayOfWeek == DayOfWeek.Sunday) return "Sunday";
         var h = await _db.Holidays.AsNoTracking().FirstOrDefaultAsync(x => x.Date == date && x.Type == "Holiday");
-        return h?.Name;
+        if (h != null) return h.Name;
+        var e = await _db.ExamTimetables.AsNoTracking().FirstOrDefaultAsync(x => x.ExamDate.Date == date && x.IsActive);
+        return e != null ? "Exam in Progress" : null;
     }
 
     public async Task<List<Holiday>> UpcomingAsync(int take)
@@ -31,6 +33,7 @@ public class CalendarService(AppDbContext db, IClock clock) : ICalendarService
     {
         var f = from.Date; var t = to.Date;
         var list = await _db.Holidays.AsNoTracking().Where(h => h.Type == "Holiday" && h.Date >= f && h.Date <= t).Select(h => h.Date).ToListAsync();
-        return [.. list];
+        var exams = await _db.ExamTimetables.AsNoTracking().Where(e => e.IsActive && e.ExamDate.Date >= f && e.ExamDate.Date <= t).Select(e => e.ExamDate.Date).ToListAsync();
+        return [.. list, .. exams];
     }
 }

@@ -4,75 +4,74 @@
     ViewData["Title"] = "Exam Timetable & Results";
     var sem = ViewBag.Semester as int?;
     bool isStudent = ViewBag.IsStudent == true;
+    var completed = Model.Where(x => x.Mark != null && x.Mark.IsLocked).ToList();
+    var upcoming = Model.Where(x => x.Mark == null || !x.Mark.IsLocked).ToList();
 }
 
-<div class="container-fluid py-4 px-3 px-md-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-        <h2 class="fw-bold text-dark mb-0">
-            <i class="bi bi-calendar-check me-2 text-primary"></i>Exam Timetable & Results
-            <small class="text-muted fs-6">Semester @(sem ?? 0)</small>
-        </h2>
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="?examType=Mid1&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid1" ? "btn-primary" : "btn-outline-primary") rounded-pill">Mid Sem 1</a>
-            <a href="?examType=Mid2&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid2" ? "btn-primary" : "btn-outline-primary") rounded-pill">Mid Sem 2</a>
-            <a href="?examType=Final&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Final" ? "btn-primary" : "btn-outline-primary") rounded-pill">Final Sem</a>
-            <a href="?examType=&semester=@sem" class="btn btn-sm btn-outline-secondary rounded-pill">All</a>
+<h1 class="mb-3">Exam Timetable & Results</h1>
+
+<div class="ax-card mb-3">
+    <div class="card-h">
+        <span>Exam Schedule <small class="text-muted">Semester @(sem ?? 0)</small></span>
+        <div class="d-flex gap-2">
+            <a href="?examType=Mid1&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid1" ? "btn-primary" : "btn-outline-secondary")">Mid Sem 1</a>
+            <a href="?examType=Mid2&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Mid2" ? "btn-primary" : "btn-outline-secondary")">Mid Sem 2</a>
+            <a href="?examType=Final&semester=@sem" class="btn btn-sm @(ViewBag.ExamType as string == "Final" ? "btn-primary" : "btn-outline-secondary")">Final Sem</a>
+            <a href="?examType=&semester=@sem" class="btn btn-sm btn-outline-secondary">All</a>
         </div>
     </div>
-
-    @if (!Model.Any())
-    {
-        <div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>No exams found for this filter. Exams are generated twice a year (Mid1/Mid2/Final).</div>
-    }
-    else
-    {
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Subject</th>
-                            <th>Faculty</th>
-                            <th>Room</th>
-                            <th>Type</th>
-                            <th>Marks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            var e = item.Exam;
-                            var m = item.Mark;
-                            <tr>
-                                <td class="fw-semibold">@e.ExamDate.ToString("ddd, dd MMM")</td>
-                                <td>@UiHelpers.Time(e.StartTime) – @UiHelpers.Time(e.EndTime)</td>
-                                <td><b>@e.Subject?.SubjectCode</b> @e.Subject?.SubjectName</td>
-                                <td>@e.Faculty?.FullName</td>
-                                <td>@e.RoomNo</td>
-                                <td>
-                                    <span class="badge @(e.ExamType == "Final" ? "bg-danger" : e.ExamType == "Mid2" ? "bg-warning text-dark" : "bg-info text-dark")">
-                                        @e.ExamType
-                                    </span>
-                                </td>
-                                <td>
-                                    @if (m != null)
-                                    {
-                                        <span class="badge @(m.MarksObtained >= m.MaxMarks * 0.75m ? "bg-success" : m.MarksObtained >= m.MaxMarks * 0.4m ? "bg-warning text-dark" : "bg-danger")">
-                                            @m.MarksObtained / @m.MaxMarks
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Upcoming</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    }
+    <div class="card-b">
+        @if (!Model.Any())
+        {
+            <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No exams found", "Exams are generated for each semester. Please contact admin if missing.")' />
+        }
+        else
+        {
+            if (completed.Any())
+            {
+                <h6 class="fw-semibold mt-1 mb-2"><i class="bi bi-check-circle text-success me-2"></i>Completed & Declared</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Date</th><th>Subject</th><th>Faculty</th><th>Room</th><th>Marks</th></tr></thead>
+                        <tbody>
+                            @foreach (var item in completed)
+                            {
+                                var e = item.Exam; var m = item.Mark!;
+                                <tr>
+                                    <td class="fw-semibold">@e.ExamDate.ToString("dd MMM")</td>
+                                    <td><b>@e.Subject?.SubjectCode</b> @e.Subject?.SubjectName <span class="badge ms-1 @(e.ExamType == "Final" ? "bg-danger" : e.ExamType == "Mid2" ? "bg-warning text-dark" : "bg-info text-dark")">@e.ExamType</span></td>
+                                    <td>@e.Faculty?.FullName</td>
+                                    <td>@e.RoomNo</td>
+                                    <td><span class="badge @(m.MarksObtained >= m.MaxMarks * 0.75m ? "bg-success" : m.MarksObtained >= m.MaxMarks * 0.4m ? "bg-warning text-dark" : "bg-danger")">@m.MarksObtained / @m.MaxMarks</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            if (upcoming.Any())
+            {
+                <h6 class="fw-semibold mb-2"><i class="bi bi-calendar3 text-primary me-2"></i>Upcoming Exams</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Faculty</th><th>Room</th><th>Type</th></tr></thead>
+                        <tbody>
+                            @foreach (var item in upcoming)
+                            {
+                                var e = item.Exam;
+                                <tr>
+                                    <td class="fw-semibold">@e.ExamDate.ToString("ddd, dd MMM")</td>
+                                    <td>@UiHelpers.Time(e.StartTime) – @UiHelpers.Time(e.EndTime)</td>
+                                    <td><b>@e.Subject?.SubjectCode</b> @e.Subject?.SubjectName</td>
+                                    <td>@e.Faculty?.FullName</td>
+                                    <td>@e.RoomNo</td>
+                                    <td><span class="badge @(e.ExamType == "Final" ? "bg-danger" : e.ExamType == "Mid2" ? "bg-warning text-dark" : "bg-info text-dark")">@e.ExamType</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+    </div>
 </div>

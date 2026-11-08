@@ -662,13 +662,21 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
         var rnd = new Random(2026);
         var holidays = await new CalendarService(_db, new SystemClock()).HolidayDatesAsync(startDate, today);
+        // Exclude exam periods where no regular classes are held
+        var examDates = await _db.ExamTimetables.AsNoTracking()
+            .Where(e => e.ExamDate >= startDate && e.ExamDate <= today)
+            .Select(e => e.ExamDate.Date)
+            .Distinct()
+            .ToListAsync();
+        var excludeDates = holidays.Union(examDates).ToHashSet();
+
         var byClass = students.GroupBy(s => (s.BranchId, s.SectionId, s.Semester)).ToDictionary(g => g.Key, g => g.ToList());
         var prop = students.ToDictionary(s => s.Id, s => { var r = rnd.NextDouble(); return r < 0.2 ? 0.55 + rnd.NextDouble() * 0.17 : r < 0.8 ? 0.78 + rnd.NextDouble() * 0.12 : 0.92 + rnd.NextDouble() * 0.06; });
         var decliners = students.Where(_ => rnd.NextDouble() < 0.08).Select(s => s.Id).ToHashSet();
 
         var totalDays = (int)(today - startDate).TotalDays;
         var jobs = Enumerable.Range(0, totalDays).Select(i => startDate.AddDays(i))
-            .Where(d => d.DayOfWeek != DayOfWeek.Sunday && !holidays.Contains(d))
+            .Where(d => d.DayOfWeek != DayOfWeek.Sunday && !excludeDates.Contains(d))
             .SelectMany(d => tts.Where(t => t.Day == d.DayOfWeek).Select(t => (Date: d, T: t)))
             .ToList();
 
@@ -831,9 +839,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             int startY = int.Parse(year.Name.Split('-')[0]);
             var windowsForYear = new List<(DateTime Start, DateTime End, string Type)>
             {
-                (new DateTime(startY, 9, 22), new DateTime(startY, 10, 4), "Mid1"),
-                (new DateTime(startY, 12, 8), new DateTime(startY, 12, 20), "Mid2"),
-                (new DateTime(startY + 1, 4, 15), new DateTime(startY + 1, 5, 5), "Final")
+                (new DateTime(startY, 9, 22), new DateTime(startY, 9, 27), "Mid1"),
+                (new DateTime(startY, 11, 17), new DateTime(startY, 11, 22), "Mid2"),
+                (new DateTime(startY, 12, 21), new DateTime(startY + 1, 1, 5), "Final")
             };
 
             foreach (var subj in subjects)
@@ -892,15 +900,18 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
             foreach (var sId in sIds)
             {
-                var isLocked = rnd.NextDouble() < 0.85; // 85% locked (Admin/HOD finalized)
-                // Normal distribution for marks: 55-95 range
-                var mObtained = (decimal)Math.Round(55 + (rnd.NextDouble() * 40), 2);
-                if (mObtained > 95) mObtained = 95; // Cap
+                bool isMid1 = exam.ExamType == "Mid1";
+                bool isMid2 = exam.ExamType == "Mid2";
+                // Mid1: 100% locked and finalized; Mid2: 85% locked; Final: locked but not graded yet
+                var isLocked = isMid1 ? true : (isMid2 ? rnd.NextDouble() < 0.85 : true);
+                
+                // Mid1 marks are already corrected and finalized (55-95). Mid2 marks draft (50-85). Final marks generated later.
+                var mObtained = (decimal)Math.Round(isMid1 ? (55 + (rnd.NextDouble() * 40)) : (50 + (rnd.NextDouble() * 35)), 2);
+                if (mObtained > 95) mObtained = 95;
 
-                // Ensure varied distribution (some low, some high)
                 var roll = rnd.NextDouble();
-                if (roll < 0.08) mObtained = (decimal)Math.Round(15 + (rnd.NextDouble() * 20), 2); // Failures
-                else if (roll > 0.92) mObtained = (decimal)Math.Round(96 + (rnd.NextDouble() * 4), 2); // Toppers
+                if (roll < 0.08) mObtained = (decimal)Math.Round(15 + (rnd.NextDouble() * 20), 2);
+                else if (roll > 0.92) mObtained = (decimal)Math.Round(96 + (rnd.NextDouble() * 4), 2);
 
                 marksToInsert.Add(new ExamMark
                 {

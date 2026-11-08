@@ -3,104 +3,99 @@
     ViewData["Title"] = "Manage Exam Marks";
     var canModify = ViewBag.CanModify == true;
 }
-
-<div class="container-fluid py-4 px-3 px-md-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-        <h2 class="fw-bold text-dark mb-0">
-            <i class="bi bi-pencil-square me-2 text-primary"></i>Manage Exam Marks
-            @if (!canModify)
-            {
-                <span class="badge bg-secondary">View Only</span>
-            }
-        </h2>
-        <span class="text-muted small">@Model.Count records found</span>
+<h1 class="mb-3">Manage Exam Marks</h1>
+<div class="ax-card mb-3">
+    <div class="card-h">
+        <span>Marks Entry Grid <small class="text-muted">@Model.Count records found</small></span>
+        <form class="row row-cols-1 row-cols-md-auto g-2 m-0" method="get">
+            <div class="col"><select name="examTimetableId" class="form-select form-select-sm"><option value="">All Exams</option>@foreach (var item in ViewBag.Exams as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new()) { <option value="@item.Value" selected="@(ViewBag.ExamTimetableId?.ToString() == item.Value)">@item.Text</option> }</select></div>
+            <div class="col"><select name="branchId" class="form-select form-select-sm"><option value="">All Branches</option>@foreach (var item in ViewBag.Branches as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new()) { <option value="@item.Value" selected="@(ViewBag.BranchId?.ToString() == item.Value)">@item.Text</option> }</select></div>
+            <div class="col"><select name="semester" class="form-select form-select-sm"><option value="">All Semesters</option>@for (int i = 1; i <= 8; i++) { <option value="@i" selected="@(ViewBag.Semester == i)">Sem @i</option> }</select></div>
+            <div class="col"><button type="submit" class="btn btn-primary btn-sm">Filter</button></div>
+        </form>
     </div>
-
-    <form class="row row-cols-1 row-cols-md-auto g-2 mb-4" method="get">
-        <div class="col">
-            <select name="examTimetableId" class="form-select rounded-pill">
-                <option value="">All Exams</option>
-                @foreach (var item in ViewBag.Exams as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
-                {
-                    <option value="@item.Value" selected="@(ViewBag.ExamTimetableId?.ToString() == item.Value)">@item.Text</option>
-                }
-            </select>
-        </div>
-        <div class="col">
-            <select name="branchId" class="form-select rounded-pill">
-                <option value="">All Branches</option>
-                @foreach (var item in ViewBag.Branches as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
-                {
-                    <option value="@item.Value" selected="@(ViewBag.BranchId?.ToString() == item.Value)">@item.Text</option>
-                }
-            </select>
-        </div>
-        <div class="col">
-            <select name="semester" class="form-select rounded-pill">
-                <option value="">All Semesters</option>
-                @for (int i = 1; i <= 8; i++) { <option value="@i" selected="@(ViewBag.Semester == i)">Sem @i</option> }
-            </select>
-        </div>
-        <div class="col"><button type="submit" class="btn btn-primary rounded-pill">Filter</button></div>
-    </form>
-
     <form method="post" asp-action="UpdateMarks">
         @Html.AntiForgeryToken()
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Student</th>
-                            <th>Subject / Exam</th>
-                            <th>Marks (Out of)</th>
-                            <th>Remarks</th>
-                            <th>Locked (Admin/HOD)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model.Any())
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Subject / Exam</th>
+                        <th>Marks (Out of)</th>
+                        <th>Remarks</th>
+                        <th>Locked</th>
+                        <th>Request / Grant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        for (int i = 0; i < Model.Count; i++)
                         {
-                            for (int i = 0; i < Model.Count; i++)
-                            {
-                                var m = Model[i];
-                                <tr>
-                                    <td>
-                                        <input type="hidden" name="marks[@i].Id" value="@m.Id" />
-                                        <div class="fw-semibold">@m.Student?.FullName</div>
-                                        <small class="text-muted">@m.Student?.StudentID · @m.Student?.Branch?.Code / Sem @m.ExamTimetable?.Semester</small>
-                                    </td>
-                                    <td>
-                                        <b>@m.ExamTimetable?.Subject?.SubjectCode</b> @m.ExamTimetable?.Subject?.SubjectName
-                                        <br><small class="text-muted">@m.ExamTimetable?.ExamType - @m.ExamTimetable?.ExamDate.ToString("dd MMM")</small>
-                                    </td>
-                                    <td class="text-nowrap">
-                                        <input type="number" step="0.1" min="0" name="marks[@i].MarksObtained" value="@m.MarksObtained" class="form-control d-inline-block" style="width: 80px;" @(m.IsLocked && !canModify ? "readonly" : "") />
-                                        /
-                                        <input type="number" step="0.1" min="1" name="marks[@i].MaxMarks" value="@m.MaxMarks" class="form-control d-inline-block" style="width: 80px;" @(m.IsLocked && !canModify ? "readonly" : "") />
-                                    </td>
-                                    <td>
-                                        <input type="text" name="marks[@i].Remarks" value="@m.Remarks" class="form-control" placeholder="Remarks..." @(m.IsLocked && !canModify ? "readonly" : "") />
-                                    </td>
-                                    <td>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="marks[@i].IsLocked" value="true" @(m.IsLocked ? "checked" : "") @(!canModify ? "disabled" : "") />
-                                            <input type="hidden" name="marks[@i].IsLocked" value="false" />
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
+                            var m = Model[i];
+                            bool isUnlocked = m.UnlockUntil != null && m.UnlockUntil.Value > DateTime.UtcNow;
+                            bool isEditable = !m.IsLocked || canModify || isUnlocked;
+                            <tr class="@(m.IsLocked && !isUnlocked ? "table-light" : "")">
+                                <td>
+                                    <input type="hidden" name="marks[@i].Id" value="@m.Id" />
+                                    <div class="fw-semibold">@m.Student?.FullName</div>
+                                    <small class="text-muted">@m.Student?.StudentID</small>
+                                </td>
+                                <td>
+                                    <b>@m.ExamTimetable?.Subject?.SubjectCode</b><br>
+                                    <small class="text-muted">@m.ExamTimetable?.ExamType | @m.ExamTimetable?.ExamDate.ToString("dd MMM")</small>
+                                </td>
+                                <td class="text-nowrap">
+                                    <input type="number" step="0.1" min="0" name="marks[@i].MarksObtained" value="@m.MarksObtained" class="form-control form-control-sm d-inline-block" style="width: 75px;" @(!isEditable ? "readonly disabled" : "") />
+                                    <input type="hidden" name="marks[@i].MaxMarks" value="@m.MaxMarks" />
+                                </td>
+                                <td><input type="text" name="marks[@i].Remarks" value="@m.Remarks" class="form-control form-control-sm" @(!isEditable ? "disabled" : "") /></td>
+                                <td>
+                                    @if (m.IsLocked && !isUnlocked)
+                                    {
+                                        <span class="badge bg-secondary"><i class="bi bi-lock-fill me-1"></i>Locked</span>
+                                        <input type="hidden" name="marks[@i].IsLocked" value="true" />
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-unlock-fill me-1"></i>Editable</span>
+                                        <input type="hidden" name="marks[@i].IsLocked" value="false" />
+                                    }
+                                </td>
+                                <td>
+                                    @if (m.IsLocked && !isUnlocked)
+                                    {
+                                        if (m.UnlockRequestedAt != null)
+                                        {
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        }
+                                        else if (!canModify)
+                                        {
+                                            <form method="post" asp-action="RequestUnlock" class="d-inline"><input type="hidden" name="id" value="@m.Id" /><button type="submit" class="btn btn-sm btn-outline-warning">Request Unlock</button></form>
+                                        }
+                                    }
+                                    @if (canModify && m.IsLocked)
+                                    {
+                                        <form method="post" asp-action="GrantUnlock" class="d-inline"><input type="hidden" name="id" value="@m.Id" /><button type="submit" class="btn btn-sm btn-outline-success">Grant 24h</button></form>
+                                    }
+                                    @if (isUnlocked)
+                                    {
+                                        <small class="text-success">Unlocked until @m.UnlockUntil?.ToString("dd MMM hh:mm")</small>
+                                    }
+                                </td>
+                            </tr>
                         }
-                        else
-                        {
-                            <tr><td colspan="5" class="text-center py-4">No marks found for this filter.</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="card-footer d-flex justify-content-end">
-                <button type="submit" class="btn btn-success rounded-pill px-4" @(Model.Count == 0 ? "disabled" : "")><i class="bi bi-check-lg me-2"></i>Save Marks</button>
-            </div>
+                    }
+                    else
+                    {
+                        <tr><td colspan="6"><partial name="_EmptyState" model='new EmptyStateModel("no_data", "No marks found", "Adjust filters or seed ExamMarks in the database.")' /></td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-b border-top d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary" @(Model.Count == 0 ? "disabled" : "")><i class="bi bi-save me-2"></i>Save Marks</button>
         </div>
     </form>
 </div>

@@ -161,18 +161,56 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
                 }
 
                 if (!isStaff && !isOwnerFaculty) continue;
-                if (dbMark.IsLocked && !isStaff) continue;
+                bool isUnlocked = dbMark.UnlockUntil != null && dbMark.UnlockUntil.Value > DateTime.UtcNow;
+                if (dbMark.IsLocked && !isStaff && !isUnlocked) continue;
 
                 dbMark.MarksObtained = m.MarksObtained;
                 dbMark.MaxMarks = m.MaxMarks;
                 dbMark.Remarks = m.Remarks;
-                dbMark.IsLocked = m.IsLocked && isStaff;
+                dbMark.IsLocked = isStaff ? m.IsLocked : dbMark.IsLocked;
+                if (isStaff && !m.IsLocked) dbMark.UnlockUntil = null; // If admin re-locks/bypasses, clear unlock window
                 dbMark.LastModifiedBy = _user.DisplayName ?? "Faculty";
                 dbMark.LastModifiedAt = DateTime.UtcNow;
             }
             await _db.SaveChangesAsync();
             TempData["Success"] = "Exam marks updated successfully.";
         }
+        return RedirectToAction("Manage");
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PolicyNames.AnyStaff)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RequestUnlock(long id)
+    {
+        var mark = await _db.ExamMarks.FirstOrDefaultAsync(m => m.Id == id);
+        if (mark == null) return NotFound();
+
+        mark.UnlockRequestedAt = DateTime.UtcNow;
+        mark.LastModifiedBy = _user.DisplayName ?? "Faculty";
+        mark.LastModifiedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        TempData["Success"] = "Unlock request sent to HOD/Admin.";
+        return RedirectToAction("Manage");
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PolicyNames.AdminOrHod)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GrantUnlock(long id, int hours = 24)
+    {
+        var mark = await _db.ExamMarks.FirstOrDefaultAsync(m => m.Id == id);
+        if (mark == null) return NotFound();
+        var scope = await _user.GetScopeBranchIdAsync();
+        if (scope != null && scope != -1 && mark.ExamTimetable!.BranchId != scope) return Forbid();
+
+        mark.IsLocked = false;
+        mark.UnlockUntil = DateTime.UtcNow.AddHours(hours);
+        mark.UnlockRequestedAt = null;
+        mark.LastModifiedBy = _user.DisplayName ?? "Admin";
+        mark.LastModifiedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        TempData["Success"] = $"Marked unlocked for {hours} hours.";
         return RedirectToAction("Manage");
     }
 }

@@ -567,6 +567,12 @@ namespace AttendX.Migrations
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("UnlockRequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UnlockUntil")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExamTimetableId");
