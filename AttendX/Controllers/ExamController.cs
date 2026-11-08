@@ -1,3 +1,5 @@
+using AttendX.ViewModels;
+
 namespace AttendX.Controllers;
 
 public class ExamController(AppDbContext db, ICurrentUser user) : Controller

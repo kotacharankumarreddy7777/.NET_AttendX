@@ -42,8 +42,8 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            var e = item.Exam as ExamTimetable;
-                            var m = item.Mark as ExamMark;
+                            var e = item.Exam;
+                            var m = item.Mark;
                             <tr>
                                 <td class="fw-semibold">@e.ExamDate.ToString("ddd, dd MMM")</td>
                                 <td>@UiHelpers.Time(e.StartTime) – @UiHelpers.Time(e.EndTime)</td>
