@@ -16,7 +16,8 @@
       rec.clientId = rec.clientId || ('c' + Date.now() + Math.random().toString(16).slice(2, 8));
       rec.capturedAt = rec.capturedAt || new Date().toISOString();
       rec.deviceId = AttendX.deviceId();
-      var q = read(); q.push(rec); write(q);
+      var q = read(); if (q.length >= 200) return;
+      q.push(rec); write(q);
     },
     pending: function () { return read().length; },
     sync: function () {

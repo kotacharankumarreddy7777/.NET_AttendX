@@ -94,7 +94,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
             ch.GroupTitle = "Branch-wise attendance % (30 days)";
             var g = await last30.GroupBy(a => a.BranchId).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
             var names = await db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Id, b => b.Code);
-            foreach (var r in g.OrderBy(q => names[q.Key])) { ch.Group.Labels.Add(names[r.Key]); ch.Group.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
+            foreach (var r in g.Where(x => names.TryGetValue(x.Key, out _)).OrderBy(q => names[q.Key])) { ch.Group.Labels.Add(names[r.Key]); ch.Group.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
         }
         else
         {
@@ -122,7 +122,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var sbj = await last30.GroupBy(a => a.SubjectId).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
         var sids = sbj.Select(x => x.Key).ToList();
         var snames = await db.Subjects.AsNoTracking().Where(s => sids.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.SubjectCode);
-        foreach (var r in sbj.Select(q => new { Name = snames[q.Key], Pct = AttendanceMath.Percent(q.P, q.L, q.T, w) }).OrderBy(q => q.Pct).Take(8))
+        foreach (var r in sbj.Where(x => snames.TryGetValue(x.Key, out _)).Select(q => new { Name = snames[q.Key], Pct = AttendanceMath.Percent(q.P, q.L, q.T, w) }).OrderBy(q => q.Pct).Take(8))
         { ch.Subject.Labels.Add(r.Name); ch.Subject.Values.Add(r.Pct); }
         return vm;
     }
@@ -190,6 +190,6 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         ex.OpenQueries = await db.AttendanceQueries.CountAsync(q => q.FacultyId == me.Id && q.Status == "Open");
         var uid = user.UserId;
         var logins = await db.AuditLogs.AsNoTracking().Where(a => a.ActorId == uid && a.Action == "Login").OrderByDescending(a => a.Timestamp).Take(2).ToListAsync();
-        ex.LastLogin = logins.Skip(1).FirstOrDefault()?.Timestamp ?? logins.FirstOrDefault()?.Timestamp;
+        ex.LastLogin = logins.Count > 1 ? logins[1].Timestamp : logins.FirstOrDefault()?.Timestamp;
     }
 }

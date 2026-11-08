@@ -107,8 +107,8 @@ public class RoleLoginViewModel
 {
     public string Role { get; set; } = "student";
     [StringLength(40), Display(Name = "Institution ID")] public string? InstitutionId { get; set; }
-    [StringLength(150)] public string? Email { get; set; } = "";
-    [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
+    [StringLength(150), EmailAddress] public string? Email { get; set; } = "";
+    [Required, StringLength(100, MinimumLength = 8), DataType(DataType.Password)] public string Password { get; set; } = "";
     [Display(Name = "Remember me")] public bool RememberMe { get; set; }
     public string? ReturnUrl { get; set; }
 }

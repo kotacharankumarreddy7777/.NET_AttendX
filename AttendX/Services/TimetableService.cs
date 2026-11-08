@@ -95,11 +95,18 @@ public class TimetableService(AppDbContext db, ISettingsService settings, IAudit
             var map = await _db.FacultySubjectMappings.FirstOrDefaultAsync(x => x.FacultyId == m.FacultyId && x.SubjectId == m.SubjectId && x.SectionId == m.SectionId && x.AcademicYearId == year.Id);
             if (map == null)
                 _db.FacultySubjectMappings.Add(new FacultySubjectMapping { FacultyId = m.FacultyId, SubjectId = m.SubjectId, BranchId = m.BranchId, SectionId = m.SectionId, Semester = m.Semester, AcademicYearId = year.Id, Active = true });
-            else map.Active = true;
+            else { map.Active = true; map.Semester = m.Semester; map.BranchId = m.BranchId; }
         }
 
         try { await _db.SaveChangesAsync(); }
-        catch (DbUpdateException) { return (false, new List<string> { "Someone else just booked this slot. Reload the timetable and try again." }); }
+        catch (DbUpdateException ex)
+        {
+            _db.ChangeTracker.Clear();
+            var msg = ex.Message ?? "";
+            if (msg.Contains("Timetable", StringComparison.OrdinalIgnoreCase) || msg.Contains("IX_Timetables", StringComparison.OrdinalIgnoreCase) || msg.Contains("duplicate"))
+                return (false, new List<string> { "This slot is already booked for this section/faculty. Reload the timetable and pick another slot." });
+            return (false, new List<string> { "Could not save the timetable: " + msg });
+        }
 
         await _audit.LogAsync(m.Id.HasValue ? "TimetableUpdated" : "TimetableCreated", "Timetable", t.Id.ToString(), old, Snapshot(t), branchId: t.BranchId);
         return (true, new List<string>());

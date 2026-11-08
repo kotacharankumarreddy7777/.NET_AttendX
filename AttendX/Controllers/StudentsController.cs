@@ -190,6 +190,8 @@ public class StudentsController(AppDbContext db, IStudentService students, IQrSe
     [Authorize(Policy = PolicyNames.AdminOnly), HttpPost]
     public async Task<IActionResult> BulkQr(int? branchId, int? sectionId, int? semester, bool regenerate)
     {
+        if (branchId == null && sectionId == null && semester == null) { TempData["Error"] = "Select a filter (branch, section or semester) before generating QRs."; return RedirectToAction(nameof(Index)); }
+        if (!await InScope(branchId ?? 0) && branchId != null) return Forbid();
         var q = _db.Students.AsNoTracking().Where(s => s.IsActive);
         if (branchId != null) q = q.Where(s => s.BranchId == branchId);
         if (sectionId != null) q = q.Where(s => s.SectionId == sectionId);
@@ -204,11 +206,15 @@ public class StudentsController(AppDbContext db, IStudentService students, IQrSe
     public IActionResult Import() => View();
 
     [Authorize(Policy = PolicyNames.AdminOnly), HttpPost]
+    [RequestSizeLimit(2 * 1024 * 1024)]
     public async Task<IActionResult> Import(IFormFile? file)
     {
         if (file == null || file.Length == 0) { TempData["Error"] = "Choose a CSV file."; return View(); }
         if (!file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) || file.Length > 2 * 1024 * 1024)
         { TempData["Error"] = "Only .csv files up to 2 MB are accepted."; return View(); }
+        var allowedTypes = new[] { "text/csv", "application/vnd.ms-excel" };
+        if (!string.IsNullOrEmpty(file.ContentType) && !allowedTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+        { TempData["Error"] = "Only CSV files are accepted."; return View(); }
         using var sr = new StreamReader(file.OpenReadStream(), Encoding.UTF8);
         var result = await _students.ImportCsvAsync(await sr.ReadToEndAsync());
         return View(result);

@@ -64,7 +64,7 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
             var th = ThresholdResolver.Resolve(rules, s.BranchId, s.Semester, s.SectionId, settings.DefaultThreshold);
             list.Add(new StudentSummary
             {
-                StudentId = s.Id, Code = s.StudentID, Name = s.FullName, Branch = s.Branch!.Code, Section = s.Section!.Name, Semester = s.Semester,
+                StudentId = s.Id, Code = s.StudentID, Name = s.FullName, Branch = s.Branch?.Code ?? s.BranchId.ToString(), Section = s.Section?.Name ?? "", Semester = s.Semester,
                 BranchId = s.BranchId, SectionId = s.SectionId, Total = a.Total, Present = a.Present, Late = a.Late, Absent = a.Absent,
                 Percent = pct, Threshold = th, Risk = AttendanceMath.Risk(pct, th),
                 ClassesNeeded = AttendanceMath.ClassesNeeded(a.Present + a.Late * settings.LateWeight, a.Total, th)
@@ -99,9 +99,15 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
                 var subIds = g.Select(x => x.SubjectId).Distinct().ToList();
                 var st = await _db.Students.AsNoTracking().Include(s => s.Section).Where(s => sids.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
                 var sub = await _db.Subjects.AsNoTracking().Where(s => subIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
-                foreach (var r in g.OrderBy(x => st[x.StudentId].StudentID).ThenBy(x => sub[x.SubjectId].SubjectCode).Take(3000))
-                    t.Rows.Add(new[] { st[r.StudentId].StudentID, st[r.StudentId].FullName, st[r.StudentId].Section!.Name, sub[r.SubjectId].SubjectCode + " " + sub[r.SubjectId].SubjectName,
+                var totalForLog = g.Count;
+                foreach (var r in g.Where(x => st.TryGetValue(x.StudentId, out _) && sub.TryGetValue(x.SubjectId, out _)).OrderBy(x => st[x.StudentId].StudentID).ThenBy(x => sub[x.SubjectId].SubjectCode).Take(3000))
+                {
+                    var s = st[r.StudentId]; var u = sub[r.SubjectId];
+                    var sec = s.Section?.Name ?? "";
+                    t.Rows.Add(new[] { s.StudentID, s.FullName, sec, u.SubjectCode + " " + u.SubjectName,
                         r.Total.ToString(), r.P.ToString(), r.L.ToString(), r.A.ToString(), Pct(r.P, r.L, r.Total) });
+                }
+                if (totalForLog > 3000) t.Rows.Add(new[] { $"Truncated: {totalForLog} rows total, showing 3000", "", "", "", "", "", "", "", "" });
                 t.PercentColumn = 8;
                 break;
             }
@@ -114,7 +120,10 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
                 var ids = g.Select(x => x.Id).ToList();
                 var sub = await _db.Subjects.AsNoTracking().Where(s => ids.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
                 foreach (var r in g.OrderBy(x => sub[x.Id].SubjectCode))
-                    t.Rows.Add(new[] { sub[r.Id].SubjectCode, sub[r.Id].SubjectName, r.Total.ToString(), r.P.ToString(), r.L.ToString(), r.A.ToString(), Pct(r.P, r.L, r.Total) });
+                {
+                    var s = sub[r.Id];
+                    t.Rows.Add(new[] { s.SubjectCode, s.SubjectName, r.Total.ToString(), r.P.ToString(), r.L.ToString(), r.A.ToString(), Pct(r.P, r.L, r.Total) });
+                }
                 t.PercentColumn = 6; t.Footer = Footer(g.Sum(x => x.Total), g.Sum(x => x.P), g.Sum(x => x.L), g.Sum(x => x.A), w, 2);
                 break;
             }
@@ -126,8 +135,12 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
                     P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late), A = x.Count(r => r.Status == AttendanceStatus.Absent) }).ToListAsync();
                 var ids = g.Select(x => x.Id).ToList();
                 var sec = await _db.Sections.AsNoTracking().Include(s => s.Branch).Where(s => ids.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
-                foreach (var r in g.OrderBy(x => sec[x.Id].Branch!.Code).ThenBy(x => sec[x.Id].Name))
-                    t.Rows.Add(new[] { sec[r.Id].Branch!.Code, sec[r.Id].Name, r.Total.ToString(), r.P.ToString(), r.L.ToString(), r.A.ToString(), Pct(r.P, r.L, r.Total) });
+                foreach (var r in g.OrderBy(x => sec.TryGetValue(x.Id, out var sec0) ? sec0.Branch?.Code ?? "" : "").ThenBy(x => sec.TryGetValue(x.Id, out var sec0b) ? sec0b.Name : ""))
+                {
+                    if (!sec.TryGetValue(r.Id, out var sd)) continue;
+                    var bc = sd.Branch?.Code ?? "";
+                    t.Rows.Add(new[] { bc, sd.Name, r.Total.ToString(), r.P.ToString(), r.L.ToString(), r.A.ToString(), Pct(r.P, r.L, r.Total) });
+                }
                 t.PercentColumn = 6; t.Footer = Footer(g.Sum(x => x.Total), g.Sum(x => x.P), g.Sum(x => x.L), g.Sum(x => x.A), w, 2);
                 break;
             }
@@ -139,7 +152,10 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
                 var ids = g.Select(x => x.Id).ToList();
                 var fac = await _db.Faculty.AsNoTracking().Where(s => ids.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
                 foreach (var r in g.OrderByDescending(x => x.Sessions))
-                    t.Rows.Add(new[] { fac[r.Id].FacultyID, fac[r.Id].FullName, r.Sessions.ToString(), r.Records.ToString(), r.Last.ToString("dd MMM yyyy HH:mm") });
+                {
+                    if (!fac.TryGetValue(r.Id, out var fv)) continue;
+                    t.Rows.Add(new[] { fv.FacultyID, fv.FullName, r.Sessions.ToString(), r.Records.ToString(), r.Last.ToString("dd MMM yyyy HH:mm") });
+                }
                 break;
             }
             case "daily":
@@ -177,9 +193,11 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
                 else if (f.Type == "defaulter") { list = [.. list.Where(s => s.Percent < s.Threshold)]; t.Title = "Defaulter report (below the required threshold)"; }
                 else t.Title = "Date-range attendance report";
                 t.Columns = new() { "Student ID", "Name", "Branch", "Section", "Sem", "Total", "Present", "Late", "Absent", "%", "Threshold", "Risk", "Classes needed" };
+                var totalCount = list.Count;
                 foreach (var s in list.OrderBy(x => x.Percent).ThenBy(x => x.Code).Take(3000))
-                    t.Rows.Add(new[] { s.Code, s.Name, s.Branch, s.Section, s.Semester.ToString(), s.Total.ToString(), s.Present.ToString(), s.Late.ToString(), s.Absent.ToString(),
+                    t.Rows.Add(new[] { s.Code, s.Name, s.Branch ?? "", s.Section ?? "", s.Semester.ToString(), s.Total.ToString(), s.Present.ToString(), s.Late.ToString(), s.Absent.ToString(),
                         s.Percent.ToString("0.0") + "%", s.Threshold.ToString("0.#") + "%", s.Risk, s.ClassesNeeded == 0 ? "-" : s.ClassesNeeded < 0 ? "n/a" : s.ClassesNeeded.ToString() });
+                if (totalCount > 3000) t.Rows.Add(new[] { $"Truncated: {totalCount} rows total, showing 3000", "", "", "", "", "", "", "", "", "", "", "", "" });
                 t.PercentColumn = 9;
                 break;
             }

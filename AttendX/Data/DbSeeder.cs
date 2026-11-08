@@ -97,7 +97,6 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         await _settings.GetAsync();
         await SeedPeriodsAsync(cancellationToken);
         await SeedBranchesAndSectionsAsync(cancellationToken);
-        await SeedAdminAsync(cancellationToken);
         await SeedSubjectsAsync(cancellationToken);
         await FixMalformedStudentIdsAsync(cancellationToken);
 
@@ -134,7 +133,6 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         if (needsRebuild)
         {
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Force rebuild needed: Faculty DB {F} vs CSV {CF}, Students DB {S} vs CSV {CS}, Attendance Aug-Nov {A}", facultyDbCount, facultyCsvCount, studentsDbCount, studentsCsvCount, attendanceCount);
-            // Truncate in FK-safe order (children first) to avoid duplicates/missing
             await _db.Database.ExecuteSqlRawAsync(@"
                 DELETE FROM ""ExamMarks"";
                 DELETE FROM ""Attendance"";
@@ -149,25 +147,25 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 DELETE FROM ""AspNetUserClaims"";
                 DELETE FROM ""AspNetUserLogins"";
                 DELETE FROM ""AspNetUsers"";
-                ALTER TABLE ""Attendance"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
-                ALTER TABLE ""Students"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
             ");
             _log.LogInformation("Truncated tables in FK-safe order for full rebuild.");
         }
         else if (attendanceCount < 5000)
         {
-            // Only attendance missing - delete attendance tables and regenerate, keep people
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Attendance missing ({A} rows Aug-Nov), regenerating attendance history only...", attendanceCount);
             await _db.Database.ExecuteSqlRawAsync(@"
                 DELETE FROM ""ExamMarks"";
                 DELETE FROM ""Attendance"";
                 DELETE FROM ""AttendanceSessions"";
                 DELETE FROM ""ExamTimetables"";
-                ALTER TABLE ""Attendance"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
-                ALTER TABLE ""Students"" ALTER COLUMN ""RowVersion"" SET DEFAULT decode('0000000000000000', 'hex');
             ");
             _log.LogInformation("Cleared attendance tables for regeneration.");
         }
+        await SeedAdminAsync(cancellationToken);
+        facultyDbCount = await _db.Faculty.CountAsync(cancellationToken);
+        studentsDbCount = await _db.Students.CountAsync(cancellationToken);
+        attendanceCount = await _db.Attendance.CountAsync(cancellationToken);
+        timetableCount = await _db.Timetables.CountAsync(cancellationToken);
 
         // If faculty and students are fully seeded AND attendance coverage is complete, skip heavy seeding
         if (await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
@@ -182,8 +180,6 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
         await SeedHolidaysAsync(cancellationToken);
-        // Only seed people if needed (truncate case), otherwise skip to save time
-        // FIXED: Also check timetableCount because attendance history requires timetable rows to exist.
         if (needsRebuild || facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0)
         {
             await SeedFacultyAsync(cancellationToken);
@@ -191,8 +187,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             await SeedTimetableAsync(cancellationToken);
         }
         await SeedNoticesAsync(cancellationToken);
-        await SeedAttendanceHistoryAsync(cancellationToken);
         await SeedExamTimetableAsync(cancellationToken);
+        await SeedAttendanceHistoryAsync(cancellationToken);
         await SelfCheckAsync(cancellationToken);
         if (watch.Elapsed.TotalSeconds > 5 && _log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding finished in {Seconds:0} s", watch.Elapsed.TotalSeconds);
 
@@ -339,6 +335,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     private async Task SeedAdminAsync(CancellationToken cancellationToken = default)
     {
         if (await _users.FindByEmailAsync(_o.AdminEmail) != null) return;
+        if (string.IsNullOrWhiteSpace(_o.AdminPassword)) { _log.LogWarning("Admin seed skipped: AttendX:AdminPassword is empty. Set env ADMIN_PASSWORD."); return; }
         var admin = new ApplicationUser { UserName = _o.AdminEmail, Email = _o.AdminEmail, EmailConfirmed = true, FullName = "System Administrator", MustChangePassword = _o.ForceAdminPasswordChange, LockoutEnabled = true };
         var res = await _users.CreateAsync(admin, _o.AdminPassword);
         if (res.Succeeded) await _users.AddToRoleAsync(admin, RoleNames.Admin);
@@ -353,9 +350,12 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var codes = (await _db.Subjects.Select(s => s.SubjectCode).ToListAsync()).ToHashSet();
         foreach (var r in rows)
         {
-            if (!branches.TryGetValue(r["branchcode"], out var b) || codes.Contains(r["subjectcode"])) continue;
-            _db.Subjects.Add(new Subject { BranchId = b.Id, Semester = int.Parse(r["semester"]), SubjectCode = r["subjectcode"], SubjectName = r["subjectname"], Credits = int.Parse(r["credits"]) });
-            codes.Add(r["subjectcode"]);
+            if (!r.TryGetValue("branchcode", out var bc) || !branches.TryGetValue(bc, out var b)) continue;
+            if (!r.TryGetValue("subjectcode", out var sc) || codes.Contains(sc)) continue;
+            if (!int.TryParse(r.TryGetValue("semester", out var sv) ? sv : "", out var sem)) continue;
+            if (!int.TryParse(r.TryGetValue("credits", out var cv) ? cv : "", out var credits)) continue;
+            _db.Subjects.Add(new Subject { BranchId = b.Id, Semester = sem, SubjectCode = sc, SubjectName = r.TryGetValue("subjectname", out var sn) ? sn : sc, Credits = credits });
+            codes.Add(sc);
         }
         await _db.SaveChangesAsync();
     }
@@ -364,7 +364,10 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     {
         if (await _db.Holidays.AnyAsync()) return;
         foreach (var r in Read("holidays.csv"))
-            _db.Holidays.Add(new Holiday { Date = DateTime.Parse(r["date"]).Date, Name = r["name"], Type = r["type"] });
+        {
+            if (!DateTime.TryParse(r.TryGetValue("date", out var dv) ? dv : "", out var d)) continue;
+            _db.Holidays.Add(new Holiday { Date = d.Date, Name = r.TryGetValue("name", out var nv) ? nv : "", Type = r.TryGetValue("type", out var tv) ? tv : "Holiday" });
+        }
         await _db.SaveChangesAsync();
     }
 
@@ -491,8 +494,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     _db.Students.Add(new Student
                     {
                         StudentID = r["studentid"], FullName = r["fullname"], Email = email, Phone = r["phone"], BranchId = b.Id, SectionId = sec.Id, Semester = sem,
-                        Year = YearHelper.FromSemester(sem), JoiningDate = DateTime.Parse(r["joiningdate"]).Date, QRPath = "on-demand", IsActive = true, IdentityUserId = user.Id,
-                        RowVersion = new byte[8]
+                        Year = YearHelper.FromSemester(sem), JoiningDate = DateTime.Parse(r["joiningdate"]).Date, QRPath = "on-demand", IsActive = true, IdentityUserId = user.Id
                     });
                 existingNormalizedEmails.Add(normEmail);
                 existingStudentIDs.Add(sid);
@@ -537,8 +539,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         JoiningDate = DateTime.Today.AddMonths(-6),
                         QRPath = "on-demand",
                         IsActive = true,
-                        IdentityUserId = user.Id,
-                        RowVersion = new byte[8]
+                        IdentityUserId = user.Id
                     });
                     existingNormalizedEmails.Add(normEmail);
                     existingStudentIDs.Add(studentId);
@@ -656,7 +657,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var students = await _db.Students.AsNoTracking().Select(s => new { s.Id, s.BranchId, s.SectionId, s.Semester }).ToListAsync();
         if (tts.Count == 0 || students.Count == 0) return;
 
-        var startDate = new DateTime(2026, 8, 1);
+        var currentYear = await _settings.GetCurrentYearAsync();
+        var startDate = currentYear?.StartDate ?? new DateTime(2026, 8, 1);
         var today = DateTime.Today;
         if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding attendance from {Start} to {Today} (real timetable mapping)...", startDate.ToString("yyyy-MM-dd"), today.ToString("yyyy-MM-dd"));
 

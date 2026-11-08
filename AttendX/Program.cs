@@ -6,9 +6,11 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-var urls = $"http://0.0.0.0:{port}";
-Environment.SetEnvironmentVariable("ASPNETCORE_URLS", urls);
-builder.WebHost.UseUrls(urls);
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    var urls = $"http://0.0.0.0:{port}";
+    builder.WebHost.UseUrls(urls);
+}
 
 builder.Services.AddResponseCompression(options => { options.EnableForHttps = true; });
 
@@ -27,11 +29,19 @@ var cs = ConnectionHelper.ConvertToNpgsqlConnectionString(rawCs);
 var usePostgres = rawCs.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
               || rawCs.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
 
+var qrSecret = Environment.GetEnvironmentVariable("QR_SECRET");
+if (!string.IsNullOrWhiteSpace(qrSecret))
+{
+    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["AttendX:QrSecret"] = qrSecret });
+}
+if (string.IsNullOrWhiteSpace(builder.Configuration["AttendX:QrSecret"]) || builder.Configuration["AttendX:QrSecret"]!.Length < 16)
+{
+    throw new InvalidOperationException("AttendX:QrSecret is required (min 16 chars) via environment variable QR_SECRET or appsettings. Refusing to start with unset/default secret.");
+}
 builder.Services.Configure<AttendXOptions>(builder.Configuration.GetSection("AttendX"));
 builder.Services.Configure<InstitutionOptions>(builder.Configuration.GetSection("Institution"));
-builder.Services.Configure<AttendXOptions>(o => o.UseMigrations = false);
 
-builder.Services.AddDbContextPool<AppDbContext>(o =>
+builder.Services.AddDbContext<AppDbContext>(o =>
 {
     if (usePostgres)
     {
@@ -118,7 +128,9 @@ builder.Services.AddScoped<DbSeeder>();
 
 var app = builder.Build();
 
-// Seed database on startup with extended timeout for cloud deployment
+if (app.Environment.IsDevelopment()) app.UseDeveloperExceptionPage();
+else { app.UseExceptionHandler("/Error"); }
+
 using (var scope = app.Services.CreateScope())
 {
     var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
@@ -130,16 +142,16 @@ using (var scope = app.Services.CreateScope())
     }
     catch (OperationCanceledException ex)
     {
-        log.LogError(ex, "Database seeding timed out after 10 minutes. Application will continue but data may be incomplete.");
+        log.LogError(ex, "Database seeding timed out after 10 minutes.");
+        throw;
     }
     catch (Exception ex)
     {
-        log.LogError(ex, "Database creation/seeding encountered an issue during startup, but application startup continues.");
+        log.LogError(ex, "Database seeding failed during startup.");
+        throw;
     }
 }
 
-if (app.Environment.IsDevelopment()) app.UseDeveloperExceptionPage();
-else { app.UseExceptionHandler("/Error"); app.UseHsts(); }
 app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
 app.Use(async (ctx, next) =>
@@ -151,7 +163,11 @@ app.Use(async (ctx, next) =>
     await next();
 });
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment() && string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_URLS"), "https", StringComparison.OrdinalIgnoreCase) == false)
+{
+    if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("HTTPS_REDIRECT"))) app.UseHttpsRedirection();
+}
+app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();

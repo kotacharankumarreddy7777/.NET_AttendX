@@ -36,12 +36,13 @@ public class FacultyController(AppDbContext db, IFacultyService faculty, ICurren
     [Authorize(Policy = PolicyNames.AdminOnly), HttpPost]
     public async Task<IActionResult> Create(FacultyFormViewModel m)
     {
+        if (!FacultyFormViewModel.Designations.Contains(m.Designation, StringComparer.OrdinalIgnoreCase)) ModelState.AddModelError(nameof(m.Designation), "Select a valid designation.");
         if (ModelState.IsValid)
         {
             var (f, pwd, err) = await _faculty.CreateAsync(m);
             if (f != null)
             {
-                TempData["TempPassword"] = $"Login created for {f.Email}. Temporary password (shown ONCE, user must change it): {pwd}";
+                TempData["TempPassword"] = $"Login created for {f.Email}. Temporary password (shown ONCE, user must change it): {pwd?.Trim()}";
                 return RedirectToAction(nameof(Index));
             }
             ModelState.AddModelError("", err ?? "Could not create faculty.");
@@ -61,6 +62,7 @@ public class FacultyController(AppDbContext db, IFacultyService faculty, ICurren
     [Authorize(Policy = PolicyNames.AdminOnly), HttpPost]
     public async Task<IActionResult> Edit(int id, FacultyFormViewModel m)
     {
+        if (!FacultyFormViewModel.Designations.Contains(m.Designation, StringComparer.OrdinalIgnoreCase)) ModelState.AddModelError(nameof(m.Designation), "Select a valid designation.");
         if (ModelState.IsValid)
         {
             var (ok, err) = await _faculty.UpdateAsync(id, m);

@@ -8,8 +8,7 @@ public static class EmailHelper
         if (string.IsNullOrWhiteSpace(id)) return "";
         string cleanId = id.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(fullName)) return cleanId + "@attendx.edu.in";
-        
-        string cleanName = fullName.Trim().ToLowerInvariant().Replace(" ", ".");
+        string cleanName = string.Concat(fullName.Trim().ToLowerInvariant().Select(ch => char.IsLetterOrDigit(ch) || ch == ' ' ? ch : ' ')).Trim().Replace(" ", ".");
         return cleanName + "." + cleanId + "@attendx.edu.in";
     }
 
@@ -25,7 +24,13 @@ public static class EmailHelper
         if (input.Contains('@'))
         {
             var at = input.IndexOf('@');
-            return input.Substring(0, at).Trim().ToUpperInvariant();
+            var local = input.Substring(0, at).Trim();
+            if (local.Contains('.'))
+            {
+                var tail = local.Substring(local.LastIndexOf('.') + 1).Trim();
+                if (!string.IsNullOrWhiteSpace(tail)) return tail.ToUpperInvariant();
+            }
+            return local.ToUpperInvariant();
         }
         return input.Trim().ToUpperInvariant();
     }

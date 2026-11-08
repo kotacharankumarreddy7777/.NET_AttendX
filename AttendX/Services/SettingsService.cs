@@ -18,7 +18,6 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
     {
         var s = await _db.AttendanceSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync();
         if (s != null) return s;
-        // First run: build the settings row from appsettings.json
         s = new AttendanceSettings
         {
             GraceMinutes = _o.GraceMinutes,
@@ -32,13 +31,24 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
             LateWeight = 1m
         };
         _db.AttendanceSettings.Add(s);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            _db.ChangeTracker.Clear();
+            var existing = await _db.AttendanceSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync();
+            if (existing != null) return existing;
+            throw new InvalidOperationException("Could not create attendance settings. Please try again.", ex);
+        }
         return s;
     }
 
     public async Task SaveAsync(AttendanceSettings s)
     {
-        var row = await _db.AttendanceSettings.FirstAsync();
+        var row = await GetAsync();
+        _db.AttendanceSettings.Attach(row);
         row.GraceMinutes = s.GraceMinutes;
         row.DefaultThreshold = s.DefaultThreshold;
         row.QrExpirySeconds = s.QrExpirySeconds;
@@ -57,10 +67,19 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
         var y = await _db.AcademicYears.AsNoTracking().FirstOrDefaultAsync(a => a.IsCurrent)
                 ?? await _db.AcademicYears.AsNoTracking().OrderByDescending(a => a.StartDate).FirstOrDefaultAsync();
         if (y != null) return y;
-        var start = int.TryParse(_o.AcademicYear.Split('-')[0], out var sy) ? sy : DateTime.Today.Year;
+        int start;
+        try
+        {
+            start = int.TryParse((_o.AcademicYear ?? "").Split('-')[0], out var sy) ? sy : DateTime.Today.Year;
+        }
+        catch
+        {
+            start = DateTime.Today.Year;
+        }
         var ny = new AcademicYear { Name = _o.AcademicYear, StartDate = new DateTime(start, 6, 1), EndDate = new DateTime(start + 1, 5, 31), IsCurrent = true };
         _db.AcademicYears.Add(ny);
-        await _db.SaveChangesAsync();
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateException ex) { throw new InvalidOperationException("Could not create academic year.", ex); }
         return ny;
     }
 }

@@ -36,7 +36,7 @@ public class HolidaysController(AppDbContext db, IAuditService audit) : Controll
     public async Task<IActionResult> Delete(int id)
     {
         var h = await _db.Holidays.FindAsync(id);
-        if (h != null) { _db.Holidays.Remove(h); await _db.SaveChangesAsync(); await _audit.LogAsync("HolidayDeleted", "Holiday", h.Date.ToString("yyyy-MM-dd"), oldValues: h.Name); }
+        if (h != null) { try { _db.Holidays.Remove(h); await _db.SaveChangesAsync(); await _audit.LogAsync("HolidayDeleted", "Holiday", h.Date.ToString("yyyy-MM-dd"), oldValues: h.Name); } catch (DbUpdateException) { TempData["Error"] = "Could not delete this holiday."; } }
         return RedirectToAction(nameof(Index));
     }
 }

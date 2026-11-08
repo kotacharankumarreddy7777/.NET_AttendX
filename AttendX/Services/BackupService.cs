@@ -27,10 +27,18 @@ public class BackupService(AppDbContext db, IConfiguration cfg, IOptions<AttendX
         ?? _cfg.GetConnectionString("DefaultConnection")
         ?? "");
 
-    private bool IsPostgres => ConnectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
-                              || ConnectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
-                              || ConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)
-                              || Environment.GetEnvironmentVariable("USE_POSTGRES") == "true";
+    private bool IsPostgres
+    {
+        get
+        {
+            var provider = _db.Database.ProviderName;
+            if (provider != null) return provider.Contains("Npgsql", StringComparison.OrdinalIgnoreCase);
+            return ConnectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
+                               || ConnectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+                               || ConnectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)
+                               || Environment.GetEnvironmentVariable("USE_POSTGRES") == "true";
+        }
+    }
 
     private string DbName
     {
@@ -76,6 +84,16 @@ public class BackupService(AppDbContext db, IConfiguration cfg, IOptions<AttendX
 
     public async Task<BackupViewModel> GetAsync()
     {
+        if (IsPostgres)
+        {
+            return new BackupViewModel
+            {
+                Files = new List<BackupFileInfo>(),
+                History = await _db.BackupHistories.AsNoTracking().OrderByDescending(h => h.At).Take(30).ToListAsync(),
+                Folder = Folder,
+                DatabaseName = DbName
+            };
+        }
         var files = new DirectoryInfo(Folder).GetFiles("*.bak").OrderByDescending(f => f.CreationTime)
             .Select(f => new BackupFileInfo { FileName = f.Name, SizeBytes = f.Length, CreatedAt = f.CreationTime }).ToList();
         var hist = await _db.BackupHistories.AsNoTracking().OrderByDescending(h => h.At).Take(30).ToListAsync();
@@ -128,6 +146,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, IOptions<AttendX
 
         var masterBuilder = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master", Pooling = false };
         var db = Quote(DbName);
+        Exception? restoreEx = null;
         try
         {
             await using var conn = new SqlConnection(masterBuilder.ConnectionString);
@@ -147,16 +166,22 @@ public class BackupService(AppDbContext db, IConfiguration cfg, IOptions<AttendX
                 r.Parameters.AddWithValue("@p", path);
                 await r.ExecuteNonQueryAsync();
             }
+            catch (Exception ex) { restoreEx = ex; throw; }
             finally
             {
-                await using var m = conn.CreateCommand();
-                m.CommandText = $"ALTER DATABASE {db} SET MULTI_USER;";
-                await m.ExecuteNonQueryAsync();
+                try
+                {
+                    await using var m = conn.CreateCommand();
+                    m.CommandText = $"ALTER DATABASE {db} SET MULTI_USER;";
+                    await m.ExecuteNonQueryAsync();
+                }
+                catch (Exception ex) when (restoreEx == null) { restoreEx = ex; }
             }
         }
         catch (Exception ex)
         {
-            return (false, "Restore failed: " + Short(ex.Message));
+            var original = restoreEx ?? ex;
+            return (false, "Restore failed: " + Short(original.Message));
         }
         SqlConnection.ClearAllPools();
         _db.ChangeTracker.Clear();

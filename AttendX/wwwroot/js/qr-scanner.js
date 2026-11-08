@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function show(cls, text) { box.className = 'scan-result scan-' + cls; box.textContent = text; }
   function refreshToken() {
-    return fetch('/Attendance/SessionToken/' + tt, { credentials: 'same-origin' }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    return fetch('/Attendance/SessionToken/' + tt, { method: 'POST', credentials: 'same-origin', headers: { 'RequestVerificationToken': window.AttendX ? AttendX.csrf() : '' } }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (x) { if (x.ok) token = x.j.token; else show('fail', x.j.error || 'Cannot open scan session.'); })
       .catch(function () { /* offline: scans will be queued */ });
   }

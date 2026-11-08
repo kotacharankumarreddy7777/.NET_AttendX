@@ -5,7 +5,7 @@
 }
 <div class="table-responsive">
 <table class="table table-bordered week mb-0">
-    <thead><tr><th>Period</th>@foreach (var d in days) { <th class="@(d == today ? "today" : "")">@d.ToString().Substring(0, 3)</th> }</tr></thead>
+    <thead><tr><th>Period</th>@foreach (var d in days) { <th class="@(d == today ? "today" : "")">@d.ToString().Substring(0, Math.Min(3, d.ToString().Length))</th> }</tr></thead>
     <tbody>
     @foreach (var p in Model.Periods)
     {

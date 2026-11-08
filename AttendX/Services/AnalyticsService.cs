@@ -107,10 +107,11 @@ public class AnalyticsService(AppDbContext db, ICurrentUser user, ISettingsServi
             if (projected < th) rec.Add($"If the recent pattern continues, attendance will be about {projected}% after 4 weeks (below {th}%).");
             if (risk == "Safe" && trend != "Declining") rec.Add("No action needed.");
 
+            var sectionName = s.Section?.Name ?? "";
             if (risk != "Safe" || trend == "Declining")
                 vm.Students.Add(new StudentRisk
                 {
-                    Code = s.StudentID, Name = s.FullName, Section = s.Section!.Name, Total = total, Percent = overall, Threshold = th,
+                    Code = s.StudentID, Name = s.FullName, Section = sectionName, Total = total, Percent = overall, Threshold = th,
                     RecentPercent = recentPct, PreviousPercent = prevPct, SlopePerWeek = slope, Projected = projected, ClassesNeeded = needed,
                     Risk = risk, Trend = trend, Recommendation = string.Join(" ", rec)
                 });
@@ -124,10 +125,11 @@ public class AnalyticsService(AppDbContext db, ICurrentUser user, ISettingsServi
         var subjects = await _db.Subjects.AsNoTracking().Where(s => subjIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
         foreach (var g in rows.GroupBy(r => r.SubjectId))
         {
+            if (!subjects.TryGetValue(g.Key, out var ds)) continue;
             var p = Pct(g, w);
             vm.Subjects.Add(new SubjectRisk
             {
-                Subject = subjects[g.Key].SubjectCode + " " + subjects[g.Key].SubjectName, Percent = p, Threshold = settings.DefaultThreshold, Records = g.Count(),
+                Subject = ds.SubjectCode + " " + ds.SubjectName, Percent = p, Threshold = settings.DefaultThreshold, Records = g.Count(),
                 Note = p < settings.DefaultThreshold ? "Below threshold - check timetable slot, teaching quality or student interest." : p < settings.DefaultThreshold + 10 ? "Watch" : "Healthy"
             });
         }
@@ -150,9 +152,10 @@ public class AnalyticsService(AppDbContext db, ICurrentUser user, ISettingsServi
             {
                 var z = std == 0 ? 0 : Math.Round((x.Recent - mean) / std, 2);
                 bool flag = (perSection.Count >= 3 && z <= -1m) || x.Prev - x.Recent >= 10m;
+                if (!secs.TryGetValue(x.Id, out var sc)) continue;
                 vm.Sections.Add(new SectionAnomaly
                 {
-                    Section = secs[x.Id].Branch!.Code + " / " + secs[x.Id].Name, Recent = x.Recent, Previous = x.Prev, Average = Math.Round(mean, 1), ZScore = z,
+                    Section = (sc.Branch?.Code ?? "") + " / " + sc.Name, Recent = x.Recent, Previous = x.Prev, Average = Math.Round(mean, 1), ZScore = z,
                     Note = flag ? (x.Prev - x.Recent >= 10m ? $"Dropped {x.Prev - x.Recent:0.#} points in two weeks." : $"{Math.Abs(z)} standard deviations below the average of all sections.") : "Normal"
                 });
             }

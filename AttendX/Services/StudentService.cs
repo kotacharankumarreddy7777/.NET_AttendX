@@ -81,6 +81,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
                 s.Email = $"{m.FullName.Trim().ToLowerInvariant().Replace(" ", ".")}.{s.StudentID}@attendx.edu.in";
                 _db.Students.Add(s);
                 try { await _db.SaveChangesAsync(); break; }
+                catch (DbUpdateConcurrencyException) { _db.Entry(s).State = EntityState.Detached; s.Id = 0; }
                 catch (DbUpdateException) when (attempt < 5) { _db.Entry(s).State = EntityState.Detached; s.Id = 0; }
             }
         }
@@ -126,18 +127,19 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
         s.Year = YearHelper.FromSemester(m.Semester);
         s.JoiningDate = m.JoiningDate.Date;
         s.UpdatedAt = DateTime.Now;
-        if (photoPath != null) { _photos.DeleteSafe(s.PhotoPath); s.PhotoPath = photoPath; }
-
+        if (photoPath != null)
+        {
+            s.PhotoPath = photoPath;
+        }
         await Gate.WaitAsync();
         try
         {
             for (int attempt = 1; attempt <= 5; attempt++)
             {
-                // the student ID encodes semester+section+branch, so it is re-issued when one of them changes (e.g. promotion)
                 if (idChange) s.StudentID = await _ids.GenerateAsync(s.Semester, s.SectionId, s.BranchId);
                 try { await _db.SaveChangesAsync(); break; }
-                catch (DbUpdateException) when (attempt < 5 && idChange) { /* sequence taken by someone else - retry */ }
                 catch (DbUpdateConcurrencyException) { return (false, "This student was changed by someone else. Reload and try again."); }
+                catch (DbUpdateException) when (attempt < 5 && idChange) { }
             }
         }
         finally { Gate.Release(); }
@@ -160,12 +162,13 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
 
         if (active)
         {
-            // never allow two ACTIVE students with the same ID
             if (await _db.Students.AnyAsync(x => x.IsActive && x.StudentID == s.StudentID && x.Id != id))
             {
                 s.StudentID = await _ids.GenerateAsync(s.Semester, s.SectionId, s.BranchId);
                 s.QRPath = null;
             }
+            var expectedEmail = $"{s.FullName.Trim().ToLowerInvariant().Replace(" ", ".")}.{s.StudentID}@attendx.edu.in";
+            if (!string.Equals(s.Email, expectedEmail, StringComparison.OrdinalIgnoreCase)) s.Email = expectedEmail;
         }
         s.IsActive = active;
         s.UpdatedAt = DateTime.Now;
@@ -173,7 +176,22 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
         if (s.IdentityUserId != null)
         {
             var u = await _users.FindByIdAsync(s.IdentityUserId);
-            if (u != null) { await _users.SetLockoutEnabledAsync(u, true); await _users.SetLockoutEndDateAsync(u, active ? null : DateTimeOffset.MaxValue); }
+            if (u != null)
+            {
+                await _users.SetLockoutEnabledAsync(u, true);
+                await _users.SetLockoutEndDateAsync(u, active ? null : DateTimeOffset.MaxValue);
+                if (active && !string.Equals(u.Email, s.Email, StringComparison.OrdinalIgnoreCase))
+                {
+                    var clash = await _users.FindByEmailAsync(s.Email);
+                    if (clash == null || clash.Id == u.Id)
+                    {
+                        await _users.SetEmailAsync(u, s.Email);
+                        await _users.SetUserNameAsync(u, s.Email);
+                        u.FullName = s.FullName;
+                        await _users.UpdateAsync(u);
+                    }
+                }
+            }
         }
         if (active && string.IsNullOrEmpty(s.QRPath))
         {
@@ -193,7 +211,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
             var list = await _db.Students.Where(s => chunk.Contains(s.Id)).ToListAsync();
             foreach (var s in list)
             {
-                if (!regenerateExisting && !string.IsNullOrEmpty(s.QRPath)) continue;
+                if (!regenerateExisting && (!string.IsNullOrEmpty(s.QRPath) && s.QRPath != "on-demand")) continue;
                 s.QRPath = await _qr.GenerateStudentQrAsync(s);
                 n++;
             }

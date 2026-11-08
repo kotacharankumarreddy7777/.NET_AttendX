@@ -1,6 +1,6 @@
 namespace AttendX.Infrastructure;
 
-/// <summary>Role names used with ASP.NET Core Identity. Students have NO login (Student role is defined only for completeness).</summary>
+/// <summary>Role names used with ASP.NET Core Identity. Students have their own login.</summary>
 public static class RoleNames
 {
     public const string Admin = "Admin";
@@ -31,18 +31,18 @@ public class AttendXOptions
     public int LateAfterMinutes { get; set; } = 15;
     public int MaxUploadMB { get; set; } = 2;
     public int PeriodCount { get; set; } = 7;
-    public string QrSecret { get; set; } = "CHANGE-ME-dev-only-attendx-qr-signing-secret-2026";
+    public string QrSecret { get; set; } = "";
     public string BackupFolder { get; set; } = "";
     public string AdminEmail { get; set; } = "admin@attendx.edu.in";
-    public string AdminPassword { get; set; } = "Admin@123";
-    public string SeedFacultyPassword { get; set; } = "Faculty@123";
-    public string SeedStudentPassword { get; set; } = "Student@1234";
+    public string AdminPassword { get; set; } = "";
+    public string SeedFacultyPassword { get; set; } = "";
+    public string SeedStudentPassword { get; set; } = "";
     public bool ForceAdminPasswordChange { get; set; } = false;
     public bool AutoExportExcel { get; set; } = true;
     public bool SeedDemoData { get; set; } = true;
     public int SeedHistoryDays { get; set; } = 14;
     public bool UseMigrations { get; set; } = false;
-    public bool RecreateIfSchemaMismatch { get; set; } = true;
+    public bool RecreateIfSchemaMismatch { get; set; } = false;
 }
 
 /// <summary>Name shown in the portal header and login pages (appsettings.json -> "Institution").</summary>

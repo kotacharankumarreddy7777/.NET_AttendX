@@ -44,7 +44,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Subject>().HasIndex(x => x.SubjectCode).IsUnique();
         b.Entity<Subject>().HasIndex(x => new { x.BranchId, x.Semester });
 
-        string activeFilter = Database.IsSqlServer() ? "\"IsActive\" = 1" : "\"IsActive\" = TRUE";
+        string activeFilter = Database.IsSqlServer() ? "[IsActive] = 1" : "\"IsActive\" = TRUE";
 
         // Duplicate ACTIVE student IDs are impossible; an ID may be reused after the old student is deactivated.
         b.Entity<Student>().HasIndex(x => x.StudentID).IsUnique().HasFilter(activeFilter);
@@ -109,15 +109,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.Semester, x.ExamType, x.ExamDate });
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.BranchId, x.Semester, x.SubjectId, x.ExamType }).IsUnique();
 
-        // RowVersion: EF Core with Npgsql requires explicit byte[] default for inserts to avoid null violations
-        // We provide a HasDefaultValue that EF Core sends as a parameter (not null) so Postgres not-null constraint is satisfied
-        // ValueGeneratedOnAdd() ensures EF Core includes the column in INSERT statements with the default value
-        b.Entity<Student>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]).ValueGeneratedOnAdd();
-        b.Entity<Attendance>().Property(x => x.RowVersion).IsRowVersion().HasDefaultValue(new byte[8]).ValueGeneratedOnAdd();
+        b.Entity<Student>().Property(x => x.RowVersion).IsRowVersion();
+        b.Entity<Attendance>().Property(x => x.RowVersion).IsRowVersion();
 
-        // SQL Server rejects "multiple cascade paths"
+        // Keep Identity FKs as Cascade; Restrict only domain cross-cutting FKs to avoid multiple-cascade-path errors on SQL Server.
         foreach (var fk in b.Model.GetEntityTypes()
-                     .Where(e => e.ClrType.Namespace == typeof(Student).Namespace)
+                     .Where(e => e.ClrType.Namespace == typeof(Student).Namespace && !e.ClrType.Name.StartsWith("Identity"))
                      .SelectMany(e => e.GetForeignKeys()))
         {
             fk.DeleteBehavior = DeleteBehavior.Restrict;

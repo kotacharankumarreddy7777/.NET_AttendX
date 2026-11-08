@@ -50,9 +50,10 @@ public static class ThresholdResolver
     /// <summary>Most specific matching rule wins (section > semester > branch). Falls back to the default threshold.</summary>
     public static decimal Resolve(IEnumerable<ThresholdRule> rules, int branchId, int semester, int sectionId, decimal defaultThreshold)
     {
+        var ordered = rules.OrderBy(r => r.Id).ToList();
         ThresholdRule? best = null;
         int bestScore = -1;
-        foreach (var r in rules)
+        foreach (var r in ordered)
         {
             if (r.BranchId != null && r.BranchId != branchId) continue;
             if (r.Semester != null && r.Semester != semester) continue;
@@ -74,6 +75,7 @@ public static class AttendanceWindow
     {
         if (now.Date != date.Date) return false;
         var (s, e) = For(date, start, end, graceMinutes);
+        if (e < s) return now >= s || now <= e;
         return now >= s && now <= e;
     }
 

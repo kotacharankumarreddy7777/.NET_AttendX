@@ -1,12 +1,29 @@
 namespace AttendX.Services;
 
-/// <summary>Server clock abstraction. SERVER time is authoritative for every attendance rule (never the browser clock). App runs live IST (Indian Standard Time, UTC+5:30).</summary>
-public interface IClock { DateTime Now { get; } }
+public interface IClock
+{
+    DateTime Now { get; }
+}
 
 public class SystemClock : IClock
 {
     private static readonly TimeZoneInfo IstZone = GetIstZone();
-    public DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IstZone);
+    public static TimeSpan IstOffset => new TimeSpan(5, 30, 0);
+    public DateTime Now => new DateTimeOffset(DateTime.UtcNow, TimeSpan.Zero).ToOffset(IstOffset).LocalDateTime;
+    public DateTime NowUtc => DateTime.UtcNow;
+    public DateTimeOffset NowOffset => new DateTimeOffset(DateTime.UtcNow, TimeSpan.Zero).ToOffset(IstOffset);
+
+    public static DateTimeOffset ToIst(DateTimeOffset utcDto)
+    {
+        var utc = utcDto.Offset == TimeSpan.Zero ? utcDto : utcDto.ToUniversalTime();
+        return utc.ToOffset(IstOffset);
+    }
+
+    public static DateTime IstFromUtc(DateTime utc)
+    {
+        var dto = new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc));
+        return dto.ToOffset(IstOffset).LocalDateTime;
+    }
 
     private static TimeZoneInfo GetIstZone()
     {
@@ -14,7 +31,6 @@ public class SystemClock : IClock
         {
             try { return TimeZoneInfo.FindSystemTimeZoneById(id); } catch { }
         }
-        // Fallback: UTC+5:30 custom
         return TimeZoneInfo.CreateCustomTimeZone("IST", TimeSpan.FromHours(5.5), "IST", "IST");
     }
 }

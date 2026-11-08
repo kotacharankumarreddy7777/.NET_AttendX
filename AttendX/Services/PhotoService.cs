@@ -38,29 +38,45 @@ public class PhotoService(IWebHostEnvironment env, IOptions<AttendXOptions> o) :
 
         if (file != null && file.Length > 0)
         {
+            if (file.FileName == null) return (null, "Photo file name is required.");
             var ext = System.IO.Path.GetExtension(file.FileName).ToLowerInvariant();
             if (!AllowedExt.Contains(ext)) return (null, "Photo must be a .jpg, .jpeg, .png or .webp file.");
-            if (!AllowedTypes.Contains(file.ContentType.ToLowerInvariant())) return (null, "Photo content type is not allowed.");
+            if (!AllowedTypes.Contains((file.ContentType ?? "").ToLowerInvariant())) return (null, "Photo content type is not allowed.");
             if (file.Length > max) return (null, $"Photo is larger than {_o.MaxUploadMB} MB.");
             using var ms = new MemoryStream();
             await file.CopyToAsync(ms);
+            if (ms.Length > max) return (null, $"Photo is larger than {_o.MaxUploadMB} MB.");
             bytes = ms.ToArray();
         }
         else if (!string.IsNullOrWhiteSpace(webcamDataUrl))
         {
             var idx = webcamDataUrl.IndexOf("base64,", StringComparison.Ordinal);
             if (!webcamDataUrl.StartsWith("data:image/") || idx < 0) return (null, "Webcam photo is invalid.");
-            try { bytes = Convert.FromBase64String(webcamDataUrl[(idx + 7)..]); }
+            var b64 = webcamDataUrl[(idx + 7)..];
+            if (b64.Length > (max * 2)) return (null, $"Photo is larger than {_o.MaxUploadMB} MB.");
+            try { bytes = Convert.FromBase64String(b64); }
             catch (FormatException) { return (null, "Webcam photo is invalid."); }
             if (bytes.Length > max) return (null, $"Photo is larger than {_o.MaxUploadMB} MB.");
         }
 
-        if (bytes == null) return (null, null);            // nothing uploaded - not an error
+        if (bytes == null) return (null, null);
         var real = DetectExt(bytes);
         if (real == null) return (null, "The file is not a real JPEG, PNG or WEBP image.");
 
-        var name = Guid.NewGuid().ToString("N") + real;     // unique name, user input never used in the path
-        await File.WriteAllBytesAsync(System.IO.Path.Combine(Dir(), name), bytes);
+        var name = Guid.NewGuid().ToString("N") + real;
+        var tmp = Path.Combine(Dir(), name + ".tmp");
+        try
+        {
+            await using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write))
+            {
+                await fs.WriteAsync(bytes);
+            }
+            File.Move(tmp, Path.Combine(Dir(), name), overwrite: true);
+        }
+        finally
+        {
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+        }
         return ("uploads/students/" + name, null);
     }
 

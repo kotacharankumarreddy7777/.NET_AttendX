@@ -17,13 +17,22 @@ public class ReportsController(IReportService reports, IExportService export, Ap
 
     public async Task<IActionResult> Index(ReportFilter f, bool run = false)
     {
+        if (string.IsNullOrWhiteSpace(f.Type)) f.Type = "section";
+        if (!Types.Any(t => t.Value == f.Type))
+        {
+            ModelState.AddModelError("Type", "Unknown report type.");
+        }
         var vm = await Build(f);
+        if (!ModelState.IsValid) return View(vm);
         if (run) vm.Table = await _reports.BuildAsync(f);
         return View(vm);
     }
 
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Export(ReportFilter f, string format = "excel")
     {
+        if (string.IsNullOrWhiteSpace(f.Type)) f.Type = "section";
+        if (!Types.Any(t => t.Value == f.Type)) return BadRequest("Unknown report type.");
         var table = await _reports.BuildAsync(f);
         var stamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
         var name = $"AttendX_{f.Type}_{stamp}";

@@ -16,14 +16,27 @@ public interface IExportService
 /// <summary>CSV (plain), Excel (ClosedXML) and PDF (QuestPDF, Community licence) exports of any ReportTable.</summary>
 public class ExportService : IExportService
 {
+    static ExportService()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+    }
+
     public byte[] ToCsv(ReportTable t)
     {
         var sb = new StringBuilder();
         sb.AppendLine(CsvParser.Escape("AttendX - " + t.Title));
-        sb.AppendLine(string.Join(",", t.Columns.Select(CsvParser.Escape)));
-        foreach (var r in t.Rows) sb.AppendLine(string.Join(",", r.Select(CsvParser.Escape)));
-        if (t.Footer != null) sb.AppendLine(string.Join(",", t.Footer.Select(CsvParser.Escape)));
-        return [.. new UTF8Encoding(true).GetPreamble(), .. Encoding.UTF8.GetBytes(sb.ToString())];   // BOM so Excel reads UTF-8
+        sb.AppendLine(string.Join(",", t.Columns.Select(c => CsvParser.Escape(Sanitize(c)))));
+        foreach (var r in t.Rows) sb.AppendLine(string.Join(",", r.Select(v => CsvParser.Escape(Sanitize(v)))));
+        if (t.Footer != null) sb.AppendLine(string.Join(",", t.Footer.Select(v => CsvParser.Escape(Sanitize(v)))));
+        return [.. new UTF8Encoding(true).GetPreamble(), .. Encoding.UTF8.GetBytes(sb.ToString())];
+    }
+
+    private static string Sanitize(string? v)
+    {
+        if (string.IsNullOrEmpty(v)) return v ?? "";
+        var c = v[0];
+        if (c == '=' || c == '+' || c == '-' || c == '@' || c == '\t' || c == '\r' || c == '\n') return "'" + v;
+        return v;
     }
 
     public byte[] ToExcel(ReportTable t)
@@ -67,7 +80,6 @@ public class ExportService : IExportService
 
     public byte[] ToPdf(ReportTable t)
     {
-        QuestPDF.Settings.License = LicenseType.Community;
         var doc = Document.Create(container =>
         {
             container.Page(page =>

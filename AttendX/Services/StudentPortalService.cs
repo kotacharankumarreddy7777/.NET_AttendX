@@ -37,7 +37,7 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         var w = settings.LateWeight;
         var now = _clock.Now; var today = now.Date;
 
-        var vm = new StudentDashboardViewModel { Student = me, BranchName = me.Branch!.Name, SectionName = me.Section!.Name };
+        var vm = new StudentDashboardViewModel { Student = me, BranchName = me.Branch?.Name ?? "", SectionName = me.Section?.Name ?? "" };
         vm.ClassStrength = await _db.Students.CountAsync(s => s.IsActive && s.BranchId == me.BranchId && s.SectionId == me.SectionId && s.Semester == me.Semester);
         vm.Threshold = ThresholdResolver.Resolve(rules, me.BranchId, me.Semester, me.SectionId, settings.DefaultThreshold);
 
@@ -46,7 +46,7 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
             .Where(t => t.IsActive && t.AcademicYearId == year.Id && t.BranchId == me.BranchId && t.SectionId == me.SectionId && t.Semester == me.Semester).ToListAsync();
         vm.Periods = await _db.PeriodDefinitions.AsNoTracking().OrderBy(p => p.PeriodNo).ToListAsync();
         foreach (var t in tt)
-            vm.Week[$"{(int)t.Day}-{t.Period}"] = new TimetableCellVm { SubjectCode = t.Subject!.SubjectCode, SubjectName = t.Subject.SubjectName, Faculty = t.Faculty!.FullName, Room = t.RoomNo };
+            vm.Week[$"{(int)t.Day}-{t.Period}"] = new TimetableCellVm { SubjectCode = t.Subject?.SubjectCode ?? "", SubjectName = t.Subject?.SubjectName ?? "", Faculty = t.Faculty?.FullName ?? "", Room = t.RoomNo };
         var facultyBySubject = tt.GroupBy(t => t.SubjectId).ToDictionary(g => g.Key, g => g.First().Faculty!);
 
         // ----- attendance of this student
@@ -78,10 +78,11 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         var subjects = await _db.Subjects.AsNoTracking().Where(s => subjectIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id);
         foreach (var g in rows.GroupBy(r => r.SubjectId))
         {
+            if (!subjects.TryGetValue(g.Key, out var sj)) continue;
             int p = g.Count(r => r.Status == AttendanceStatus.Present), l = g.Count(r => r.Status == AttendanceStatus.Late), a = g.Count(r => r.Status == AttendanceStatus.Absent);
             vm.Subjects.Add(new StudentSubjectRow
             {
-                Code = subjects[g.Key].SubjectCode, Name = subjects[g.Key].SubjectName,
+                Code = sj.SubjectCode, Name = sj.SubjectName,
                 FacultyName = facultyBySubject.TryGetValue(g.Key, out var fc) ? fc.FullName : "",
                 Total = g.Count(), Present = p, Late = l, Absent = a, Percent = AttendanceMath.Percent(p, l, g.Count(), w)
             });
@@ -90,11 +91,11 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
 
         // ----- my faculty
         vm.Faculty = [.. tt.GroupBy(t => t.SubjectId).Select(g => g.First())
-            .Select(t => new FacultyContact { Name = t.Faculty!.FullName, Email = t.Faculty.Email, Subject = t.Subject!.SubjectCode + " " + t.Subject.SubjectName }).OrderBy(f => f.Subject)];
-        vm.SubjectOptions = [.. tt.GroupBy(t => t.SubjectId).Select(g => g.First()).OrderBy(t => t.Subject!.SubjectCode).Select(t => new SelectListItem(t.Subject!.SubjectCode + " - " + t.Subject.SubjectName, t.SubjectId.ToString()))];
+            .Select(t => new FacultyContact { Name = t.Faculty?.FullName ?? "", Email = t.Faculty?.Email ?? "", Subject = (t.Subject?.SubjectCode ?? "") + " " + (t.Subject?.SubjectName ?? "") }).OrderBy(f => f.Subject)];
+        vm.SubjectOptions = [.. tt.GroupBy(t => t.SubjectId).Select(g => g.First()).OrderBy(t => t.Subject?.SubjectCode ?? "").Select(t => new SelectListItem((t.Subject?.SubjectCode ?? "") + " - " + (t.Subject?.SubjectName ?? ""), t.SubjectId.ToString()))];
 
         // ----- heat map (last 35 days)
-        var holidays = await _calendar.HolidayDatesAsync(today.AddDays(-34), today);
+        var holidays = await _calendar.HolidayDatesAsync(today.AddDays(-34), today, me.BranchId, me.SectionId, me.Semester);
         var byDay = rows.GroupBy(r => r.Date).ToDictionary(g => g.Key, g => g.ToList());
         for (int i = 34; i >= 0; i--)
         {
@@ -113,7 +114,7 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         }
 
         // ----- today
-        vm.NonWorkingReason = await _calendar.GetNonWorkingReasonAsync(today);
+        vm.NonWorkingReason = await _calendar.GetNonWorkingReasonAsync(today, me.BranchId, me.SectionId, me.Semester);
         if (vm.NonWorkingReason == null)
         {
             var todayStatus = rows.Where(r => r.Date == today).ToDictionary(r => r.Period, r => r.Status.ToString());
@@ -122,13 +123,13 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
                 var state = AttendanceWindow.State(now, today, t.StartTime, t.EndTime, settings.GraceMinutes);
                 vm.TodayClasses.Add(new SlotView
                 {
-                    TimetableId = t.Id, Period = t.Period, Start = t.StartTime, End = t.EndTime, SubjectCode = t.Subject!.SubjectCode, SubjectName = t.Subject.SubjectName,
-                    FacultyName = t.Faculty!.FullName, Room = t.RoomNo, SectionName = me.Section.Name, BranchCode = me.Branch.Code, State = state,
+                    TimetableId = t.Id, Period = t.Period, Start = t.StartTime, End = t.EndTime, SubjectCode = t.Subject?.SubjectCode ?? "", SubjectName = t.Subject?.SubjectName ?? "",
+                    FacultyName = t.Faculty?.FullName ?? "", Room = t.RoomNo, SectionName = me.Section?.Name ?? "", BranchCode = me.Branch?.Code ?? "", State = state,
                     MyStatus = todayStatus.TryGetValue(t.Period, out var st) ? st : null
                 });
             }
         }
-        var next = FindNextClass(tt, now);
+        var next = await FindNextClassAsync(tt, now, me.BranchId, me.SectionId, me.Semester);
         vm.NextClassText = next;
 
         // ----- misc
@@ -142,15 +143,16 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         return vm;
     }
 
-    private string? FindNextClass(List<Timetable> tt, DateTime now)
+    private async Task<string?> FindNextClassAsync(List<Timetable> tt, DateTime now, int branchId, int sectionId, int semester)
     {
         for (int add = 0; add < 8; add++)
         {
             var d = now.Date.AddDays(add);
             if (d.DayOfWeek == DayOfWeek.Sunday) continue;
+            if (await _calendar.GetNonWorkingReasonAsync(d, branchId, sectionId, semester) != null) continue;
             var next = tt.Where(t => t.Day == d.DayOfWeek && (add > 0 || d + t.StartTime > now)).OrderBy(t => t.Period).FirstOrDefault();
             if (next != null)
-                return (add == 0 ? "Today" : add == 1 ? "Tomorrow" : d.ToString("dddd")) + $" {next.StartTime.Hours:00}:{next.StartTime.Minutes:00} - {next.Subject!.SubjectName}";
+                return (add == 0 ? "Today" : add == 1 ? "Tomorrow" : d.ToString("dddd")) + $" {next.StartTime.Hours:00}:{next.StartTime.Minutes:00} - {next.Subject?.SubjectName}";
         }
         return null;
     }
@@ -166,10 +168,16 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         if (date > today || date < today.AddDays(-30)) return (false, "You can raise a query only for the last 30 days.");
 
         var year = await _settings.GetCurrentYearAsync();
-        var slot = await _db.Timetables.AsNoTracking().FirstOrDefaultAsync(t => t.IsActive && t.AcademicYearId == year.Id && t.BranchId == me.BranchId && t.SectionId == me.SectionId && t.Semester == me.Semester && t.SubjectId == subjectId);
-        if (slot == null) return (false, "That subject is not part of your timetable.");
-        if (await _db.AttendanceQueries.AnyAsync(q => q.StudentId == me.Id && q.SubjectId == subjectId && q.RecordDate == date && q.Status == "Open"))
-            return (false, "You already have an open query for this subject and date.");
+        var slot = await _db.Timetables.AsNoTracking().Include(t => t.Faculty).FirstOrDefaultAsync(t => t.IsActive && t.AcademicYearId == year.Id && t.BranchId == me.BranchId && t.SectionId == me.SectionId && t.Semester == me.Semester && t.SubjectId == subjectId && t.Day == date.DayOfWeek);
+        if (slot == null)
+        {
+            slot = await _db.Timetables.AsNoTracking().Include(t => t.Faculty).FirstOrDefaultAsync(t => t.IsActive && t.AcademicYearId == year.Id && t.BranchId == me.BranchId && t.SectionId == me.SectionId && t.Semester == me.Semester && t.SubjectId == subjectId);
+            if (slot == null) return (false, "That subject is not part of your timetable.");
+            if (slot.Day != date.DayOfWeek) return (false, "That subject is not scheduled on the selected day.");
+        }
+        var period = slot.Period;
+        var openDup = await _db.AttendanceQueries.AnyAsync(q => q.StudentId == me.Id && q.SubjectId == subjectId && q.RecordDate == date && q.Status == "Open");
+        if (openDup) return (false, "You already have an open query for this subject and date.");
 
         _db.AttendanceQueries.Add(new AttendanceQuery { StudentId = me.Id, BranchId = me.BranchId, SubjectId = subjectId, FacultyId = slot.FacultyId, RecordDate = date, Message = message });
         await _db.SaveChangesAsync();

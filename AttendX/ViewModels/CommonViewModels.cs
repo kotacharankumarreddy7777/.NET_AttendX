@@ -33,14 +33,6 @@ public class ErrorViewModel
     public string Message { get; set; } = "An unexpected error occurred. Please try again.";
 }
 
-public class LoginViewModel
-{
-    [Required, EmailAddress] public string Email { get; set; } = "";
-    [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
-    [Display(Name = "Remember me")] public bool RememberMe { get; set; }
-    public string? ReturnUrl { get; set; }
-}
-
 public class ChangePasswordViewModel
 {
     [Required, DataType(DataType.Password), Display(Name = "Current password")] public string CurrentPassword { get; set; } = "";
@@ -83,7 +75,7 @@ public class StudentFormViewModel
     public int? Id { get; set; }
     [Required, StringLength(120), Display(Name = "Full name")] public string FullName { get; set; } = "";
     [Required, EmailAddress, StringLength(150)] public string Email { get; set; } = "";
-    [Required, RegularExpression(@"^[0-9+\- ]{10,15}$", ErrorMessage = "Enter a valid phone number (10-15 digits).")] public string Phone { get; set; } = "";
+    [Required, RegularExpression(@"^(\+?\d[\s\-]?){10,15}$", ErrorMessage = "Enter a valid phone number (10-15 digits).")] public string Phone { get; set; } = "";
     [Range(1, int.MaxValue, ErrorMessage = "Select a branch")] public int BranchId { get; set; }
     [Range(1, int.MaxValue, ErrorMessage = "Select a section")] public int SectionId { get; set; }
     [Range(1, 8)] public int Semester { get; set; } = 1;
@@ -102,9 +94,10 @@ public class FacultyFormViewModel
     [StringLength(20), Display(Name = "Faculty ID (auto if empty)")] public string? FacultyID { get; set; }
     [Required, StringLength(120), Display(Name = "Full name")] public string FullName { get; set; } = "";
     [Required, EmailAddress, StringLength(150)] public string Email { get; set; } = "";
-    [Required, RegularExpression(@"^[0-9+\- ]{10,15}$", ErrorMessage = "Enter a valid phone number.")] public string Phone { get; set; } = "";
+    [Required, RegularExpression(@"^(\+?\d[\s\-]?){10,15}$", ErrorMessage = "Enter a valid phone number.")] public string Phone { get; set; } = "";
     [Range(1, int.MaxValue, ErrorMessage = "Select a department")] public int BranchId { get; set; }
     [Required, StringLength(60)] public string Designation { get; set; } = "Assistant Professor";
+    public bool IsValidDesignation => Designations.Contains(Designation, StringComparer.OrdinalIgnoreCase);
     [Display(Name = "Is HOD")] public bool IsHOD { get; set; }
     public List<SelectListItem> Branches { get; set; } = new();
     public static readonly string[] Designations = { "Professor", "Associate Professor", "Assistant Professor", "Lecturer", "Lab Instructor" };

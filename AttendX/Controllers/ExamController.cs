@@ -116,7 +116,8 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
             else
             {
                 var fid = await _db.Faculty.AsNoTracking().Where(f => f.IdentityUserId == _user.UserId).Select(f => f.Id).FirstOrDefaultAsync();
-                if (fid > 0) q = q.Where(m => m.ExamTimetable!.FacultyId == fid);
+                if (fid == 0) return Forbid();
+                q = q.Where(m => m.ExamTimetable!.FacultyId == fid);
             }
         }
 
@@ -143,6 +144,7 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateMarks(List<ExamMark> marks)
     {
+        if (marks != null && marks.Count > 10000) return Forbid();
         if (marks != null)
         {
             foreach (var m in marks)
@@ -150,6 +152,8 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
                 if (m.Id == 0) continue;
                 var dbMark = await _db.ExamMarks.FirstOrDefaultAsync(x => x.Id == m.Id);
                 if (dbMark == null) continue;
+
+                if (!ModelState.IsValid) continue;
 
                 bool isStaff = _user.IsAdmin || _user.IsHod;
                 bool isOwnerFaculty = false;
@@ -163,6 +167,9 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
                 if (!isStaff && !isOwnerFaculty) continue;
                 bool isUnlocked = dbMark.UnlockUntil != null && dbMark.UnlockUntil.Value > DateTime.UtcNow;
                 if (dbMark.IsLocked && !isStaff && !isUnlocked) continue;
+
+                if (dbMark.MaxMarks <= 0) continue;
+                if (m.MarksObtained < 0 || m.MarksObtained > dbMark.MaxMarks) continue;
 
                 dbMark.MarksObtained = m.MarksObtained;
                 dbMark.MaxMarks = m.MaxMarks;
@@ -183,9 +190,16 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RequestUnlock(long id)
     {
-        var mark = await _db.ExamMarks.FirstOrDefaultAsync(m => m.Id == id);
+        var mark = await _db.ExamMarks.Include(m => m.ExamTimetable).ThenInclude(e => e!.Faculty).FirstOrDefaultAsync(m => m.Id == id);
         if (mark == null) return NotFound();
-
+        if (!_user.IsAdmin && !_user.IsHod)
+        {
+            var fid = await _db.Faculty.AsNoTracking().Where(f => f.IdentityUserId == _user.UserId).Select(f => f.Id).FirstOrDefaultAsync();
+            if (fid == 0) return Forbid();
+            if (mark.ExamTimetable!.FacultyId != fid) return Forbid();
+        }
+        if (mark.ExamTimetable?.FacultyId == 0) return Forbid();
+        if (mark.UnlockRequestedAt != null) return RedirectToAction("Manage");
         mark.UnlockRequestedAt = DateTime.UtcNow;
         mark.LastModifiedBy = _user.DisplayName ?? "Faculty";
         mark.LastModifiedAt = DateTime.UtcNow;
@@ -199,10 +213,16 @@ public class ExamController(AppDbContext db, ICurrentUser user) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> GrantUnlock(long id, int hours = 24)
     {
-        var mark = await _db.ExamMarks.FirstOrDefaultAsync(m => m.Id == id);
+        var mark = await _db.ExamMarks.Include(m => m.ExamTimetable).FirstOrDefaultAsync(m => m.Id == id);
         if (mark == null) return NotFound();
         var scope = await _user.GetScopeBranchIdAsync();
-        if (scope != null && scope != -1 && mark.ExamTimetable!.BranchId != scope) return Forbid();
+        if (mark.ExamTimetable != null)
+        {
+            if (scope != null && scope != -1 && mark.ExamTimetable.BranchId != scope)
+                return Forbid();
+        }
+        if (hours < 1 || hours > 72) return BadRequest("Hours must be 1-72.");
+        if (!mark.IsLocked && mark.UnlockUntil == null) return NotFound();
 
         mark.IsLocked = false;
         mark.UnlockUntil = DateTime.UtcNow.AddHours(hours);

@@ -25,6 +25,7 @@ public class SettingsController(AppDbContext db, ISettingsService settings, IAud
     [HttpPost]
     public async Task<IActionResult> SaveSettings([Bind("GraceMinutes,DefaultThreshold,QrExpirySeconds,LocationRequirement,LateWeight,LateAfterMinutes,OfflineSyncEnabled,OfflineMaxDelayMinutes,PeriodCount")] AttendanceSettings s)
     {
+        if (!ModelState.IsValid) { TempData["Error"] = "Please correct the settings form."; return RedirectToAction(nameof(Index)); }
         if (s.DefaultThreshold < 1 || s.DefaultThreshold > 100 || s.LateWeight < 0 || s.LateWeight > 1 || s.GraceMinutes < 0 || s.GraceMinutes > 120 || s.QrExpirySeconds < 10 || s.QrExpirySeconds > 300 || s.PeriodCount < 1 || s.PeriodCount > 12)
         { TempData["Error"] = "A value is out of range (threshold 1-100, late weight 0-1, grace 0-120, QR expiry 10-300 s, periods 1-12)."; return RedirectToAction(nameof(Index)); }
         var old = await _settings.GetAsync();
@@ -38,6 +39,8 @@ public class SettingsController(AppDbContext db, ISettingsService settings, IAud
     [HttpPost]
     public async Task<IActionResult> SavePeriods(int[] periodNo, string[] start, string[] end)
     {
+        if (periodNo == null || start == null || end == null || periodNo.Length == 0 || start.Length != periodNo.Length || end.Length != periodNo.Length)
+        { TempData["Error"] = "Periods data is incomplete."; return RedirectToAction(nameof(Index)); }
         var rows = new List<(int No, TimeSpan S, TimeSpan E)>();
         for (int i = 0; i < periodNo.Length; i++)
         {
@@ -48,15 +51,17 @@ public class SettingsController(AppDbContext db, ISettingsService settings, IAud
         var ordered = rows.OrderBy(r => r.No).ToList();
         for (int i = 1; i < ordered.Count; i++)
             if (ordered[i].S < ordered[i - 1].E) { TempData["Error"] = $"Period {ordered[i].No} overlaps period {ordered[i - 1].No}."; return RedirectToAction(nameof(Index)); }
-
+        var year = await _db.AcademicYears.FirstOrDefaultAsync(y => y.IsCurrent);
         var existing = await _db.PeriodDefinitions.ToListAsync();
         foreach (var r in rows)
         {
             var p = existing.FirstOrDefault(x => x.PeriodNo == r.No);
             if (p == null) _db.PeriodDefinitions.Add(new PeriodDefinition { PeriodNo = r.No, StartTime = r.S, EndTime = r.E });
             else { p.StartTime = r.S; p.EndTime = r.E; }
-            // keep timetable slots in sync with the new timing
-            foreach (var slot in await _db.Timetables.Where(x => x.Period == r.No).ToListAsync()) { slot.StartTime = r.S; slot.EndTime = r.E; }
+            if (year != null)
+            {
+                foreach (var slot in await _db.Timetables.Where(x => x.Period == r.No && x.AcademicYearId == year.Id).ToListAsync()) { slot.StartTime = r.S; slot.EndTime = r.E; }
+            }
         }
         await _db.SaveChangesAsync();
         await _audit.LogAsync("PeriodsChanged", "Settings", null, details: string.Join("; ", rows.Select(r => $"P{r.No} {r.S.ToString(@"hh\:mm")}-{r.E.ToString(@"hh\:mm")}")));
@@ -67,12 +72,22 @@ public class SettingsController(AppDbContext db, ISettingsService settings, IAud
     [HttpPost]
     public async Task<IActionResult> AddRule(int? branchId, int? semester, int? sectionId, decimal percent, string? note)
     {
+        if (semester < 1 || semester > 8) { TempData["Error"] = "Semester must be 1-8."; return RedirectToAction(nameof(Index)); }
         if (percent < 1 || percent > 100) { TempData["Error"] = "Threshold must be 1-100."; return RedirectToAction(nameof(Index)); }
-        if (sectionId != null && branchId != null && !await _db.Sections.AnyAsync(s => s.Id == sectionId && s.BranchId == branchId)) { TempData["Error"] = "Section does not belong to the branch."; return RedirectToAction(nameof(Index)); }
+        if (branchId != null && !await _db.Branches.AnyAsync(b => b.Id == branchId && b.IsActive))
+        { TempData["Error"] = "Selected branch does not exist."; return RedirectToAction(nameof(Index)); }
+        if (sectionId != null && !await _db.Sections.AnyAsync(s => s.Id == sectionId && s.BranchId == (branchId ?? -1))) { TempData["Error"] = "Section does not belong to the branch."; return RedirectToAction(nameof(Index)); }
         _db.ThresholdRules.Add(new ThresholdRule { BranchId = branchId, Semester = semester, SectionId = sectionId, Percent = percent, Note = note });
-        await _db.SaveChangesAsync();
-        await _audit.LogAsync("ThresholdRuleAdded", "Settings", null, details: $"branch={branchId}, sem={semester}, section={sectionId}, {percent}%");
-        TempData["Success"] = "Threshold rule added.";
+        try
+        {
+            await _db.SaveChangesAsync();
+            await _audit.LogAsync("ThresholdRuleAdded", "Settings", null, details: $"branch={branchId}, sem={semester}, section={sectionId}, {percent}%");
+            TempData["Success"] = "Threshold rule added.";
+        }
+        catch (DbUpdateException)
+        {
+            TempData["Error"] = "This rule already exists.";
+        }
         return RedirectToAction(nameof(Index));
     }
 
@@ -99,11 +114,24 @@ public class SettingsController(AppDbContext db, ISettingsService settings, IAud
     [HttpPost]
     public async Task<IActionResult> SetCurrentYear(int id)
     {
-        var years = await _db.AcademicYears.ToListAsync();
-        foreach (var y in years) y.IsCurrent = y.Id == id;
-        await _db.SaveChangesAsync();
-        await _audit.LogAsync("CurrentYearChanged", "Settings", id.ToString());
-        TempData["Success"] = "Current academic year changed. Timetables are per year - build the timetable for the new year.";
+        if (id <= 0) return NotFound();
+        var target = await _db.AcademicYears.FindAsync(id);
+        if (target == null) return NotFound();
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            foreach (var y in await _db.AcademicYears.ToListAsync()) y.IsCurrent = y.Id == id;
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+            await _audit.LogAsync("CurrentYearChanged", "Settings", id.ToString());
+            TempData["Success"] = "Current academic year changed. Timetables are per year - build the timetable for the new year.";
+        }
+        catch
+        {
+            _db.ChangeTracker.Clear();
+            await tx.RollbackAsync();
+            TempData["Error"] = "Could not change current year.";
+        }
         return RedirectToAction(nameof(Index));
     }
 }

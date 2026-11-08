@@ -15,9 +15,9 @@ public class StudentIdService(AppDbContext db) : IStudentIdService
 
     public static string Prefix(int semester, string sectionName, string branchCode)
     {
-        if (!string.IsNullOrEmpty(sectionName) && sectionName.Length > 0 && sectionName[0] - '0' == semester)
-            return $"{sectionName}-{branchCode}-";
-        return $"{semester}{sectionName}-{branchCode}-";
+        var sec = string.IsNullOrEmpty(sectionName) ? "" : sectionName.Trim();
+        if (sec.StartsWith(semester.ToString(), StringComparison.Ordinal)) return $"{sec}-{branchCode}-";
+        return $"{semester}{sec}-{branchCode}-";
     }
 
     /// <summary>Pure function: next sequence number given the existing IDs that start with the prefix.</summary>
@@ -36,8 +36,10 @@ public class StudentIdService(AppDbContext db) : IStudentIdService
 
     public async Task<string> GenerateAsync(int semester, int sectionId, int branchId)
     {
-        var section = await _db.Sections.AsNoTracking().FirstAsync(s => s.Id == sectionId);
-        var branch = await _db.Branches.AsNoTracking().FirstAsync(b => b.Id == branchId);
+        var section = await _db.Sections.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sectionId)
+            ?? throw new InvalidOperationException($"Section {sectionId} not found.");
+        var branch = await _db.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == branchId)
+            ?? throw new InvalidOperationException($"Branch {branchId} not found.");
         var prefix = Prefix(semester, section.Name, branch.Code);
         var ids = await _db.Students.AsNoTracking()
             .Where(s => s.IsActive && s.StudentID.StartsWith(prefix))

@@ -5,7 +5,7 @@ public class DashboardController(IDashboardService dash) : Controller
 {
     private readonly IDashboardService _dash = dash;
 
-    /// <summary>One entry point - the user is routed to the dashboard that matches the role.</summary>
+    /// <summary>One entry point - Admin and HOD share the admin dashboard; role priority is Admin > HOD > Faculty.</summary>
     public async Task<IActionResult> Index()
     {
         if (User.IsInRole(RoleNames.Admin) || User.IsInRole(RoleNames.Hod))

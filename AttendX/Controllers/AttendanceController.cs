@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace AttendX.Controllers;
@@ -72,7 +73,7 @@ public class AttendanceController(IAttendanceService att, ICurrentUser user, App
         return View(page);
     }
 
-    [HttpGet]
+    [HttpPost]
     public async Task<IActionResult> SessionToken(int id)
     {
         var (token, expires, error) = await _att.IssueSessionTokenAsync(id);
@@ -81,17 +82,22 @@ public class AttendanceController(IAttendanceService att, ICurrentUser user, App
     }
 
     [HttpPost]
+    [RequestSizeLimit(4 * 1024 * 1024)]
     public async Task<IActionResult> ScanPost([FromBody] ScanRequest r)
     {
+        if (r.Payload?.Length > 500) return BadRequest("QR payload too long.");
         var res = await _att.ScanAsync(r.TimetableId, r.Payload ?? "", r.Token ?? "", new DeviceInfo(Clean(r.DeviceId), r.Latitude, r.Longitude));
         return Json(new { code = res.Code.ToString(), message = res.Message, studentName = res.StudentName, studentCode = res.StudentCode, status = res.Status });
     }
 
     [HttpPost]
+    [RequestSizeLimit(4 * 1024 * 1024)]
     public async Task<IActionResult> Sync([FromBody] List<OfflineRecord> records)
-        => Json(await _att.SyncOfflineAsync(records ?? new List<OfflineRecord>()));
+    {
+        var list = (records ?? new List<OfflineRecord>()).Take(200).ToList();
+        return Json(await _att.SyncOfflineAsync(list));
+    }
 
-    /// <summary>Admin / HOD: pick a past class and correct its attendance (reason required, fully audited).</summary>
     [Authorize(Policy = PolicyNames.AdminOrHod)]
     public async Task<IActionResult> Corrections(DateTime? date, int? branchId, int? sectionId)
     {

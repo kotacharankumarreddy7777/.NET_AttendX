@@ -80,8 +80,9 @@ public class FacultySubjectController(AppDbContext db, ICurrentUser user, ISetti
 
     private async Task<MappingFormViewModel> Fill(MappingFormViewModel m)
     {
-        m.Faculty = await FacultyItems(null);
-        m.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
+        var scope = await _user.GetScopeBranchIdAsync();
+        m.Faculty = await FacultyItems(scope);
+        m.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (scope == null || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
         if (m.BranchId > 0)
         {
             m.Sections = await _db.Sections.AsNoTracking().Where(s => s.BranchId == m.BranchId && s.IsActive).OrderBy(s => s.Name).Select(s => new SelectListItem(s.Name, s.Id.ToString())).ToListAsync();

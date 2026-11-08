@@ -14,7 +14,7 @@ public class QrSigner(string secret)
 {
     private readonly byte[] _key = Encoding.UTF8.GetBytes(secret);
 
-    private string Sign(string data) => Convert.ToHexString(HMACSHA256.HashData(_key, Encoding.UTF8.GetBytes(data)))[..20];
+    private string Sign(string data) => Convert.ToHexString(HMACSHA256.HashData(_key, Encoding.UTF8.GetBytes(data)));
 
     private static bool SafeEquals(string a, string b)
         => a.Length == b.Length && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(a), Encoding.UTF8.GetBytes(b));
@@ -72,13 +72,12 @@ public class QrService(IOptions<AttendXOptions> options, IWebHostEnvironment env
     }
 
     /// <summary>Creates (or replaces) the student's QR image under wwwroot/QRCodes and returns the relative path.</summary>
-    public Task<string> GenerateStudentQrAsync(Student student)
+    public async Task<string> GenerateStudentQrAsync(Student student)
     {
         var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
         var dir = Path.Combine(webRoot, "QRCodes");
         Directory.CreateDirectory(dir);
 
-        // delete the previous image (only by file name, so a tampered DB path can never escape the folder)
         if (!string.IsNullOrEmpty(student.QRPath))
         {
             var old = Path.Combine(dir, Path.GetFileName(student.QRPath));
@@ -86,7 +85,7 @@ public class QrService(IOptions<AttendXOptions> options, IWebHostEnvironment env
         }
 
         var fileName = Guid.NewGuid().ToString("N") + ".png";
-        File.WriteAllBytes(Path.Combine(dir, fileName), RenderPng(GetStudentPayload(student)));
-        return Task.FromResult("QRCodes/" + fileName);
+        await File.WriteAllBytesAsync(Path.Combine(dir, fileName), RenderPng(GetStudentPayload(student)));
+        return "QRCodes/" + fileName;
     }
 }

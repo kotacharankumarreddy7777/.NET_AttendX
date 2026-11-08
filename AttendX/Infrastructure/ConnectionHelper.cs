@@ -17,9 +17,9 @@ public static class ConnectionHelper
             var userInfo = uri.UserInfo.Split(':', 2);
             var user = Uri.UnescapeDataString(userInfo[0]);
             var pass = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
-            var host = uri.Host;
+            var host = uri.Host.Contains(':') ? "[" + uri.Host.Trim('[', ']') + "]" : uri.Host;
             var port = uri.Port > 0 ? uri.Port : 5432;
-            var db = uri.AbsolutePath.TrimStart('/');
+            var db = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
 
             var npgsqlSb = new Npgsql.NpgsqlConnectionStringBuilder
             {
@@ -28,7 +28,7 @@ public static class ConnectionHelper
                 Database = db,
                 Username = user,
                 Password = pass,
-                SslMode = Npgsql.SslMode.Require
+                SslMode = Npgsql.SslMode.Prefer
             };
 
             if (!string.IsNullOrEmpty(uri.Query))
@@ -58,7 +58,7 @@ public static class ConnectionHelper
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Failed to parse database connection URI '{connStr}': {ex.Message}", ex);
+            throw new InvalidOperationException($"Failed to parse database connection URI: {ex.Message}", ex);
         }
     }
 }

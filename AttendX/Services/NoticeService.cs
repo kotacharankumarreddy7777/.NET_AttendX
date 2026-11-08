@@ -22,7 +22,7 @@ public class NoticeService(AppDbContext db, ICurrentUser user, IClock clock) : I
         {
             var f = await _user.GetFacultyAsync();
             int? bid = f?.BranchId;
-            q = q.Where(n => n.Audience == "All" || n.Audience == "Faculty" || (n.Audience == "Branch" && n.BranchId == bid));
+            q = q.Where(n => n.Audience == "All" || n.Audience == "Faculty" || (n.Audience == "Branch" && ((bid == null && n.BranchId == null) || (bid != null && n.BranchId == bid))) || (n.Audience == "Section" && (bid == null || n.BranchId == null || n.BranchId == bid)));
         }
         else
         {
@@ -30,8 +30,8 @@ public class NoticeService(AppDbContext db, ICurrentUser user, IClock clock) : I
             var s = await _db.Students.AsNoTracking().FirstOrDefaultAsync(x => x.IdentityUserId == uid);
             if (s == null) return new List<Notice>();
             int branchId = s.BranchId, sectionId = s.SectionId;
-            q = q.Where(n => n.Audience == "All" || n.Audience == "Student" || (n.Audience == "Branch" && n.BranchId == branchId)
-                             || (n.Audience == "Section" && n.SectionId == sectionId && n.BranchId == branchId));
+            q = q.Where(n => n.Audience == "All" || n.Audience == "Student" || (n.Audience == "Branch" && (n.BranchId == branchId || n.BranchId == null))
+                             || (n.Audience == "Section" && n.SectionId == sectionId && (n.BranchId == branchId || n.BranchId == null)));
         }
         return await q.OrderByDescending(n => n.IsPinned).ThenByDescending(n => n.PublishedAt).Take(take).ToListAsync();
     }

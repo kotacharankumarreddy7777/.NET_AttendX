@@ -61,7 +61,8 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
         n.BranchId = (m.Audience is "Branch" or "Section") ? m.BranchId : null;
         n.SectionId = m.Audience == "Section" ? m.SectionId : null;
         n.ExpiresAt = m.ExpiresAt?.Date.AddDays(1).AddSeconds(-1); n.IsPinned = m.IsPinned;
-        await _db.SaveChangesAsync();
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateException) { await _audit.LogAsync("NoticeUpdated", "Notice", n.Id.ToString(), branchId: n.BranchId); TempData["Error"] = "Could not save the notice."; return View("Form", await Fill(m)); }
         await _audit.LogAsync(m.Id.HasValue ? "NoticeUpdated" : "NoticeCreated", "Notice", n.Id.ToString(), newValues: $"{n.Audience}: {n.Title}", branchId: n.BranchId);
         TempData["Success"] = "Notice saved.";
         return RedirectToAction(nameof(Index));

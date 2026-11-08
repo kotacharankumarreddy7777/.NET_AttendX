@@ -32,7 +32,6 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
     public async Task<List<SlotView>> GetSlotsAsync(DateTime date, int? facultyId, int? branchId, int? sectionId)
     {
         date = date.Date;
-        if (await _calendar.GetNonWorkingReasonAsync(date) != null) return new List<SlotView>();     // Sunday / holiday: no classes
         var now = _clock.Now;
         var year = await _settings.GetCurrentYearAsync();
         var settings = await _settings.GetAsync();
@@ -42,7 +41,18 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         if (facultyId != null) q = q.Where(t => t.FacultyId == facultyId);
         if (branchId != null) q = q.Where(t => t.BranchId == branchId);
         if (sectionId != null) q = q.Where(t => t.SectionId == sectionId);
-        var rows = await q.OrderBy(t => t.Period).ThenBy(t => t.Section!.Name).ToListAsync();
+        var rows = await q.OrderBy(t => t.Period).ThenBy(t => t.Section != null ? t.Section.Name : "").ToListAsync();
+        var filtered = new List<Timetable>();
+        foreach (var r in rows)
+        {
+            int? b = r.BranchId;
+            int? sId = r.SectionId;
+            int? sem = r.Semester;
+            var reason = await _calendar.GetNonWorkingReasonAsync(date, b, sId, sem);
+            if (reason != null) continue;
+            filtered.Add(r);
+        }
+        rows = filtered;
 
         var ids = rows.Select(r => r.Id).ToList();
         var sessions = await _db.AttendanceSessions.AsNoTracking().Where(s => s.Date == date && ids.Contains(s.TimetableId))
@@ -77,14 +87,25 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         date = date.Date;
         if (!t.IsActive) return new AccessCheck(AccessOutcome.Inactive, false, "This timetable slot is no longer active.");
         if (date > now.Date) return new AccessCheck(AccessOutcome.Future, false, "Attendance cannot be marked for a future date.");
-        var nonWorking = await _calendar.GetNonWorkingReasonAsync(date);
+        var nonWorking = await _calendar.GetNonWorkingReasonAsync(date, t.BranchId, t.SectionId, t.Semester);
         if (nonWorking != null) return new AccessCheck(AccessOutcome.OutsideTime, false, $"No classes on {date:dd MMM yyyy} ({nonWorking}).");
 
         var me = await _user.GetFacultyAsync();
         bool assigned = me != null && me.Id == t.FacultyId;
         bool open = AttendanceWindow.IsOpen(now, date, t.StartTime, t.EndTime, settings.GraceMinutes);
 
-        if (assigned && date == now.Date) return new AccessCheck(AccessOutcome.Ok, false, "OK");
+        if (assigned && date == now.Date)
+        {
+            if (!open && now.Date == date)
+            {
+                var hasRecords = await _db.AttendanceSessions.AsNoTracking().Where(s => s.TimetableId == t.Id && s.Date == date).Select(s => s.Id).ToListAsync();
+                bool hasMarks = hasRecords.Count > 0 && await _db.Attendance.AsNoTracking().AnyAsync(a => hasRecords.Contains(a.AttendanceSessionId));
+                if (!hasMarks) return new AccessCheck(AccessOutcome.Ok, false, "OK");
+                if (now.TimeOfDay < t.StartTime) return new AccessCheck(AccessOutcome.Ok, false, "OK");
+                return new AccessCheck(AccessOutcome.Ok, true, "OK");
+            }
+            return new AccessCheck(AccessOutcome.Ok, false, "OK");
+        }
         if (_user.IsAdmin) return new AccessCheck(AccessOutcome.Ok, !open, "OK");
         if (_user.IsHod)
         {
@@ -125,12 +146,13 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         var (_, end) = AttendanceWindow.For(date, t.StartTime, t.EndTime, settings.GraceMinutes);
         var vm = new MarkPageViewModel
         {
-            TimetableId = t.Id, Date = date, SubjectName = t.Subject!.SubjectName, SubjectCode = t.Subject.SubjectCode,
-            SectionName = t.Section!.Name, BranchCode = t.Branch!.Code, FacultyName = t.Faculty!.FullName, Room = t.RoomNo,
+            TimetableId = t.Id, Date = date, SubjectName = t.Subject?.SubjectName ?? "", SubjectCode = t.Subject?.SubjectCode ?? "",
+            SectionName = t.Section?.Name ?? "", BranchCode = t.Branch?.Code ?? "", FacultyName = t.Faculty?.FullName ?? "", Room = t.RoomNo,
             Period = t.Period, Start = t.StartTime, End = t.EndTime, IsCorrection = access.IsCorrection,
             CanScanQr = !access.IsCorrection, OfflineEnabled = settings.OfflineSyncEnabled && !access.IsCorrection,
             LocationRequirement = settings.LocationRequirement.ToString(),
-            WindowEndMs = new DateTimeOffset(end).ToUnixTimeMilliseconds(), ServerNowMs = new DateTimeOffset(_clock.Now).ToUnixTimeMilliseconds(),
+            WindowEndMs = new DateTimeOffset(DateTime.SpecifyKind(end, DateTimeKind.Local)).ToUnixTimeMilliseconds(),
+            ServerNowMs = new DateTimeOffset(DateTime.SpecifyKind(_clock.Now, DateTimeKind.Local)).ToUnixTimeMilliseconds(),
             Students = [.. students.Select(s => new MarkStudentRow
             {
                 Id = s.Id, StudentID = s.StudentID, FullName = s.FullName, PhotoPath = s.PhotoPath,
@@ -212,8 +234,8 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         if (!access.Allowed || access.IsCorrection || me == null || me.Id != t.FacultyId)
             return (null, 0, access.Allowed && !access.IsCorrection ? "Only the assigned faculty can scan." : access.Message);
         var settings = await _settings.GetAsync();
-        var session = await GetOrCreateSessionAsync(t, _clock.Now.Date, "QR", new DeviceInfo(null, null, null));
-        var token = _qr.Signer.CreateSessionToken(session.Id, new DateTimeOffset(_clock.Now), settings.QrExpirySeconds);
+        var session = await GetOrCreateSessionFlushedAsync(t, _clock.Now.Date, "QR", new DeviceInfo(null, null, null));
+        var token = _qr.Signer.CreateSessionToken(session.Id, new DateTimeOffset(DateTime.SpecifyKind(_clock.Now, DateTimeKind.Local)).ToUniversalTime(), settings.QrExpirySeconds);
         return (token, settings.QrExpirySeconds, null);
     }
 
@@ -232,8 +254,8 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         if (settings.LocationRequirement == LocationRequirement.Required && device.Latitude == null)
             return new ScanResult(ScanCode.LocationRequired, "Location is required. Allow location access in your browser.");
 
-        var session = await GetOrCreateSessionAsync(t, now.Date, "QR", device);
-        if (!_qr.Signer.ValidateSessionToken(session.Id, token, new DateTimeOffset(now), settings.QrExpirySeconds))
+        var session = await GetOrCreateSessionFlushedAsync(t, now.Date, "QR", device);
+        if (!_qr.Signer.ValidateSessionToken(session.Id, token, new DateTimeOffset(DateTime.SpecifyKind(now, DateTimeKind.Local)).ToUniversalTime(), settings.QrExpirySeconds))
             return new ScanResult(ScanCode.SessionExpired, "Scan session expired. The page is refreshing the session key - scan again.");
 
         if (!_qr.Signer.TryParseStudentPayload(payload, out var studentId, out var code))
@@ -269,7 +291,7 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
                 if (!DateTime.TryParse(rec.Date, out var date)) { results.Add(new(rec.ClientId, false, "Invalid date.")); continue; }
                 date = date.Date;
 
-                var captured = rec.CapturedAt.Kind == DateTimeKind.Utc ? rec.CapturedAt.ToLocalTime() : rec.CapturedAt;
+                var captured = rec.CapturedAt.Kind == DateTimeKind.Utc ? SystemClock.IstFromUtc(rec.CapturedAt) : rec.CapturedAt.Kind == DateTimeKind.Local ? rec.CapturedAt : SystemClock.IstFromUtc(DateTime.SpecifyKind(rec.CapturedAt, DateTimeKind.Utc));
                 if (captured > now.AddMinutes(2)) { results.Add(new(rec.ClientId, false, "Record time is in the future.")); continue; }
                 if (captured.Date != date || date > now.Date) { results.Add(new(rec.ClientId, false, "Record date mismatch.")); continue; }
                 if (!AttendanceWindow.IsOpen(captured, date, t.StartTime, t.EndTime, settings.GraceMinutes))
@@ -296,7 +318,7 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
                 if (fromQr) status = DecideStatus(t, date, captured, settings);
                 else if (!Enum.TryParse(rec.Status, true, out status) || !Enum.IsDefined(status)) { results.Add(new(rec.ClientId, false, "Invalid status.")); continue; }
 
-                var session = await GetOrCreateSessionAsync(t, date, "Offline", new DeviceInfo(rec.DeviceId, null, null));
+                var session = await GetOrCreateSessionFlushedAsync(t, date, "Offline", new DeviceInfo(rec.DeviceId, null, null));
                 var r = await RecordAsync(t, st, status, "Offline", new DeviceInfo(rec.DeviceId, null, null), captured, session);
                 results.Add(new(rec.ClientId, r.Code == ScanCode.Marked, r.Code == ScanCode.Marked ? $"{st.StudentID} synced as {status}." : r.Message));
             }
@@ -352,11 +374,19 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
             Longitude = dev.Longitude == null ? null : Math.Round(dev.Longitude.Value, 3)
         };
         _db.AttendanceSessions.Add(s);
+        return s;
+    }
+
+    private async Task<AttendanceSession> GetOrCreateSessionFlushedAsync(Timetable t, DateTime date, string mode, DeviceInfo dev)
+    {
+        var s = await GetOrCreateSessionAsync(t, date, mode, dev);
         try { await _db.SaveChangesAsync(); }
-        catch (DbUpdateException)         // another request created it first
+        catch (DbUpdateException)
         {
-            _db.Entry(s).State = EntityState.Detached;
-            s = await _db.AttendanceSessions.FirstAsync(x => x.TimetableId == t.Id && x.Date == date);
+            _db.ChangeTracker.Clear();
+            var existing = await _db.AttendanceSessions.FirstOrDefaultAsync(x => x.TimetableId == t.Id && x.Date == date);
+            if (existing != null) return existing;
+            throw;
         }
         return s;
     }

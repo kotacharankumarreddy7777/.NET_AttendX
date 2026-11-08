@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace AttendX.Models;
 
-/// <summary>Login account (Admin, HOD, Faculty). Students never have an account.</summary>
+/// <summary>Login account (Admin, HOD, Faculty, Student). All roles sign in via Identity.</summary>
 public class ApplicationUser : IdentityUser
 {
     [StringLength(150)]

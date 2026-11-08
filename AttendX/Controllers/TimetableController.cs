@@ -13,7 +13,7 @@ public class TimetableController(AppDbContext db, ITimetableService tt, ICurrent
     {
         var scope = await _user.GetScopeBranchIdAsync();
         bool facultyOnly = !_user.IsAdmin && !_user.IsHod;
-        if (facultyOnly) { var me = await _user.GetFacultyAsync(); facultyId = me?.Id ?? -1; branchId = null; sectionId = null; }
+        if (facultyOnly) { var me = await _user.GetFacultyAsync(); facultyId = me?.Id ?? -1; }
         else if (scope != null) branchId = scope;
 
         var vm = await _tt.BuildGridAsync(branchId, sectionId, semester, facultyId, scope);

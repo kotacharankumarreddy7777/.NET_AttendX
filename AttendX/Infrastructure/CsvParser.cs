@@ -27,11 +27,11 @@ public static class CsvParser
             }
             else if (c == '"') inQuotes = true;
             else if (c == ',') { row.Add(sb.ToString()); sb.Clear(); }
-            else if (c == '\r') { /* ignore, handled by \n */ }
+            else if (c == '\r') { }
             else if (c == '\n')
             {
                 row.Add(sb.ToString()); sb.Clear();
-                if (row.Any(x => x.Length > 0)) rows.Add([.. row]);
+                if (row.Any(x => !string.IsNullOrWhiteSpace(x))) rows.Add([.. row]);
                 row = new List<string>();
             }
             else sb.Append(c);
@@ -39,7 +39,7 @@ public static class CsvParser
         if (sb.Length > 0 || row.Count > 0)
         {
             row.Add(sb.ToString());
-            if (row.Any(x => x.Length > 0)) rows.Add([.. row]);
+            if (row.Any(x => !string.IsNullOrWhiteSpace(x))) rows.Add([.. row]);
         }
         return rows;
     }

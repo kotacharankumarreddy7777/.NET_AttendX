@@ -10,8 +10,10 @@
     var act = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
     bool admin = User.IsInRole("Admin"), hod = User.IsInRole("HOD"), fac = User.IsInRole("Faculty"), student = User.IsInRole("Student");
     bool staff = admin || hod || fac;
-    int bell = await NoticeSvc.RecentCountAsync();
-    var year = await SettingsSvc.GetCurrentYearAsync();
+    int bell = 0;
+    AcademicYear? year = null;
+    try { bell = await NoticeSvc.RecentCountAsync(); } catch { bell = 0; }
+    try { year = await SettingsSvc.GetCurrentYearAsync(); } catch { year = null; }
     string roleText = admin ? "Administrator" : hod ? "Head of Department" : fac ? "Faculty" : "Student";
     var appUser = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
     string rawName = appUser?.FullName ?? User.Identity?.Name ?? "";
@@ -65,7 +67,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="pt-header">
     <button class="pt-menu" id="sbToggle" type="button" aria-label="Menu"><i class="bi bi-list"></i></button>
-    <span class="pt-logo">@inst.ShortName.Substring(0, 1)</span>
+    <span class="pt-logo">@(string.IsNullOrEmpty(inst.ShortName) ? "A" : inst.ShortName.Substring(0, Math.Min(1, inst.ShortName.Length)))</span>
     <div class="pt-brand"><div class="pt-brand-text"><b>@inst.Name</b><span>@inst.SystemName</span></div></div>
     <div class="pt-right">
         <span id="offlineBadge" class="badge bg-warning d-none"></span>

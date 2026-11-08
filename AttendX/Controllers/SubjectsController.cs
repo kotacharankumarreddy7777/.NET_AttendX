@@ -38,14 +38,16 @@ public class SubjectsController(AppDbContext db, ICurrentUser user, IAuditServic
     {
         m.Branches = await Branches(null);
         if (!ModelState.IsValid) return View("Form", m);
-        var code = m.SubjectCode.Trim().ToUpperInvariant();
-        if (await _db.Subjects.AnyAsync(s => s.SubjectCode == code && s.Id != (m.Id ?? 0)))
+        if (!await _db.Branches.AnyAsync(b => b.Id == m.BranchId && b.IsActive)) { ModelState.AddModelError(nameof(m.BranchId), "Selected branch does not exist."); return View("Form", m); }
+        var code = (m.SubjectCode ?? "").Trim().ToUpperInvariant();
+        if (await _db.Subjects.AnyAsync(s => s.SubjectCode.ToUpper() == code && s.Id != (m.Id ?? 0)))
         { ModelState.AddModelError("", "This subject code already exists."); return View("Form", m); }
         Subject s;
         if (m.Id.HasValue) s = (await _db.Subjects.FindAsync(m.Id.Value))!;
         else { s = new Subject(); _db.Subjects.Add(s); }
         s.SubjectName = m.SubjectName.Trim(); s.SubjectCode = code; s.BranchId = m.BranchId; s.Semester = m.Semester; s.Credits = m.Credits; s.IsActive = m.IsActive;
-        await _db.SaveChangesAsync();
+        try { await _db.SaveChangesAsync(); }
+        catch (DbUpdateException) { ModelState.AddModelError("", "Subject code already exists."); return View("Form", m); }
         await _audit.LogAsync(m.Id.HasValue ? "SubjectUpdated" : "SubjectCreated", "Subject", s.SubjectCode, branchId: s.BranchId);
         TempData["Success"] = "Subject saved.";
         return RedirectToAction(nameof(Index), new { branchId = s.BranchId, semester = s.Semester });

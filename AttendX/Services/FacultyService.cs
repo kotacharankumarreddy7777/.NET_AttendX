@@ -42,8 +42,11 @@ public class FacultyService(AppDbContext db, UserManager<ApplicationUser> users,
     {
         var branch = await _db.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == m.BranchId);
         if (branch == null) return (null, null, "Selected department is invalid.");
+        if (string.IsNullOrWhiteSpace(m.Designation) || !FacultyFormViewModel.Designations.Contains(m.Designation.Trim(), StringComparer.OrdinalIgnoreCase))
+            return (null, null, $"Invalid designation. Use one of: {string.Join(", ", FacultyFormViewModel.Designations)}.");
         var email = m.Email.Trim();
-        if (await _db.Faculty.AnyAsync(f => f.Email == email) || await _users.FindByEmailAsync(email) != null)
+        var emailUpper = email.ToUpperInvariant();
+        if (await _db.Faculty.AnyAsync(f => f.Email.ToUpper() == emailUpper) || await _users.FindByEmailAsync(email) != null)
             return (null, null, "A user with this email already exists.");
         var facultyId = string.IsNullOrWhiteSpace(m.FacultyID) ? await NextFacultyIdAsync() : m.FacultyID.Trim();
         if (await _db.Faculty.AnyAsync(f => f.FacultyID == facultyId)) return (null, null, $"Faculty ID {facultyId} already exists.");
@@ -68,8 +71,11 @@ public class FacultyService(AppDbContext db, UserManager<ApplicationUser> users,
         }
         catch (DbUpdateException)
         {
+            _db.ChangeTracker.Clear();
             _db.Entry(f).State = EntityState.Detached;
-            await _users.DeleteAsync(user);               // compensate: no orphan login
+            await _users.DeleteAsync(user);
+            if (await _db.Faculty.AnyAsync(x => x.FacultyID == facultyId))
+                return (null, null, $"Faculty ID {facultyId} already exists. Reload and try again.");
             return (null, null, "Could not save the faculty (duplicate data?).");
         }
         await _audit.LogAsync("FacultyCreated", "Faculty", f.FacultyID, null, Snapshot(f), branchId: f.BranchId);
@@ -82,8 +88,11 @@ public class FacultyService(AppDbContext db, UserManager<ApplicationUser> users,
         if (f == null) return (false, "Faculty not found.");
         var branch = await _db.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == m.BranchId);
         if (branch == null) return (false, "Selected department is invalid.");
+        if (string.IsNullOrWhiteSpace(m.Designation) || !FacultyFormViewModel.Designations.Contains(m.Designation.Trim(), StringComparer.OrdinalIgnoreCase))
+            return (false, $"Invalid designation. Use one of: {string.Join(", ", FacultyFormViewModel.Designations)}.");
         var email = m.Email.Trim();
-        if (await _db.Faculty.AnyAsync(x => x.Email == email && x.Id != id)) return (false, "Another faculty uses this email.");
+        var emailUpper = email.ToUpperInvariant();
+        if (await _db.Faculty.AnyAsync(x => x.Email.ToUpper() == emailUpper && x.Id != id)) return (false, "Another faculty uses this email.");
 
         var old = Snapshot(f);
         var user = f.IdentityUserId == null ? null : await _users.FindByIdAsync(f.IdentityUserId);
