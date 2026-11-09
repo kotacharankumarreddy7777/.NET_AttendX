@@ -25,6 +25,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         ["CSE"] = ("EV", 6), ["CSEAI"] = ("EN", 24), ["CSEAIML"] = ("EN", 24), ["ADS"] = ("EU", 6), ["ECE"] = ("EC", 6), ["EEE"] = ("EE", 4),
         ["MECH"] = ("ME", 4), ["CIVIL"] = ("CE", 4), ["IT"] = ("IT", 6), ["CYBER"] = ("CS", 6), ["AIDS"] = ("AD", 4), ["AIML"] = ("AM", 4), ["IOT"] = ("IO", 4), ["DS"] = ("DS", 4)
     };
+    private string SeedAdminPassword => _o.EffectiveAdminPassword;
+    private string SeedFacultyPassword => _o.EffectiveSeedFacultyPassword;
+    private string SeedStudentPassword => _o.EffectiveSeedStudentPassword;
 
     private static readonly string[] SampleStudentNames = [
         "Aarav Patel", "Aarav Shah", "Aditi Gupta", "Akash Joshi", "Ananya Jani", "Anjali Chauhan", "Arjun Oza", "Charan Gohil",
@@ -335,9 +338,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     private async Task SeedAdminAsync(CancellationToken cancellationToken = default)
     {
         if (await _users.FindByEmailAsync(_o.AdminEmail) != null) return;
-        if (string.IsNullOrWhiteSpace(_o.AdminPassword)) { _log.LogWarning("Admin seed skipped: AttendX:AdminPassword is empty. Set env ADMIN_PASSWORD."); return; }
+        if (string.IsNullOrWhiteSpace(SeedAdminPassword)) { _log.LogWarning("Admin seed skipped: AttendX:AdminPassword is empty. Set env ADMIN_PASSWORD."); return; }
         var admin = new ApplicationUser { UserName = _o.AdminEmail, Email = _o.AdminEmail, EmailConfirmed = true, FullName = "System Administrator", MustChangePassword = _o.ForceAdminPasswordChange, LockoutEnabled = true };
-        var res = await _users.CreateAsync(admin, _o.AdminPassword);
+        var res = await _users.CreateAsync(admin, SeedAdminPassword);
         if (res.Succeeded) await _users.AddToRoleAsync(admin, RoleNames.Admin);
         else _log.LogError("Could not create admin: {Errors}", string.Join("; ", res.Errors.Select(e => e.Description)));
     }
@@ -382,7 +385,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     private async Task SeedFacultyAsync(CancellationToken cancellationToken = default)
     {
         var rows = Read("faculty.csv");
-        var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), _o.SeedFacultyPassword);
+        var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedFacultyPassword);
         var roleIds = await _db.Roles.ToDictionaryAsync(r => r.Name!, r => r.Id);
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
         var existingEmails = (await _db.Users.Select(u => u.NormalizedEmail).ToListAsync()).ToHashSet();
@@ -433,7 +436,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             if (u == null)
             {
                 u = NewUser(f.Email, f.FullName, hash);
-                await _users.CreateAsync(u, _o.SeedFacultyPassword);
+                await _users.CreateAsync(u, SeedFacultyPassword);
                 await _users.AddToRoleAsync(u, RoleNames.Faculty);
                 if (f.IsHOD) await _users.AddToRoleAsync(u, RoleNames.Hod);
             }
@@ -461,7 +464,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     private async Task SeedStudentsAsync(CancellationToken cancellationToken = default)
     {
         var rows = Read("students.csv");
-        var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), _o.SeedStudentPassword);
+        var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedStudentPassword);
         var studentRole = (await _db.Roles.FirstAsync(r => r.Name == RoleNames.Student)).Id;
 
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
@@ -563,7 +566,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             if (u == null)
             {
                 u = NewUser(s.Email, s.FullName, hash);
-                await _users.CreateAsync(u, _o.SeedStudentPassword);
+                await _users.CreateAsync(u, SeedStudentPassword);
                 await _users.AddToRoleAsync(u, RoleNames.Student);
             }
             else

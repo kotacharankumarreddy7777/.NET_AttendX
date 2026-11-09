@@ -37,6 +37,10 @@ public class AttendXOptions
     public string AdminPassword { get; set; } = "";
     public string SeedFacultyPassword { get; set; } = "";
     public string SeedStudentPassword { get; set; } = "";
+    public string EffectiveAdminPassword => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")) ? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")! : AdminPassword;
+    public string EffectiveSeedFacultyPassword => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SEED_FACULTY_PASSWORD")) ? Environment.GetEnvironmentVariable("SEED_FACULTY_PASSWORD")! : !string.IsNullOrWhiteSpace(SeedFacultyPassword) ? SeedFacultyPassword : "Faculty@123";
+    public string EffectiveSeedStudentPassword => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SEED_STUDENT_PASSWORD")) ? Environment.GetEnvironmentVariable("SEED_STUDENT_PASSWORD")! : !string.IsNullOrWhiteSpace(SeedStudentPassword) ? SeedStudentPassword : "Student@123";
+    public string EffectiveQrSecret => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("QR_SECRET")) ? Environment.GetEnvironmentVariable("QR_SECRET")! : QrSecret;
     public bool ForceAdminPasswordChange { get; set; } = false;
     public bool AutoExportExcel { get; set; } = true;
     public bool SeedDemoData { get; set; } = true;

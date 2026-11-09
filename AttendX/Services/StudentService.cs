@@ -34,7 +34,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
         if (s.IdentityUserId != null) return;
         if (await _users.FindByEmailAsync(s.Email) != null) return;      // email already used by another account - no login created
         var u = new ApplicationUser { UserName = s.Email, Email = s.Email, EmailConfirmed = true, FullName = s.FullName, MustChangePassword = true, LockoutEnabled = true };
-        var r = await _users.CreateAsync(u, _o.SeedStudentPassword);
+        var r = await _users.CreateAsync(u, _o.EffectiveSeedStudentPassword);
         if (!r.Succeeded) return;
         await _users.AddToRoleAsync(u, RoleNames.Student);
         s.IdentityUserId = u.Id;

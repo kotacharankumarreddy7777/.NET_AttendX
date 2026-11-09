@@ -39,6 +39,19 @@ The landing page `/` shows the three role cards. All three values must belong to
 | Student | `1EV1-CSE-001` | `1EV1-CSE-001@attendx.edu.in` | `Student@123` |
 **Every** faculty (`FAC-<BRANCH>-001..009`, 001 = HOD) and **every** student (`Dataset/students.csv`, e.g. `3EV2-CSE-017`) can log in with their own Institution ID + email + the role password above.
 Full list: `Dataset/demo_logins.md` and the **Logins** sheet of `Dataset/AttendX_Master_Data.xlsx`.
+In Docker/Render deployments, these passwords come from environment variables (`ADMIN_PASSWORD`, `SEED_FACULTY_PASSWORD`, `SEED_STUDENT_PASSWORD`) and `appsettings.Development.json` provides local development defaults.
+
+## 4a. Deployment environment variables
+
+| Key | Required | Purpose |
+|---|---|---|
+| `DATABASE_URL` | yes | Postgres (Neon) or SQL Server connection string. |
+| `QR_SECRET` | yes (Production) | ≥16 chars. Signs QR codes. Generate once (`openssl rand -base64 24`). |
+| `ADMIN_PASSWORD` | yes (first seed) | Sets the seeded admin password (`admin@attendx.edu.in`). |
+| `SEED_FACULTY_PASSWORD` | optional | Defaults to `Faculty@123`. |
+| `SEED_STUDENT_PASSWORD` | optional | Defaults to `Student@123`. |
+| `PORT` | recommended | App binds to `0.0.0.0:8080` by default. |
+| `ASPNETCORE_URLS` | optional | Defaults to `http://0.0.0.0:8080` in Docker. |
 
 ## 5. Seeded data (all automatic, from the `Dataset` folder)
 * 14 branches, 102 sections, 896 subjects (8 per semester, semesters 1-8).
