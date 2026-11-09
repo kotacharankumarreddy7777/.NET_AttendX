@@ -153,21 +153,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Start the web host first so Render port checks pass, then seed in the background.
-var hostTask = app.RunAsync();
-try
+// Seed BEFORE opening the port so no request hits an empty DB mid-reseed.
+// Render port check retries, so blocking here is safe; total seed budget = 10 min.
+await app.StartAsync();
 {
-    using var scope = app.Services.CreateScope();
-    var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-    var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-    await seeder.SeedAsync(cts.Token);
-    log.LogInformation("Database seeding completed in background.");
+    var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+    var log = loggerFactory.CreateLogger("Program");
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        await seeder.SeedAsync(cts.Token);
+        log.LogInformation("Database seeding completed.");
+    }
+    catch (Exception ex)
+    {
+        log.LogError(ex, "Database seeding failed — continuing to serve requests.");
+    }
 }
-catch (Exception ex)
-{
-    using var scope2 = app.Services.CreateScope();
-    var log = scope2.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    log.LogError(ex, "Database seeding failed — continuing to serve requests.");
-}
-await hostTask;
+await app.WaitForShutdownAsync();
