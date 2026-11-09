@@ -64,11 +64,11 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
     {
-        o.Password.RequiredLength = 8;
-        o.Password.RequireDigit = true;
-        o.Password.RequireUppercase = true;
-        o.Password.RequireLowercase = true;
-        o.Password.RequireNonAlphanumeric = true;
+        o.Password.RequiredLength = 5;
+        o.Password.RequireDigit = false;
+        o.Password.RequireUppercase = false;
+        o.Password.RequireLowercase = false;
+        o.Password.RequireNonAlphanumeric = false;
         o.User.RequireUniqueEmail = true;
         o.Lockout.MaxFailedAccessAttempts = 5;
         o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
@@ -131,27 +131,6 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment()) app.UseDeveloperExceptionPage();
 else { app.UseExceptionHandler("/Error"); }
 
-using (var scope = app.Services.CreateScope())
-{
-    var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    try
-    {
-        var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-        await seeder.SeedAsync(cts.Token);
-    }
-    catch (OperationCanceledException ex)
-    {
-        log.LogError(ex, "Database seeding timed out after 10 minutes.");
-        throw;
-    }
-    catch (Exception ex)
-    {
-        log.LogError(ex, "Database seeding failed during startup.");
-        throw;
-    }
-}
-
 app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
 app.Use(async (ctx, next) =>
@@ -173,4 +152,22 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-app.Run();
+
+// Start the web host first so Render port checks pass, then seed in the background.
+var hostTask = app.RunAsync();
+try
+{
+    using var scope = app.Services.CreateScope();
+    var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+    var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+    await seeder.SeedAsync(cts.Token);
+    log.LogInformation("Database seeding completed in background.");
+}
+catch (Exception ex)
+{
+    using var scope2 = app.Services.CreateScope();
+    var log = scope2.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    log.LogError(ex, "Database seeding failed — continuing to serve requests.");
+}
+await hostTask;
