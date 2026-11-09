@@ -241,7 +241,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         timetableCount = await _db.Timetables.CountAsync(cancellationToken);
 
         // If faculty and students are fully seeded AND attendance coverage is complete, skip heavy seeding
-        if (!resetEnabled && await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
+        if (!resetEnabled && !_o.ForceReseed && await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
         {
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Database already seeded. Skipping demo seeding.");
             // Ensure exam timetables exist even if attendance is seeded

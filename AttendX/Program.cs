@@ -156,7 +156,7 @@ app.UseAuthorization();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // Seed BEFORE opening the port so no request hits an empty DB mid-reseed.
-// Render port check retries, so blocking here is safe; total seed budget = 10 min.
+// Render port check retries, so blocking here is safe; total seed budget = 25 min.
 await app.StartAsync();
 {
     var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
@@ -165,7 +165,7 @@ await app.StartAsync();
     {
         using var scope = app.Services.CreateScope();
         var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(20));
+        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(25));
         await seeder.SeedAsync(cts.Token);
         log.LogInformation("Database seeding completed.");
     }
