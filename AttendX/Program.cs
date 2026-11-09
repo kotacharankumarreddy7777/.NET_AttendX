@@ -62,6 +62,8 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     o.ConfigureWarnings(wb => wb.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 });
 
+builder.Services.AddDataProtection();
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
     {
         o.Password.RequiredLength = 5;
@@ -163,7 +165,7 @@ await app.StartAsync();
     {
         using var scope = app.Services.CreateScope();
         var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(20));
         await seeder.SeedAsync(cts.Token);
         log.LogInformation("Database seeding completed.");
     }
