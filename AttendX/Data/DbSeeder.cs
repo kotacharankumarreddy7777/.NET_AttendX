@@ -28,6 +28,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     private string SeedAdminPassword => _o.EffectiveAdminPassword;
     private string SeedFacultyPassword => _o.EffectiveSeedFacultyPassword;
     private string SeedStudentPassword => _o.EffectiveSeedStudentPassword;
+    private string AccountPasswordSuffix => _o.AccountPasswordSuffix;
 
     private static readonly string[] SampleStudentNames = [
         "Aarav Patel", "Aarav Shah", "Aditi Gupta", "Akash Joshi", "Ananya Jani", "Anjali Chauhan", "Arjun Oza", "Charan Gohil",
@@ -120,6 +121,37 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         await SeedSubjectsAsync(cancellationToken);
         await FixMalformedStudentIdsAsync(cancellationToken);
 
+        // One-time destructive reset for credentials in production (guarded by env + completion marker)
+        var resetEnabled = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RESET_NONADMIN_USERS_ON_STARTUP")) && Environment.GetEnvironmentVariable("RESET_NONADMIN_USERS_ON_STARTUP")!.Equals("true", StringComparison.OrdinalIgnoreCase);
+        if (resetEnabled)
+        {
+            bool alreadyReset = await _db.AuditLogs.AnyAsync(a => a.Action == "NonAdminPasswordResetCompleted", cancellationToken);
+            if (!alreadyReset)
+            {
+                _log.LogWarning("Resetting all non-admin users: deleting domain + identity rows (history will be removed).");
+                await _db.Database.ExecuteSqlRawAsync(@"
+                    DELETE FROM ""ExamMarks"";
+                    DELETE FROM ""Attendance"";
+                    DELETE FROM ""AttendanceSessions"";
+                    DELETE FROM ""AttendanceQueries"";
+                    DELETE FROM ""ExamTimetables"";
+                    DELETE FROM ""Timetables"";
+                    DELETE FROM ""FacultySubjectMappings"";
+                    DELETE FROM ""Students"";
+                    DELETE FROM ""Faculty"";
+                    DELETE FROM ""AspNetUserRoles"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
+                    DELETE FROM ""AspNetUserTokens"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
+                    DELETE FROM ""AspNetUserClaims"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
+                    DELETE FROM ""AspNetUserLogins"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
+                    DELETE FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN';
+                ");
+                var audit = new AuditLog { Action = "NonAdminPasswordResetCompleted", EntityType = "Database", EntityId = "Neon", ActorName = "DbSeeder", Details = "Deleted all non-admin users and domain rows; reseed will recreate with ID@AttendX123." };
+                _db.AuditLogs.Add(audit);
+                try { await _db.SaveChangesAsync(cancellationToken); } catch { }
+                _log.LogInformation("Non-admin reset completed; reseeding will recreate logins with account-ID passwords.");
+            }
+        }
+
         // Force rebuild check: if CSV counts != DB counts, force DELETE and reseed all people + attendance
         var facultyCsvCount = Read("faculty.csv").Count;
         var studentsCsvCount = Read("students.csv").Count;
@@ -200,7 +232,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
         await SeedHolidaysAsync(cancellationToken);
-        if (needsRebuild || facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0)
+        if (resetEnabled || needsRebuild || facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0)
         {
             await SeedFacultyAsync(cancellationToken);
             await SeedStudentsAsync(cancellationToken);
@@ -354,12 +386,28 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
     private async Task SeedAdminAsync(CancellationToken cancellationToken = default)
     {
-        if (await _users.FindByEmailAsync(_o.AdminEmail) != null) return;
+        var adminEmail = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_EMAIL")) ? Environment.GetEnvironmentVariable("ADMIN_EMAIL")! : _o.AdminEmail;
         if (string.IsNullOrWhiteSpace(SeedAdminPassword)) { _log.LogWarning("Admin seed skipped: AttendX:AdminPassword is empty. Set env ADMIN_PASSWORD."); return; }
-        var admin = new ApplicationUser { UserName = _o.AdminEmail, Email = _o.AdminEmail, EmailConfirmed = true, FullName = "System Administrator", MustChangePassword = _o.ForceAdminPasswordChange, LockoutEnabled = true };
-        var res = await _users.CreateAsync(admin, SeedAdminPassword);
-        if (res.Succeeded) await _users.AddToRoleAsync(admin, RoleNames.Admin);
-        else _log.LogError("Could not create admin: {Errors}", string.Join("; ", res.Errors.Select(e => e.Description)));
+        var admin = await _users.FindByEmailAsync(adminEmail);
+        if (admin == null)
+        {
+            admin = new ApplicationUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true, FullName = "System Administrator", MustChangePassword = _o.ForceAdminPasswordChange, LockoutEnabled = true };
+            var res = await _users.CreateAsync(admin, SeedAdminPassword);
+            if (!res.Succeeded) { _log.LogError("Could not create admin: {Errors}", string.Join("; ", res.Errors.Select(e => e.Description))); return; }
+        }
+        else
+        {
+            admin.EmailConfirmed = true;
+            admin.MustChangePassword = _o.ForceAdminPasswordChange;
+            admin.LockoutEnabled = true;
+            admin.LockoutEnd = null;
+            admin.AccessFailedCount = 0;
+            var hash = new PasswordHasher<ApplicationUser>().HashPassword(admin, SeedAdminPassword);
+            admin.PasswordHash = hash;
+            var update = await _users.UpdateAsync(admin);
+            if (!update.Succeeded) { _log.LogError("Could not update admin: {Errors}", string.Join("; ", update.Errors.Select(e => e.Description))); return; }
+        }
+        if (!await _users.IsInRoleAsync(admin, RoleNames.Admin)) { var role = await _users.AddToRoleAsync(admin, RoleNames.Admin); if (!role.Succeeded) _log.LogError("Could not assign Admin role: {Errors}", string.Join("; ", role.Errors.Select(e => e.Description))); }
     }
 
     private async Task SeedSubjectsAsync(CancellationToken cancellationToken = default)
@@ -392,17 +440,21 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     }
 
     // ------------------------------------------------------------------ people (fast path)
-    private static ApplicationUser NewUser(string email, string fullName, string hash) => new()
+    private string AccountPassword(string institutionId) => (institutionId ?? string.Empty).Trim() + (!string.IsNullOrWhiteSpace(_o.AccountPasswordSuffix) ? _o.AccountPasswordSuffix : "@AttendX123");
+    private string AccountPasswordHash(string institutionId) => new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), AccountPassword(institutionId));
+
+    private static ApplicationUser NewUser(string email, string fullName, string hash, bool mustChangePassword = true) => new()
     {
         Id = Guid.NewGuid().ToString(), UserName = email, NormalizedUserName = email.ToUpperInvariant(), Email = email, NormalizedEmail = email.ToUpperInvariant(),
         EmailConfirmed = true, PasswordHash = hash, SecurityStamp = Guid.NewGuid().ToString(), ConcurrencyStamp = Guid.NewGuid().ToString(),
-        LockoutEnabled = true, FullName = fullName, MustChangePassword = false
+        LockoutEnabled = true, FullName = fullName, MustChangePassword = mustChangePassword
     };
 
     private async Task SeedFacultyAsync(CancellationToken cancellationToken = default)
     {
         var rows = Read("faculty.csv");
-        var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedFacultyPassword);
+        var facultyHash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedFacultyPassword);
+        var studentHash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedStudentPassword);
         var roleIds = await _db.Roles.ToDictionaryAsync(r => r.Name!, r => r.Id);
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
         var existingEmails = (await _db.Users.Select(u => u.NormalizedEmail).ToListAsync()).ToHashSet();
@@ -420,7 +472,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 if (!branches.TryGetValue(r.TryGetValue("department", out var dv) ? dv.Trim() : "", out var b)) continue;
                 var email = EmailHelper.FacultyEmail(fid, r.TryGetValue("fullname", out var fn) ? fn : fid);
                 if (existingEmails.Contains(email.ToUpperInvariant())) continue;
-                var user = NewUser(email, r.TryGetValue("fullname", out var nv) ? nv.Trim() : fid, hash);
+                var user = NewUser(email, r.TryGetValue("fullname", out var nv) ? nv.Trim() : fid, AccountPasswordHash(fid), true);
                 bool hod = r.TryGetValue("ishod", out var hv) && hv.Equals("true", StringComparison.OrdinalIgnoreCase);
                 _db.Users.Add(user);
                 _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = roleIds[RoleNames.Faculty] });
@@ -452,8 +504,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             var u = f.IdentityUserId != null ? await _users.FindByIdAsync(f.IdentityUserId) : await _users.FindByEmailAsync(f.Email);
             if (u == null)
             {
-                u = NewUser(f.Email, f.FullName, hash);
-                await _users.CreateAsync(u, SeedFacultyPassword);
+                u = NewUser(f.Email, f.FullName, AccountPasswordHash(f.FacultyID), true);
+                await _users.CreateAsync(u, AccountPassword(f.FacultyID));
                 await _users.AddToRoleAsync(u, RoleNames.Faculty);
                 if (f.IsHOD) await _users.AddToRoleAsync(u, RoleNames.Hod);
             }
@@ -469,8 +521,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 }
                 if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
                 {
-                    u.PasswordHash = hash;
-                    u.MustChangePassword = false;
+                    u.PasswordHash = AccountPasswordHash(f.FacultyID);
+                    u.MustChangePassword = true;
                     await _users.UpdateAsync(u);
                 }
             }
@@ -482,7 +534,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     private async Task SeedStudentsAsync(CancellationToken cancellationToken = default)
     {
         var rows = Read("students.csv");
-        var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedStudentPassword);
+        var studentHash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedStudentPassword);
         var studentRole = (await _db.Roles.FirstAsync(r => r.Name == RoleNames.Student)).Id;
 
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
@@ -509,7 +561,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 string normEmail = email.ToUpperInvariant();
                 if (existingNormalizedEmails.Contains(normEmail)) continue;
 
-                    var user = NewUser(email, r["fullname"], hash);
+                    var user = NewUser(email, r["fullname"], AccountPasswordHash(sid), true);
                     _db.Users.Add(user);
                     _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = studentRole });
                     _db.Students.Add(new Student
@@ -544,7 +596,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     string normEmail = email.ToUpperInvariant();
                     if (existingNormalizedEmails.Contains(normEmail) || existingStudentIDs.Contains(studentId)) continue;
 
-                    var user = NewUser(email, studentName, hash);
+                    var user = NewUser(email, studentName, AccountPasswordHash(studentId), true);
                     _db.Users.Add(user);
                     _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = studentRole });
                     _db.Students.Add(new Student
@@ -583,8 +635,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             var u = s.IdentityUserId != null ? await _users.FindByIdAsync(s.IdentityUserId) : await _users.FindByEmailAsync(s.Email);
             if (u == null)
             {
-                u = NewUser(s.Email, s.FullName, hash);
-                await _users.CreateAsync(u, SeedStudentPassword);
+                u = NewUser(s.Email, s.FullName, AccountPasswordHash(s.StudentID), true);
+                await _users.CreateAsync(u, AccountPassword(s.StudentID));
                 await _users.AddToRoleAsync(u, RoleNames.Student);
             }
             else
@@ -599,8 +651,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 }
                 if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
                 {
-                    u.PasswordHash = hash;
-                    u.MustChangePassword = false;
+                    u.PasswordHash = AccountPasswordHash(s.StudentID);
+                    u.MustChangePassword = true;
                     await _users.UpdateAsync(u);
                 }
             }
