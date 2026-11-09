@@ -82,6 +82,23 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     );
                     CREATE INDEX IF NOT EXISTS ""IX_ExamTimetables_Semester_Type_Date"" ON ""ExamTimetables"" (""AcademicYearId"", ""Semester"", ""ExamType"", ""ExamDate"");
                     CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ExamTimetables_Unique"" ON ""ExamTimetables"" (""AcademicYearId"", ""BranchId"", ""Semester"", ""SubjectId"", ""ExamType"") WHERE ""IsActive"";
+
+                    CREATE TABLE IF NOT EXISTS ""ExamMarks"" (
+                        ""Id"" bigserial PRIMARY KEY,
+                        ""ExamTimetableId"" integer NOT NULL REFERENCES ""ExamTimetables""(""Id"") ON DELETE RESTRICT,
+                        ""StudentId"" integer NOT NULL REFERENCES ""Students""(""Id"") ON DELETE RESTRICT,
+                        ""MarksObtained"" numeric(5,2) NOT NULL,
+                        ""MaxMarks"" numeric(5,2) NOT NULL DEFAULT 100,
+                        ""IsLocked"" boolean NOT NULL DEFAULT TRUE,
+                        ""UnlockRequestedAt"" timestamp with time zone,
+                        ""UnlockUntil"" timestamp with time zone,
+                        ""Remarks"" text,
+                        ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        ""LastModifiedBy"" text,
+                        ""LastModifiedAt"" timestamp with time zone
+                    );
+                    CREATE INDEX IF NOT EXISTS ""IX_ExamMarks_ExamTimetableId"" ON ""ExamMarks"" (""ExamTimetableId"");
+                    CREATE INDEX IF NOT EXISTS ""IX_ExamMarks_StudentId"" ON ""ExamMarks"" (""StudentId"");
                 ");
             }
             catch (Exception ex)
@@ -450,9 +467,10 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     u.NormalizedUserName = f.Email.ToUpperInvariant();
                     await _users.UpdateAsync(u);
                 }
-                if (string.IsNullOrEmpty(u.PasswordHash))
+                if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
                 {
                     u.PasswordHash = hash;
+                    u.MustChangePassword = false;
                     await _users.UpdateAsync(u);
                 }
             }
