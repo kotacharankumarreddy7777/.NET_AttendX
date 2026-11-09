@@ -82,6 +82,7 @@ Change seed size in `appsettings.json` -> `AttendX` (`SeedDemoData`, `SeedHistor
 ## 8. If the build shows errors
 1. View -> Error List. Common causes: a NuGet version missing (edit `AttendX/AttendX.csproj`; QuestPDF uses `2025.*`), or a typo I could not catch without a compiler.
 2. Send me the first error (file, line, message). 3. Tests: Test -> Run All Tests.
+Production 500 errors now show the exact exception type + message + RequestId on the Error page — select the red block, click Copy error, paste it when asking for help.
 4. LocalDB: `sqllocaldb start MSSQLLocalDB`. HTTPS certificate: `dotnet dev-certs https --trust`.
 5. Start from scratch: stop the app, delete database `AttendXDb` in SQL Server Object Explorer, F5 again.
 6. Using .NET 8 instead of 10? Replace `net10.0` and the `10.0.0` package versions with `net8.0` / `8.0.x`.

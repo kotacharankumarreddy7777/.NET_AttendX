@@ -31,6 +31,16 @@ public class ErrorViewModel
     public int Code { get; set; } = 500;
     public string Title { get; set; } = "Something went wrong";
     public string Message { get; set; } = "An unexpected error occurred. Please try again.";
+    public string? ErrorType { get; set; }
+    public string? ErrorMessage { get; set; }
+    public string? RequestId { get; set; }
+    public string? TraceIdentifier { get; set; }
+    public string? RequestPath { get; set; }
+    public DateTime? TimestampUtc { get; set; }
+    public bool HasDetail => !string.IsNullOrWhiteSpace(ErrorType);
+    public string DetailSummary => HasDetail
+        ? $"{ErrorType}: {ErrorMessage}\n---\nPath: {RequestPath}\nRequestId: {RequestId}\nTraceIdentifier: {TraceIdentifier}\nTime (UTC): {TimestampUtc:O}"
+        : "";
 }
 
 public class ChangePasswordViewModel
