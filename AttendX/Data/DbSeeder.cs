@@ -20,11 +20,32 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         ("CSE", "CSE"), ("CSE-AI", "CSEAI"), ("CSE-AIML", "CSEAIML"), ("AI&DS", "ADS"), ("ECE", "ECE"), ("EEE", "EEE"), ("MECH", "MECH"),
         ("CIVIL", "CIVIL"), ("IT", "IT"), ("Cyber Security", "CYBER"), ("AIDS", "AIDS"), ("AIML", "AIML"), ("IOT", "IOT"), ("DS", "DS")
     ];
-    private static readonly Dictionary<string, (string Prefix, int Count)> SectionRules = new()
+    private static readonly Dictionary<string, (string Prefix, int Count)> SectionRules = GenerateSectionRules();
+    private static Dictionary<string, (string Prefix, int Count)> GenerateSectionRules()
     {
-        ["CSE"] = ("EV", 6), ["CSEAI"] = ("EN", 24), ["CSEAIML"] = ("EN", 24), ["ADS"] = ("EU", 6), ["ECE"] = ("EC", 6), ["EEE"] = ("EE", 4),
-        ["MECH"] = ("ME", 4), ["CIVIL"] = ("CE", 4), ["IT"] = ("IT", 6), ["CYBER"] = ("CS", 6), ["AIDS"] = ("AD", 4), ["AIML"] = ("AM", 4), ["IOT"] = ("IO", 4), ["DS"] = ("DS", 4)
-    };
+        var rng = new Random(2026);
+        var dict = new Dictionary<string, (string, int)>();
+        var prefixes = new Dictionary<string, string>
+        {
+            ["CSE"] = "EV", ["CSEAI"] = "EN", ["CSEAIML"] = "EN", ["ADS"] = "EU", ["ECE"] = "EC", ["EEE"] = "EE",
+            ["MECH"] = "ME", ["CIVIL"] = "CE", ["IT"] = "IT", ["CYBER"] = "CS", ["AIDS"] = "AD", ["AIML"] = "AM", ["IOT"] = "IO", ["DS"] = "DS"
+        };
+        foreach (var (code, prefix) in prefixes) dict[code] = (prefix, rng.Next(5, 7));
+        return dict;
+    }
+    // BTech branches: 4 years = 8 semesters. Non-BTech: random 6-8 semesters (deterministic per branch code).
+    private static int SemestersForBranch(string branchCode)
+    {
+        var nonBTech = new HashSet<string> { "ADS", "AIDS", "AIML", "DS", "IOT" };
+        if (!nonBTech.Contains(branchCode)) return 8;
+        var rng = new Random(branchCode.GetHashCode() & 0xffff);
+        return rng.Next(6, 9); // 6,7,8
+    }
+    private static int ClassSizeFor(int branchId, int sectionId, int semester)
+    {
+        var rng = new Random((branchId * 10000) + (sectionId * 100) + semester);
+        return rng.Next(25, 31); // 25-30 inclusive
+    }
     private string SeedAdminPassword => _o.EffectiveAdminPassword;
     private string SeedFacultyPassword => _o.EffectiveSeedFacultyPassword;
     private string SeedStudentPassword => _o.EffectiveSeedStudentPassword;
@@ -220,7 +241,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         timetableCount = await _db.Timetables.CountAsync(cancellationToken);
 
         // If faculty and students are fully seeded AND attendance coverage is complete, skip heavy seeding
-        if (await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
+        if (!resetEnabled && await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
         {
             if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Database already seeded. Skipping demo seeding.");
             // Ensure exam timetables exist even if attendance is seeded
@@ -351,7 +372,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         for (int i = 0; i < Math.Min(_o.PeriodCount, starts.Length); i++)
         {
             var s = TimeSpan.Parse(starts[i]);
-            _db.PeriodDefinitions.Add(new PeriodDefinition { PeriodNo = i + 1, StartTime = s, EndTime = s.Add(TimeSpan.FromMinutes(55)) });
+            var duration = (i == 6) ? 80 : 60; // lab P7 = 80 min, others 60
+            _db.PeriodDefinitions.Add(new PeriodDefinition { PeriodNo = i + 1, StartTime = s, EndTime = s.Add(TimeSpan.FromMinutes(duration)) });
         }
         await _db.SaveChangesAsync();
     }
@@ -368,7 +390,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         foreach (var b in branches)
         {
             if (!SectionRules.TryGetValue(b.Code, out var rule)) continue;
-            for (int sem = 1; sem <= 8; sem++)
+            int sems = SemestersForBranch(b.Code);
+            for (int sem = 1; sem <= sems; sem++)
             {
                 for (int i = 1; i <= rule.Count; i++)
                 {
@@ -582,13 +605,15 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         {
             var b = branches.Values.FirstOrDefault(x => x.Id == sec.BranchId);
             if (b == null) continue;
-            foreach (int sem in new[] { 1, 3, 5 })
+            int sems = SemestersForBranch(b.Code);
+            for (int sem = 1; sem <= sems; sem++)
             {
                 var sectionStudents = await _db.Students.Where(s => s.BranchId == b.Id && s.SectionId == sec.Id && s.Semester == sem).ToListAsync();
+                int targetSize = ClassSizeFor(b.Id, sec.Id, sem);
                 int currentCount = sectionStudents.Count;
-                if (currentCount >= 30) continue;
+                if (currentCount >= targetSize) continue;
 
-                for (int i = currentCount + 1; i <= 30; i++)
+                for (int i = currentCount + 1; i <= targetSize; i++)
                 {
                     string studentId = StudentIdService.Format(StudentIdService.Prefix(sem, sec.Name, b.Code), i);
                     string studentName = SampleStudentNames[(i + sem * 7) % SampleStudentNames.Length];
@@ -679,8 +704,10 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var mapped = new HashSet<(int, int, int)>();
         var scheduledSlots = new HashSet<(int SectionId, DayOfWeek Day, int Period)>();
         var facultySlots = new HashSet<(int FacultyId, DayOfWeek Day, int Period)>();
+        var classDailyCounts = new Dictionary<(int SectionId, DayOfWeek Day), int>();
         _db.ChangeTracker.AutoDetectChangesEnabled = false;
         int n = 0;
+        var rngTT = new Random(2026);
         foreach (var r in rows)
         {
             if (!branches.TryGetValue(r["branchcode"], out var b)) continue;
@@ -694,6 +721,11 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
             if (!scheduledSlots.Add((sec.Id, day, period))) continue;
             if (!facultySlots.Add((f.Id, day, period))) continue;
+            // Enforce 5-6 classes per day per class: cap at 6
+            var key = (sec.Id, day);
+            int count = classDailyCounts.GetValueOrDefault(key, 0);
+            if (count >= 6) continue;
+            classDailyCounts[key] = count + 1;
 
             string room = r["room"];
             string classType = r.TryGetValue("classtype", out var ct) && !string.IsNullOrWhiteSpace(ct) ? ct : (room.Contains("Lab", StringComparison.OrdinalIgnoreCase) ? "Lab" : room.Contains("Workshop", StringComparison.OrdinalIgnoreCase) ? "Workshop" : "Lecture");
@@ -895,28 +927,22 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var facMap = mappings.GroupBy(m => (m.BranchId, m.Semester, m.SubjectId))
             .ToDictionary(g => g.Key, g => g.First().FacultyId);
 
-        List<(DateTime Start, DateTime End, string Type)> examWindows = new();
-        foreach (var yearData in academics)
-        {
-            int y = int.TryParse(yearData.Name.Split('-')[0], out int startY) ? startY : 2026;
-            // Mid1: Sep 22-Oct 4, Mid2: Dec 8-Dec 20, Final: Apr 15-May 5
-            examWindows.Add((new DateTime(y, 9, 22), new DateTime(y, 10, 4), "Mid1"));
-            examWindows.Add((new DateTime(y, 12, 8), new DateTime(y, 12, 20), "Mid2"));
-            examWindows.Add((new DateTime(y + 1, 4, 15), new DateTime(y + 1, 5, 5), "Final"));
-        }
-
         var exams = new List<ExamTimetable>();
         var rnd = new Random(2026);
         foreach (var year in academics)
         {
-            var windows = examWindows.Where(w => w.Start.Year == int.Parse(year.Name.Split('-')[0]) || w.Start.Year == int.Parse(year.Name.Split('-')[0]) + 1926).ToList();
-            // Simpler: use year.Name to compute windows
             int startY = int.Parse(year.Name.Split('-')[0]);
+            // Odd sem (running now): Mid1 Sep (completed), Mid2 3rd week Nov, Final end Dec
+            // Even sem: Mid1 Mar, Mid2 Apr, Final May + summer break Jun-Jul
             var windowsForYear = new List<(DateTime Start, DateTime End, string Type)>
             {
                 (new DateTime(startY, 9, 22), new DateTime(startY, 9, 27), "Mid1"),
                 (new DateTime(startY, 11, 17), new DateTime(startY, 11, 22), "Mid2"),
-                (new DateTime(startY, 12, 21), new DateTime(startY + 1, 1, 5), "Final")
+                (new DateTime(startY, 12, 21), new DateTime(startY + 1, 1, 5), "Final"),
+                // Even sem next calendar year
+                (new DateTime(startY + 1, 3, 10), new DateTime(startY + 1, 3, 16), "Mid1"),
+                (new DateTime(startY + 1, 4, 8), new DateTime(startY + 1, 4, 14), "Mid2"),
+                (new DateTime(startY + 1, 5, 5), new DateTime(startY + 1, 5, 20), "Final")
             };
 
             foreach (var subj in subjects)
