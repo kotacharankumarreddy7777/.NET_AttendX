@@ -14,13 +14,13 @@ public class TimetableController(AppDbContext db, ITimetableService tt, ICurrent
         var scope = await _user.GetScopeBranchIdAsync();
         bool facultyOnly = !_user.IsAdmin && !_user.IsHod;
         if (facultyOnly) { var me = await _user.GetFacultyAsync(); facultyId = me?.Id ?? -1; }
-        else if (scope != null) branchId = scope;
+        else if (scope.HasValue) branchId = scope;
 
         var vm = await _tt.BuildGridAsync(branchId, sectionId, semester, facultyId, scope);
         vm.ReadOnly = !_user.IsAdmin;
-        vm.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (scope == null || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
+        vm.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (!scope.HasValue || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
         if (branchId != null) vm.Sections = await _db.Sections.AsNoTracking().Where(s => s.BranchId == branchId && s.IsActive).OrderBy(s => s.Name).Select(s => new SelectListItem(s.Name, s.Id.ToString())).ToListAsync();
-        if (!facultyOnly) vm.Faculty = await _db.Faculty.AsNoTracking().Where(f => f.IsActive && (scope == null || f.BranchId == scope)).OrderBy(f => f.FullName).Select(f => new SelectListItem(f.FullName, f.Id.ToString())).ToListAsync();
+        if (!facultyOnly) vm.Faculty = await _db.Faculty.AsNoTracking().Where(f => f.IsActive && (!scope.HasValue || f.BranchId == scope)).OrderBy(f => f.FullName).Select(f => new SelectListItem(f.FullName, f.Id.ToString())).ToListAsync();
         ViewBag.FacultyOnly = facultyOnly;
         return View(vm);
     }
@@ -52,8 +52,9 @@ public class TimetableController(AppDbContext db, ITimetableService tt, ICurrent
     [Authorize(Policy = PolicyNames.AdminOnly), HttpPost]
     public async Task<IActionResult> Remove(int id, int? sectionId, int? branchId, int? semester)
     {
-        await _tt.DeactivateAsync(id);
-        TempData["Success"] = "Slot removed (history kept).";
+        var ok = await _tt.DeactivateAsync(id);
+        if (!ok) TempData["Error"] = "That slot no longer exists.";
+        else TempData["Success"] = "Slot removed (history kept).";
         return RedirectToAction(nameof(Index), new { branchId, sectionId, semester });
     }
 

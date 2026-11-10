@@ -78,56 +78,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
-        if (_o.UseMigrations) await _db.Database.MigrateAsync(cancellationToken);
-        else await EnsureDatabaseSchemaAsync(cancellationToken);
-
-        // Ensure ExamTimetables table exists for Neon Postgres
-        if (_usePostgres)
-        {
-            try
-            {
-                await _db.Database.ExecuteSqlRawAsync(@"
-                    CREATE TABLE IF NOT EXISTS ""ExamTimetables"" (
-                        ""Id"" serial PRIMARY KEY,
-                        ""AcademicYearId"" integer NOT NULL REFERENCES ""AcademicYears""(""Id"") ON DELETE RESTRICT,
-                        ""BranchId"" integer NOT NULL REFERENCES ""Branches""(""Id"") ON DELETE RESTRICT,
-                        ""SectionId"" integer REFERENCES ""Sections""(""Id"") ON DELETE RESTRICT,
-                        ""Semester"" integer NOT NULL,
-                        ""SubjectId"" integer NOT NULL REFERENCES ""Subjects""(""Id"") ON DELETE RESTRICT,
-                        ""FacultyId"" integer NOT NULL REFERENCES ""Faculty""(""Id"") ON DELETE RESTRICT,
-                        ""ExamType"" character varying(20) NOT NULL,
-                        ""ExamDate"" timestamp with time zone NOT NULL,
-                        ""StartTime"" interval NOT NULL,
-                        ""EndTime"" interval NOT NULL,
-                        ""RoomNo"" character varying(30) NOT NULL DEFAULT '',
-                        ""IsActive"" boolean NOT NULL DEFAULT TRUE
-                    );
-                    CREATE INDEX IF NOT EXISTS ""IX_ExamTimetables_Semester_Type_Date"" ON ""ExamTimetables"" (""AcademicYearId"", ""Semester"", ""ExamType"", ""ExamDate"");
-                    CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ExamTimetables_Unique"" ON ""ExamTimetables"" (""AcademicYearId"", ""BranchId"", ""Semester"", ""SubjectId"", ""ExamType"") WHERE ""IsActive"";
-
-                    CREATE TABLE IF NOT EXISTS ""ExamMarks"" (
-                        ""Id"" bigserial PRIMARY KEY,
-                        ""ExamTimetableId"" integer NOT NULL REFERENCES ""ExamTimetables""(""Id"") ON DELETE RESTRICT,
-                        ""StudentId"" integer NOT NULL REFERENCES ""Students""(""Id"") ON DELETE RESTRICT,
-                        ""MarksObtained"" numeric(5,2) NOT NULL,
-                        ""MaxMarks"" numeric(5,2) NOT NULL DEFAULT 100,
-                        ""IsLocked"" boolean NOT NULL DEFAULT TRUE,
-                        ""UnlockRequestedAt"" timestamp with time zone,
-                        ""UnlockUntil"" timestamp with time zone,
-                        ""Remarks"" text,
-                        ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        ""LastModifiedBy"" text,
-                        ""LastModifiedAt"" timestamp with time zone
-                    );
-                    CREATE INDEX IF NOT EXISTS ""IX_ExamMarks_ExamTimetableId"" ON ""ExamMarks"" (""ExamTimetableId"");
-                    CREATE INDEX IF NOT EXISTS ""IX_ExamMarks_StudentId"" ON ""ExamMarks"" (""StudentId"");
-                ");
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "ExamTimetables creation check failed, continuing");
-            }
-        }
+        await _db.Database.MigrateAsync(cancellationToken);
 
         foreach (var r in RoleNames.All)
         {
@@ -142,38 +93,10 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         await SeedSubjectsAsync(cancellationToken);
         await FixMalformedStudentIdsAsync(cancellationToken);
 
-        // One-time destructive reset for credentials in production (guarded by env + completion marker)
-        var resetEnabled = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RESET_NONADMIN_USERS_ON_STARTUP")) && Environment.GetEnvironmentVariable("RESET_NONADMIN_USERS_ON_STARTUP")!.Equals("true", StringComparison.OrdinalIgnoreCase);
-        if (resetEnabled)
-        {
-            bool alreadyReset = await _db.AuditLogs.AnyAsync(a => a.Action == "NonAdminPasswordResetCompleted", cancellationToken);
-            if (!alreadyReset)
-            {
-                _log.LogWarning("Resetting all non-admin users: deleting domain + identity rows (history will be removed).");
-                await _db.Database.ExecuteSqlRawAsync(@"
-                    DELETE FROM ""ExamMarks"";
-                    DELETE FROM ""Attendance"";
-                    DELETE FROM ""AttendanceSessions"";
-                    DELETE FROM ""AttendanceQueries"";
-                    DELETE FROM ""ExamTimetables"";
-                    DELETE FROM ""Timetables"";
-                    DELETE FROM ""FacultySubjectMappings"";
-                    DELETE FROM ""Students"";
-                    DELETE FROM ""Faculty"";
-                    DELETE FROM ""AspNetUserRoles"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
-                    DELETE FROM ""AspNetUserTokens"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
-                    DELETE FROM ""AspNetUserClaims"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
-                    DELETE FROM ""AspNetUserLogins"" WHERE ""UserId"" IN (SELECT ""Id"" FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN');
-                    DELETE FROM ""AspNetUsers"" WHERE ""NormalizedEmail"" <> 'KOTA@ATTENDX.EDU.IN';
-                ");
-                var audit = new AuditLog { Action = "NonAdminPasswordResetCompleted", EntityType = "Database", EntityId = "Neon", ActorName = "DbSeeder", Details = "Deleted all non-admin users and domain rows; reseed will recreate with ID@AttendX123." };
-                _db.AuditLogs.Add(audit);
-                try { await _db.SaveChangesAsync(cancellationToken); } catch { }
-                _log.LogInformation("Non-admin reset completed; reseeding will recreate logins with account-ID passwords.");
-            }
-        }
+        await SeedAdminAsync(cancellationToken);
+        if (!_o.SeedDemoData) return;
 
-        // Force rebuild check: if CSV counts != DB counts, force DELETE and reseed all people + attendance
+        // Idempotent check: reseed only what is missing. Never deletes existing data.
         var facultyCsvCount = Read("faculty.csv").Count;
         var studentsCsvCount = Read("students.csv").Count;
         var facultyDbCount = await _db.Faculty.CountAsync(cancellationToken);
@@ -181,79 +104,12 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var attendanceCount = await _db.Attendance.CountAsync(cancellationToken);
         var timetableCount = await _db.Timetables.CountAsync(cancellationToken);
 
-        // Count generated students: sections * semesters (1,3,5) * 30 students per section minus CSV students
-        // For simplicity, if studentsDbCount > studentsCsvCount and attendanceCount == 0, it's a rebuild case
-        // FIXED: timetableCount == 0 was the root cause of the "No data" graphs - attendance history needs timetable rows to exist.
-        // Previously, needsRebuild was false when counts were OK but timetable was empty, blocking re-seeding.
-        bool needsRebuild = facultyDbCount < facultyCsvCount || studentsDbCount == 0 || attendanceCount < 5000 || timetableCount == 0;
-
-        // Only rebuild if attendance is completely missing OR people counts are significantly off (less than 80% of CSV)
-        if (!needsRebuild && attendanceCount >= 5000)
-        {
-            needsRebuild = false;
-        }
-        else if (facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0)
-        {
-            // FIX: Triggers a full rebuild, which was preventing the mandatory attendance history generation for the charts.
-            needsRebuild = true;
-        }
-        else if (attendanceCount < 5000)
-        {
-            // Attendance missing - need to reseed attendance but keep people (don't truncate users)
-            needsRebuild = false;
-        }
-
-        if (needsRebuild)
-        {
-            if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Force rebuild needed: Faculty DB {F} vs CSV {CF}, Students DB {S} vs CSV {CS}, Attendance Aug-Nov {A}", facultyDbCount, facultyCsvCount, studentsDbCount, studentsCsvCount, attendanceCount);
-            await _db.Database.ExecuteSqlRawAsync(@"
-                DELETE FROM ""ExamMarks"";
-                DELETE FROM ""Attendance"";
-                DELETE FROM ""AttendanceSessions"";
-                DELETE FROM ""ExamTimetables"";
-                DELETE FROM ""Timetables"";
-                DELETE FROM ""FacultySubjectMappings"";
-                DELETE FROM ""Students"";
-                DELETE FROM ""Faculty"";
-                DELETE FROM ""AspNetUserRoles"";
-                DELETE FROM ""AspNetUserTokens"";
-                DELETE FROM ""AspNetUserClaims"";
-                DELETE FROM ""AspNetUserLogins"";
-                DELETE FROM ""AspNetUsers"";
-            ");
-            _log.LogInformation("Truncated tables in FK-safe order for full rebuild.");
-        }
-        else if (attendanceCount < 5000)
-        {
-            if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Attendance missing ({A} rows Aug-Nov), regenerating attendance history only...", attendanceCount);
-            await _db.Database.ExecuteSqlRawAsync(@"
-                DELETE FROM ""ExamMarks"";
-                DELETE FROM ""Attendance"";
-                DELETE FROM ""AttendanceSessions"";
-                DELETE FROM ""ExamTimetables"";
-            ");
-            _log.LogInformation("Cleared attendance tables for regeneration.");
-        }
-        await SeedAdminAsync(cancellationToken);
-        facultyDbCount = await _db.Faculty.CountAsync(cancellationToken);
-        studentsDbCount = await _db.Students.CountAsync(cancellationToken);
-        attendanceCount = await _db.Attendance.CountAsync(cancellationToken);
-        timetableCount = await _db.Timetables.CountAsync(cancellationToken);
-
-        // If faculty and students are fully seeded AND attendance coverage is complete, skip heavy seeding
-        if (!resetEnabled && !_o.ForceReseed && await _db.Faculty.CountAsync(cancellationToken) >= 120 && await _db.Students.CountAsync(cancellationToken) >= 2500 && await _db.Users.CountAsync(cancellationToken) > 2500 && attendanceCount >= 5000)
-        {
-            if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Database already seeded. Skipping demo seeding.");
-            // Ensure exam timetables exist even if attendance is seeded
-            await SeedExamTimetableAsync(cancellationToken);
-            return;
-        }
-
-        if (!_o.SeedDemoData) return;
+        var needsPeople = !_o.ForceReseed && (facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0);
+        var needsAttendance = !_o.ForceReseed && attendanceCount < 5000;
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
         await SeedHolidaysAsync(cancellationToken);
-        if (resetEnabled || needsRebuild || facultyDbCount < facultyCsvCount * 0.8 || studentsDbCount < studentsCsvCount * 0.8 || timetableCount == 0)
+        if (_o.ForceReseed || needsPeople)
         {
             await SeedFacultyAsync(cancellationToken);
             await SeedStudentsAsync(cancellationToken);
@@ -261,7 +117,10 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         }
         await SeedNoticesAsync(cancellationToken);
         await SeedExamTimetableAsync(cancellationToken);
-        await SeedAttendanceHistoryAsync(cancellationToken);
+        if (_o.ForceReseed || needsAttendance)
+        {
+            await SeedAttendanceHistoryAsync(cancellationToken);
+        }
         await SelfCheckAsync(cancellationToken);
         if (watch.Elapsed.TotalSeconds > 5 && _log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding finished in {Seconds:0} s", watch.Elapsed.TotalSeconds);
 
@@ -277,93 +136,6 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     }
 
     // ------------------------------------------------------------------ base data
-
-    /// <summary>
-    /// EnsureCreated only builds the schema when the database does not exist at all, so a database created by an older
-    /// model (renamed or missing tables/columns) would never be fixed. Every table is rebuilt from the Dataset files,
-    /// so when the stored schema does not match the current model the database is dropped and created again.
-    /// </summary>
-    private async Task EnsureDatabaseSchemaAsync(CancellationToken cancellationToken = default)
-    {
-        // When running against a Supabase/Railway database that may already contain tables, EF Core migrations handle
-        // both brand-new databases and databases with drifted/already-existing tables gracefully. We prefer this path
-        // over raw CreateTablesAsync because EnsureCreatedAsync throws when tables already exist.
-        try
-        {
-            await _db.Database.MigrateAsync();
-        }
-        catch (Exception ex)
-        {
-            if (_usePostgres)
-            {
-                // In Postgres, if tables already exist (e.g., Error 42P07), fallback to EnsureCreatedAsync without throwing
-                try
-                {
-                    await _db.Database.EnsureCreatedAsync();
-                }
-                catch (NpgsqlException)
-                {
-                    // Existing tables already present, continue safely with seeding
-                }
-            }
-            else if (!_o.RecreateIfSchemaMismatch)
-            {
-                throw new InvalidOperationException($"Database schema migration failed: {ex.Message}. Set AttendX:RecreateIfSchemaMismatch to true.");
-            }
-        }
-
-        if (!_usePostgres)
-        {
-            // Only on SQL Server do we force-create if migrations reported nothing pending but tables are missing.
-            var creator = _db.Database.GetService<Microsoft.EntityFrameworkCore.Storage.IRelationalDatabaseCreator>();
-            if (await creator.ExistsAsync())
-            {
-                // Check whether all expected tables exist; if any are missing AND the user opts into rebuild, drop & recreate.
-                var missing = await MissingSchemaObjectsAsync();
-                if (missing.Count > 0 && _o.RecreateIfSchemaMismatch)
-                {
-                    await creator.EnsureDeletedAsync();
-                    await creator.CreateAsync();
-                    await creator.CreateTablesAsync();
-                }
-            }
-        }
-    }
-
-    private async Task<List<string>> MissingSchemaObjectsAsync(CancellationToken cancellationToken = default)
-    {
-        var expected = _db.Model.GetEntityTypes()
-            .SelectMany(e =>
-            {
-                var table = e.GetTableName();
-                return table == null ? [] : e.GetProperties().Select(p => $"{table.ToLowerInvariant()}.{p.GetColumnName().ToLowerInvariant()}");
-            })
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        ISet<string> actual;
-        if (_usePostgres)
-        {
-            actual = (await _db.Database.SqlQueryRaw<string>(
-                    @"SELECT lower(table_name) || '.' || lower(column_name) AS ""Value""
-                      FROM information_schema.columns
-                      WHERE table_schema = 'public'")
-                .ToListAsync())
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        }
-        else
-        {
-            actual = (await _db.Database.SqlQueryRaw<string>(
-                    @"SELECT lower(t.name) + '.' + lower(c.name) AS [Value]
-                      FROM sys.tables t INNER JOIN sys.columns c ON c.object_id = t.object_id")
-                .ToListAsync())
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        }
-
-        // Detect both missing columns (expected but not actual) and extra columns (actual but not expected)
-        var missing = expected.Except(actual, StringComparer.OrdinalIgnoreCase);
-        var extra = actual.Except(expected, StringComparer.OrdinalIgnoreCase);
-        return [.. missing.Union(extra).OrderBy(x => x)];
-    }
 
     private async Task SeedPeriodsAsync(CancellationToken cancellationToken = default)
     {
@@ -556,8 +328,10 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
     private async Task SeedStudentsAsync(CancellationToken cancellationToken = default)
     {
+        // Cache password hashes per ID — each student ID yields a distinct password, so we hash each once only.
+        var hashCache = new Dictionary<string, string>();
+        string HashFor(string id) => hashCache.TryGetValue(id, out var h) ? h : hashCache[id] = AccountPasswordHash(id);
         var rows = Read("students.csv");
-        var studentHash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedStudentPassword);
         var studentRole = (await _db.Roles.FirstAsync(r => r.Name == RoleNames.Student)).Id;
 
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
@@ -584,7 +358,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 string normEmail = email.ToUpperInvariant();
                 if (existingNormalizedEmails.Contains(normEmail)) continue;
 
-                    var user = NewUser(email, r["fullname"], AccountPasswordHash(sid), true);
+                    var user = NewUser(email, r["fullname"], HashFor(sid), true);
                     _db.Users.Add(user);
                     _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = studentRole });
                     _db.Students.Add(new Student
@@ -595,7 +369,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 existingNormalizedEmails.Add(normEmail);
                 existingStudentIDs.Add(sid);
                 added++;
-                if (added % 500 == 0) { await _db.SaveChangesAsync(cancellationToken); _db.ChangeTracker.Clear(); }
+                if (added % 200 == 0) { await _db.SaveChangesAsync(cancellationToken); _db.ChangeTracker.Clear(); }
             }
             await _db.SaveChangesAsync(cancellationToken);
             _db.ChangeTracker.Clear();
@@ -621,7 +395,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     string normEmail = email.ToUpperInvariant();
                     if (existingNormalizedEmails.Contains(normEmail) || existingStudentIDs.Contains(studentId)) continue;
 
-                    var user = NewUser(email, studentName, AccountPasswordHash(studentId), true);
+                    var user = NewUser(email, studentName, HashFor(studentId), true);
                     _db.Users.Add(user);
                     _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = studentRole });
                     _db.Students.Add(new Student
@@ -660,7 +434,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             var u = s.IdentityUserId != null ? await _users.FindByIdAsync(s.IdentityUserId) : await _users.FindByEmailAsync(s.Email);
             if (u == null)
             {
-                u = NewUser(s.Email, s.FullName, AccountPasswordHash(s.StudentID), true);
+                u = NewUser(s.Email, s.FullName, HashFor(s.StudentID), true);
                 await _users.CreateAsync(u, AccountPassword(s.StudentID));
                 await _users.AddToRoleAsync(u, RoleNames.Student);
             }
@@ -676,7 +450,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 }
                 if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
                 {
-                    u.PasswordHash = AccountPasswordHash(s.StudentID);
+                    u.PasswordHash = HashFor(s.StudentID);
                     u.MustChangePassword = true;
                     await _users.UpdateAsync(u);
                 }

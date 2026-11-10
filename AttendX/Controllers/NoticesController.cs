@@ -18,7 +18,7 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
     {
         var scope = await _user.GetScopeBranchIdAsync();
         var q = _db.Notices.AsNoTracking().AsQueryable();
-        if (scope != null) q = q.Where(n => n.BranchId == scope);
+        if (scope.HasValue) q = q.Where(n => n.BranchId == scope);
         return View(await q.OrderByDescending(n => n.PublishedAt).Take(200).ToListAsync());
     }
 
@@ -31,7 +31,7 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
         var n = await _db.Notices.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
         if (n == null) return NotFound();
         var scope = await _user.GetScopeBranchIdAsync();
-        if (scope != null && n.BranchId != scope) return Forbid();
+        if (scope.HasValue && n.BranchId != scope) return Forbid();
         return View("Form", await Fill(new NoticeFormViewModel { Id = n.Id, Title = n.Title, Body = n.Body, Audience = n.Audience, BranchId = n.BranchId, SectionId = n.SectionId, ExpiresAt = n.ExpiresAt, IsPinned = n.IsPinned }));
     }
 
@@ -53,16 +53,23 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
         Notice n;
         if (m.Id.HasValue)
         {
-            n = (await _db.Notices.FindAsync(m.Id.Value))!;
-            if (scope != null && n.BranchId != scope) return Forbid();
+            var existing = await _db.Notices.FindAsync(m.Id.Value);
+            if (existing == null) { TempData["Error"] = "That notice no longer exists."; return RedirectToAction(nameof(Index)); }
+            if (scope.HasValue && existing.BranchId != scope) return Forbid();
+            n = existing;
         }
-        else { n = new Notice { PublishedAt = DateTime.Now, CreatedBy = _user.DisplayName }; _db.Notices.Add(n); }
+        else { n = new Notice { PublishedAt = DateTime.UtcNow, CreatedBy = _user.DisplayName }; _db.Notices.Add(n); }
         n.Title = m.Title.Trim(); n.Body = m.Body.Trim(); n.Audience = m.Audience;
         n.BranchId = (m.Audience is "Branch" or "Section") ? m.BranchId : null;
         n.SectionId = m.Audience == "Section" ? m.SectionId : null;
         n.ExpiresAt = m.ExpiresAt?.Date.AddDays(1).AddSeconds(-1); n.IsPinned = m.IsPinned;
         try { await _db.SaveChangesAsync(); }
-        catch (DbUpdateException) { await _audit.LogAsync("NoticeUpdated", "Notice", n.Id.ToString(), branchId: n.BranchId); TempData["Error"] = "Could not save the notice."; return View("Form", await Fill(m)); }
+        catch (DbUpdateException)
+        {
+            _db.ChangeTracker.Clear();
+            TempData["Error"] = "Could not save the notice.";
+            return View("Form", await Fill(m));
+        }
         await _audit.LogAsync(m.Id.HasValue ? "NoticeUpdated" : "NoticeCreated", "Notice", n.Id.ToString(), newValues: $"{n.Audience}: {n.Title}", branchId: n.BranchId);
         TempData["Success"] = "Notice saved.";
         return RedirectToAction(nameof(Index));
@@ -73,14 +80,14 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
     {
         var n = await _db.Notices.FindAsync(id);
         var scope = await _user.GetScopeBranchIdAsync();
-        if (n != null && (scope == null || n.BranchId == scope)) { _db.Notices.Remove(n); await _db.SaveChangesAsync(); await _audit.LogAsync("NoticeDeleted", "Notice", id.ToString(), oldValues: n.Title, branchId: n.BranchId); }
+        if (n != null && (!scope.HasValue || n.BranchId == scope)) { _db.Notices.Remove(n); await _db.SaveChangesAsync(); await _audit.LogAsync("NoticeDeleted", "Notice", id.ToString(), oldValues: n.Title, branchId: n.BranchId); }
         return RedirectToAction(nameof(Index));
     }
 
     private async Task<NoticeFormViewModel> Fill(NoticeFormViewModel m)
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        m.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (scope == null || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
+        m.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (!scope.HasValue || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
         var bid = m.BranchId ?? scope;
         if (bid != null) m.Sections = await _db.Sections.AsNoTracking().Where(s => s.BranchId == bid && s.IsActive).OrderBy(s => s.Name).Select(s => new SelectListItem(s.Name, s.Id.ToString())).ToListAsync();
         return m;

@@ -76,7 +76,7 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
         {
             start = DateTime.Today.Year;
         }
-        var ny = new AcademicYear { Name = _o.AcademicYear, StartDate = new DateTime(start, 6, 1), EndDate = new DateTime(start + 1, 5, 31), IsCurrent = true };
+        var ny = new AcademicYear { Name = _o.AcademicYear ?? DateTime.UtcNow.Year.ToString(), StartDate = new DateTime(start, 6, 1), EndDate = new DateTime(start + 1, 5, 31), IsCurrent = true };
         _db.AcademicYears.Add(ny);
         try { await _db.SaveChangesAsync(); }
         catch (DbUpdateException ex) { throw new InvalidOperationException("Could not create academic year.", ex); }

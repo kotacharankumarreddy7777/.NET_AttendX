@@ -22,12 +22,7 @@ public class ErrorController : Controller
         if (exFeature?.Error != null)
         {
             var ex = exFeature.Error;
-            vm.ErrorType = ex.GetType().FullName;
-            vm.ErrorMessage = ex.ToString();
             vm.RequestId = HttpContext.TraceIdentifier;
-            vm.TraceIdentifier = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
-            vm.RequestPath = exFeature.Path;
-            vm.TimestampUtc = DateTime.UtcNow;
             _log.LogCritical(ex, "Unhandled exception on {Path} (RequestId {RequestId}, Code {Code})", exFeature.Path, vm.RequestId, c);
         }
         Response.StatusCode = c;

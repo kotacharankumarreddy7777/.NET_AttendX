@@ -14,14 +14,14 @@ public class FacultyController(AppDbContext db, IFacultyService faculty, ICurren
     {
         var scope = await _user.GetScopeBranchIdAsync();
         var q = _db.Branches.AsNoTracking().Where(b => b.IsActive);
-        if (scope != null) q = q.Where(b => b.Id == scope);
+        if (scope.HasValue) q = q.Where(b => b.Id == scope);
         return await q.OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name + " (" + b.Code + ")", b.Id.ToString())).ToListAsync();
     }
 
     public async Task<IActionResult> Index(int? branchId, string? search, string status = "active")
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        if (scope != null) branchId = scope;
+        if (scope.HasValue) branchId = scope;
         var q = _db.Faculty.AsNoTracking().Include(f => f.Branch).AsQueryable();
         if (status == "active") q = q.Where(f => f.IsActive); else if (status == "inactive") q = q.Where(f => !f.IsActive);
         if (branchId != null) q = q.Where(f => f.BranchId == branchId);

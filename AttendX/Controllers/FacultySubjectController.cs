@@ -13,7 +13,7 @@ public class FacultySubjectController(AppDbContext db, ICurrentUser user, ISetti
     public async Task<IActionResult> Index(int? facultyId, int? branchId)
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        if (scope != null) branchId = scope;
+        if (scope.HasValue) branchId = scope;
         var year = await _settings.GetCurrentYearAsync();
         var q = _db.FacultySubjectMappings.AsNoTracking().Include(m => m.Faculty).Include(m => m.Subject).Include(m => m.Section).Include(m => m.Branch)
             .Where(m => m.AcademicYearId == year.Id);
@@ -74,7 +74,7 @@ public class FacultySubjectController(AppDbContext db, ICurrentUser user, ISetti
     private async Task<List<SelectListItem>> FacultyItems(int? scope)
     {
         var q = _db.Faculty.AsNoTracking().Where(f => f.IsActive);
-        if (scope != null) q = q.Where(f => f.BranchId == scope);
+        if (scope.HasValue) q = q.Where(f => f.BranchId == scope);
         return await q.OrderBy(f => f.FullName).Select(f => new SelectListItem(f.FullName + " (" + f.FacultyID + ")", f.Id.ToString())).ToListAsync();
     }
 
@@ -82,7 +82,7 @@ public class FacultySubjectController(AppDbContext db, ICurrentUser user, ISetti
     {
         var scope = await _user.GetScopeBranchIdAsync();
         m.Faculty = await FacultyItems(scope);
-        m.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (scope == null || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
+        m.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (!scope.HasValue || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
         if (m.BranchId > 0)
         {
             m.Sections = await _db.Sections.AsNoTracking().Where(s => s.BranchId == m.BranchId && s.IsActive).OrderBy(s => s.Name).Select(s => new SelectListItem(s.Name, s.Id.ToString())).ToListAsync();

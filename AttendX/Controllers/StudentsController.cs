@@ -17,7 +17,7 @@ public class StudentsController(AppDbContext db, IStudentService students, IQrSe
     {
         var scope = await _user.GetScopeBranchIdAsync();
         var q = _db.Branches.AsNoTracking().Where(b => b.IsActive);
-        if (scope != null) q = q.Where(b => b.Id == scope);
+        if (scope.HasValue) q = q.Where(b => b.Id == scope);
         return await q.OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name + " (" + b.Code + ")", b.Id.ToString())).ToListAsync();
     }
     private async Task<List<SelectListItem>> SectionItems(int? branchId)
@@ -29,7 +29,7 @@ public class StudentsController(AppDbContext db, IStudentService students, IQrSe
     private async Task<bool> InScope(int branchId)
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        return scope == null || scope == branchId;
+        return !scope.HasValue || scope == branchId;
     }
     private async Task Fill(StudentFormViewModel m)
     {
@@ -41,7 +41,7 @@ public class StudentsController(AppDbContext db, IStudentService students, IQrSe
     public async Task<IActionResult> Index(string? search, int? branchId, int? sectionId, int? semester, int? year, string status = "active", int page = 1)
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        if (scope != null) branchId = scope;
+        if (scope.HasValue) branchId = scope;
         var q = _db.Students.AsNoTracking().Include(s => s.Branch).Include(s => s.Section).AsQueryable();
         if (status == "active") q = q.Where(s => s.IsActive); else if (status == "inactive") q = q.Where(s => !s.IsActive);
         if (branchId != null) q = q.Where(s => s.BranchId == branchId);
@@ -191,7 +191,24 @@ public class StudentsController(AppDbContext db, IStudentService students, IQrSe
     public async Task<IActionResult> BulkQr(int? branchId, int? sectionId, int? semester, bool regenerate)
     {
         if (branchId == null && sectionId == null && semester == null) { TempData["Error"] = "Select a filter (branch, section or semester) before generating QRs."; return RedirectToAction(nameof(Index)); }
-        if (!await InScope(branchId ?? 0) && branchId != null) return Forbid();
+        var scope = await _user.GetScopeBranchIdAsync();
+        if (scope.HasValue)
+        {
+            // Scope the operation to the scoped branch; if sectionId is provided, it must belong to the scoped branch.
+            if (branchId != null && branchId != scope.Value) return Forbid();
+            branchId = scope;
+            if (sectionId != null)
+            {
+                var sec = await _db.Sections.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sectionId);
+                if (sec == null || sec.BranchId != scope.Value) return Forbid();
+            }
+        }
+        else if (sectionId != null)
+        {
+            var sec = await _db.Sections.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sectionId);
+            if (sec == null) return NotFound();
+            branchId ??= sec.BranchId;
+        }
         var q = _db.Students.AsNoTracking().Where(s => s.IsActive);
         if (branchId != null) q = q.Where(s => s.BranchId == branchId);
         if (sectionId != null) q = q.Where(s => s.SectionId == sectionId);

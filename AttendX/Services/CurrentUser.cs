@@ -33,11 +33,6 @@ public class CurrentUser(IHttpContextAccessor http, AppDbContext db) : ICurrentU
             if (id != null && _faculty != null && !string.IsNullOrWhiteSpace(_faculty.FullName)) return _faculty.FullName;
             var claim = P?.FindFirstValue(ClaimTypes.Name) ?? P?.FindFirstValue("FullName");
             if (!string.IsNullOrWhiteSpace(claim)) return claim;
-            if (id != null)
-            {
-                var appUser = _db.Users.AsNoTracking().FirstOrDefault(u => u.Id == id);
-                if (!string.IsNullOrWhiteSpace(appUser?.FullName)) return appUser.FullName;
-            }
             return P?.Identity?.Name ?? "system";
         }
     }

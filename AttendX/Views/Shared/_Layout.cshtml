@@ -132,7 +132,7 @@
 <div class="pt-main">
     <div class="pt-ctx">
         <div class="crumb"><a href="/">Home</a> / <b>@ViewData["Title"]</b></div>
-        <div class="info"><span>Academic Year @year.Name</span></div>
+        @if (year != null) { <div class="info"><span>Academic Year @year.Name</span></div> }
     </div>
     <main class="pt-content" id="main">
         @if (TempData["Success"] is string ok) { <div class="alert alert-success alert-dismissible fade show" role="status">@ok<button class="btn-close" data-bs-dismiss="alert" type="button" aria-label="Close"></button></div> }

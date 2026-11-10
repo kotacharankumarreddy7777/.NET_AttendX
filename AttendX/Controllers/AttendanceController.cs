@@ -62,7 +62,7 @@ public class AttendanceController(IAttendanceService att, ICurrentUser user, App
     {
         var result = await _att.SaveManualAsync(m.TimetableId, m.Date, m.Status, m.Reason, new DeviceInfo(Clean(m.DeviceId), m.Latitude, m.Longitude));
         TempData[result.Ok ? "Success" : "Error"] = result.Message;
-        return result.Ok ? RedirectToAction(nameof(Mark), new { id = m.TimetableId, date = m.Date.ToString("yyyy-MM-dd") }) : RedirectToAction(nameof(Mark), new { id = m.TimetableId, date = m.Date.ToString("yyyy-MM-dd") });
+        return RedirectToAction(nameof(Mark), new { id = m.TimetableId, date = m.Date.ToString("yyyy-MM-dd") });
     }
 
     [HttpGet]
@@ -102,11 +102,11 @@ public class AttendanceController(IAttendanceService att, ICurrentUser user, App
     public async Task<IActionResult> Corrections(DateTime? date, int? branchId, int? sectionId)
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        if (scope != null) branchId = scope;
+        if (scope.HasValue) branchId = scope;
         var d = (date ?? _clock.Now.Date).Date;
         if (d > _clock.Now.Date) d = _clock.Now.Date;
         var vm = new CorrectionPickerViewModel { Date = d, BranchId = branchId, SectionId = sectionId };
-        vm.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (scope == null || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
+        vm.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (!scope.HasValue || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
         if (branchId != null) vm.Sections = await _db.Sections.AsNoTracking().Where(s => s.BranchId == branchId && s.IsActive).OrderBy(s => s.Name).Select(s => new SelectListItem(s.Name, s.Id.ToString())).ToListAsync();
         if (sectionId != null) vm.Slots = await _att.GetSlotsAsync(d, null, branchId, sectionId);
         return View(vm);

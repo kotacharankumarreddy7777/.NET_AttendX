@@ -132,34 +132,27 @@ public class AccountController(SignInManager<ApplicationUser> signIn, UserManage
         return View("RoleLogin", m);
     }
 
+    /// <summary>
+    /// Returns whether an account exists for the given Institution ID. Does NOT return the email (PII).
+    /// The email/ID pair is only ever echoed after the user proves possession of the password at sign-in.
+    /// </summary>
     [AllowAnonymous, HttpGet("account/lookup")]
-    public async Task<IActionResult> Lookup(string role, string id, string? email)
+    public async Task<IActionResult> Lookup(string role, string id)
     {
-        if (string.IsNullOrWhiteSpace(role)) return Json(new { email = "", institutionId = "" });
+        if (string.IsNullOrWhiteSpace(role)) return Json(new { exists = false });
         id = (id?.Trim() ?? "").ToUpperInvariant();
-        email = email?.Trim() ?? "";
 
         if (role == "student")
         {
-            if (!string.IsNullOrEmpty(email) && string.IsNullOrWhiteSpace(id)) id = EmailHelper.NormalizeToId(email);
             var studentRec = await _db.Students.AsNoTracking().FirstOrDefaultAsync(x => x.StudentID == id);
-            if (studentRec != null && studentRec.IsActive)
-            {
-                return Json(new { email = studentRec.Email, institutionId = studentRec.StudentID });
-            }
-            return Json(new { email = "", institutionId = id });
+            return Json(new { exists = studentRec != null && studentRec.IsActive });
         }
         else if (role == "faculty")
         {
-            if (!string.IsNullOrEmpty(email) && string.IsNullOrWhiteSpace(id)) id = EmailHelper.NormalizeToId(email);
             var facultyRec = await _db.Faculty.AsNoTracking().FirstOrDefaultAsync(x => x.FacultyID == id);
-            if (facultyRec != null && facultyRec.IsActive)
-            {
-                return Json(new { email = facultyRec.Email, institutionId = facultyRec.FacultyID });
-            }
-            return Json(new { email = "", institutionId = id });
+            return Json(new { exists = facultyRec != null && facultyRec.IsActive });
         }
-        return Json(new { email = "", institutionId = "" });
+        return Json(new { exists = false });
     }
 
     [HttpPost]

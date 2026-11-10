@@ -27,14 +27,15 @@ public class LiveController(AppDbContext db, INoticeService notices, ICurrentUse
     public async Task<IActionResult> Health()
     {
         if (!(_user.IsAdmin || _user.IsHod || _user.IsFaculty)) return Forbid();
-        int students = await _db.Students.CountAsync(s => s.IsActive);
-        int attendanceToday = 0;
-        try
-        {
-            var today = _clock.Now.Date;
-            attendanceToday = await _db.Attendance.CountAsync(a => a.Date == today);
-        }
-        catch { }
+        var today = _clock.Now.Date;
+        var scope = await _user.GetScopeBranchIdAsync();
+        bool isGlobal = _user.IsAdmin;
+        var students = isGlobal
+            ? await _db.Students.CountAsync(s => s.IsActive)
+            : scope != null ? await _db.Students.CountAsync(s => s.IsActive && s.BranchId == scope) : 0;
+        var attendanceToday = isGlobal
+            ? await _db.Attendance.CountAsync(a => a.Date == today)
+            : scope != null ? await _db.Attendance.CountAsync(a => a.Date == today && a.BranchId == scope) : 0;
         return Json(new { ok = true, students, attendanceToday, serverTime = _clock.Now.ToString("hh:mm tt, dd MMM yyyy") });
     }
 
@@ -52,7 +53,10 @@ public class LiveController(AppDbContext db, INoticeService notices, ICurrentUse
         if (!_user.IsAdmin)
         {
             var scope = await _user.GetScopeBranchIdAsync();
-            if (scope != null && scope != -1) q = q.Where(t => t.BranchId == scope);
+            if (scope.HasValue && scope.Value != -1)
+            {
+                q = q.Where(t => t.BranchId == scope.Value);
+            }
             else
             {
                 var fid = (await _user.GetFacultyAsync())?.Id ?? -1;
