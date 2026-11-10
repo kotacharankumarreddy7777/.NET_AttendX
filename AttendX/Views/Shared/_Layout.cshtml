@@ -140,7 +140,7 @@
         @if (TempData["TempPassword"] is string tp) { <div class="alert alert-warning alert-dismissible fade show">@tp<button class="btn-close" data-bs-dismiss="alert" type="button" aria-label="Close"></button></div> }
         @RenderBody()
     </main>
-    <footer class="pt-footer">&copy; @DateTime.Now.Year @inst.Name. All rights reserved.</footer>
+    <footer class="pt-footer">&copy; @DateTime.UtcNow.Year @inst.Name. All rights reserved.</footer>
 </div>
 <nav class="pt-tabbar" aria-label="Quick navigation">
     @if (student)

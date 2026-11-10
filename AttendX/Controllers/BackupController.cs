@@ -9,7 +9,7 @@ public class BackupController(IBackupService backup, IMasterDataExportService ex
     /// <summary>All admin / faculty / student / subject / timetable data in one Excel workbook.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ExportExcel()
-        => File(await _export.BuildAsync(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"AttendX_Master_Data_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+        => File(await _export.BuildAsync(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"AttendX_Master_Data_{DateTime.UtcNow:yyyyMMdd_HHmm}.xlsx");
 
     public async Task<IActionResult> Index() => View(await _backup.GetAsync());
 

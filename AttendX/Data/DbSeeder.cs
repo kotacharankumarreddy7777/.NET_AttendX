@@ -408,7 +408,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         SectionId = sec.Id,
                         Semester = sem,
                         Year = YearHelper.FromSemester(sem),
-                        JoiningDate = DateTime.Today.AddMonths(-6),
+                        JoiningDate = DateTime.UtcNow.Date.AddMonths(-6),
                         QRPath = "on-demand",
                         IsActive = true,
                         IdentityUserId = user.Id
@@ -521,7 +521,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     private async Task SeedNoticesAsync(CancellationToken cancellationToken = default)
     {
         if (await _db.Notices.AnyAsync()) return;
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         _db.Notices.AddRange(
             new Notice { Title = "Welcome to AttendX", Body = "Attendance is now digital. Faculty mark attendance in the period window; students can follow their attendance live on the student dashboard.", Audience = "All", IsPinned = true, PublishedAt = now.AddDays(-3), CreatedBy = "System Administrator" },
             new Notice { Title = "75% attendance is required", Body = "Students below 75% attendance may not be allowed to sit the end-semester exams. Check your dashboard regularly and raise a query if a record looks wrong.", Audience = "Student", PublishedAt = now.AddDays(-2), CreatedBy = "System Administrator" },
@@ -538,7 +538,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
         var currentYear = await _settings.GetCurrentYearAsync();
         var startDate = currentYear?.StartDate ?? new DateTime(2026, 8, 1);
-        var today = DateTime.Today;
+        var today = DateTime.UtcNow.Date;
         if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding attendance from {Start} to {Today} (real timetable mapping)...", startDate.ToString("yyyy-MM-dd"), today.ToString("yyyy-MM-dd"));
 
         var rnd = new Random(2026);

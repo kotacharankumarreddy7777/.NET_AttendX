@@ -44,7 +44,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Subject>().HasIndex(x => x.SubjectCode).IsUnique();
         b.Entity<Subject>().HasIndex(x => new { x.BranchId, x.Semester });
 
-        string activeFilter = Database.IsSqlServer() ? "[IsActive] = 1" : "\"IsActive\" = TRUE";
+        const string activeFilter = "\"IsActive\" = TRUE";
 
         // Duplicate ACTIVE student IDs are impossible; an ID may be reused after the old student is deactivated.
         b.Entity<Student>().HasIndex(x => x.StudentID).IsUnique().HasFilter(activeFilter);
@@ -74,19 +74,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         // Core duplicate protection: a student can have only ONE record per date + period.
         b.Entity<Attendance>().HasIndex(x => new { x.StudentId, x.Date, x.Period }).IsUnique();
         // Dashboard/report aggregates filter on a date range, so Date needs its own index with the aggregated columns included.
-        var attendanceDateIndex = b.Entity<Attendance>().HasIndex(x => x.Date);
-        if (Database.IsSqlServer())
-        {
-            Microsoft.EntityFrameworkCore.SqlServerIndexBuilderExtensions.IncludeProperties(
-                attendanceDateIndex,
-                nameof(Models.Attendance.Status), nameof(Models.Attendance.BranchId), nameof(Models.Attendance.Semester), nameof(Models.Attendance.SectionId),
-                nameof(Models.Attendance.SubjectId), nameof(Models.Attendance.FacultyId), nameof(Models.Attendance.AttendanceSessionId), nameof(Models.Attendance.MarkedAt));
-        }
-        else
-        {
-            // PostgreSQL does not support INCLUDE on indexes, so we add an explicit BRIN/B-tree column set instead.
-            // The unique check + date aggregate filter still benefit from the (StudentId, Date, Period) unique index above.
-        }
+        b.Entity<Attendance>().HasIndex(x => x.Date);
         b.Entity<Attendance>().HasIndex(x => new { x.SectionId, x.Date });
         b.Entity<Attendance>().HasIndex(x => new { x.BranchId, x.Semester, x.Date });
         b.Entity<Attendance>().HasIndex(x => new { x.SubjectId, x.Date });

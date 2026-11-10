@@ -82,7 +82,7 @@ public class StudentFormViewModel
     [Range(1, int.MaxValue, ErrorMessage = "Select a branch")] public int BranchId { get; set; }
     [Range(1, int.MaxValue, ErrorMessage = "Select a section")] public int SectionId { get; set; }
     [Range(1, 8)] public int Semester { get; set; } = 1;
-    [DataType(DataType.Date), Display(Name = "Joining date")] public DateTime JoiningDate { get; set; } = DateTime.Today;
+    [DataType(DataType.Date), Display(Name = "Joining date")] public DateTime JoiningDate { get; set; } = DateTime.UtcNow.Date;
     public IFormFile? Photo { get; set; }
     public string? WebcamPhoto { get; set; }
     public string? ExistingPhoto { get; set; }

@@ -29,7 +29,7 @@ public class AuditService : IAuditService
     {
         _db.AuditLogs.Add(new AuditLog
         {
-            Timestamp = _clock?.Now ?? DateTime.Now,
+            Timestamp = _clock?.Now ?? DateTime.UtcNow,
             ActorId = actorId ?? _user.UserId,
             ActorName = actorName ?? _user.DisplayName,
             Action = action,

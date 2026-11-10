@@ -11,6 +11,6 @@ public class ApplicationUser : IdentityUser
     /// <summary>When true the user is forced to change the password on next login.</summary>
     public bool MustChangePassword { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
 }

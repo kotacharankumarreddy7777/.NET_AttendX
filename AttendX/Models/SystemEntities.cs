@@ -17,7 +17,7 @@ public class AttendanceSettings
     public bool OfflineSyncEnabled { get; set; } = true;
     [Range(0, 1440)] public int OfflineMaxDelayMinutes { get; set; } = 120;
     [Range(1, 12)] public int PeriodCount { get; set; } = 7;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>Attendance threshold for a branch / semester / section. Most specific matching rule wins.</summary>
@@ -36,7 +36,7 @@ public class ThresholdRule
 public class AuditLog
 {
     public long Id { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.Now;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     [StringLength(450)] public string? ActorId { get; set; }
     [StringLength(150)] public string ActorName { get; set; } = "";
     [Required, StringLength(60)] public string Action { get; set; } = "";
@@ -53,7 +53,7 @@ public class AuditLog
 public class BackupHistory
 {
     public int Id { get; set; }
-    public DateTime At { get; set; } = DateTime.Now;
+    public DateTime At { get; set; } = DateTime.UtcNow;
     [StringLength(20)] public string Action { get; set; } = "Backup";   // Backup / Restore
     [StringLength(200)] public string FileName { get; set; } = "";
     public long SizeBytes { get; set; }

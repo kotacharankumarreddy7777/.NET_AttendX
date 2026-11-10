@@ -8,7 +8,7 @@ public class HolidaysController(AppDbContext db, IAuditService audit) : Controll
 
     public async Task<IActionResult> Index() => View(await _db.Holidays.AsNoTracking().OrderBy(h => h.Date).ToListAsync());
 
-    public IActionResult Create() => View("Form", new Holiday { Date = DateTime.Today });
+    public IActionResult Create() => View("Form", new Holiday { Date = DateTime.UtcNow.Date });
 
     public async Task<IActionResult> Edit(int id)
     {
