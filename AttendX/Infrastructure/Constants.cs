@@ -44,6 +44,7 @@ public class AttendXOptions
     public bool ForceAdminPasswordChange { get; set; } = false;
     public bool AutoExportExcel { get; set; } = true;
     public bool SeedDemoData { get; set; } = true;
+    public bool SeedAttendanceHistory { get; set; } = false;
     public bool ForceReseed { get; set; } = false;
     public int SeedHistoryDays { get; set; } = 14;
 }

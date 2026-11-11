@@ -13,7 +13,7 @@ namespace AttendX.Data;
 /// <summary>
 /// Creates the database on first run and seeds everything from the Dataset folder (CSV files). Every step only adds what is MISSING.
 /// Fast path: users are inserted directly with ONE pre-computed password hash per password (no per-user PBKDF2), students/faculty in batches,
-/// attendance history with SqlBulkCopy.  Dataset: subjects, faculty, students, timetable, holidays (CSV) + AttendX_Master_Data.xlsx.
+/// Attendance history: runs ONLY when "AttendX:SeedAttendanceHistory"=true (a one-off local/shell run), never on a normal web boot.  Dataset: subjects, faculty, students, timetable, holidays (CSV) + AttendX_Master_Data.xlsx.
 /// </summary>
 public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleManager<IdentityRole> roles, IOptions<AttendXOptions> o, IWebHostEnvironment env,
                 ISettingsService settings, IMasterDataExportService export, ILogger<DbSeeder> log)
@@ -119,7 +119,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         }
         await SeedNoticesAsync(cancellationToken);
         await SeedExamTimetableAsync(cancellationToken);
-        if (_o.ForceReseed || needsAttendance)
+        if (_o.SeedAttendanceHistory && (_o.ForceReseed || needsAttendance))
         {
             await SeedAttendanceHistoryAsync(cancellationToken);
         }
@@ -644,6 +644,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 table.Columns.Add("SectionId", typeof(int)); table.Columns.Add("BranchId", typeof(int)); table.Columns.Add("Semester", typeof(int));
                 table.Columns.Add("Date", typeof(DateTime)); table.Columns.Add("Period", typeof(int)); table.Columns.Add("Status", typeof(string));
                 table.Columns.Add("MarkedAt", typeof(DateTime)); table.Columns.Add("AttendanceSessionId", typeof(int)); table.Columns.Add("Source", typeof(string)); table.Columns.Add("DeviceId", typeof(string));
+                table.Columns.Add("RowVersion", typeof(byte[]));
 
                 for (int i = 0; i < chunk.Length; i++)
                 {
@@ -654,14 +655,14 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         double p = prop[s.Id];
                         if (decliners.Contains(s.Id) && date >= today.AddDays(-14)) p *= 0.55;
                         var status = rnd.NextDouble() < p ? (rnd.NextDouble() < 0.06 ? "Late" : "Present") : "Absent";
-                        table.Rows.Add(s.Id, t.SubjectId, t.FacultyId, t.SectionId, s.BranchId, s.Semester, date, t.Period, status, date + t.StartTime.Add(TimeSpan.FromMinutes(5)), sessions[i].Id, "Manual", "seed");
+                        table.Rows.Add(s.Id, t.SubjectId, t.FacultyId, t.SectionId, s.BranchId, s.Semester, date, t.Period, status, date + t.StartTime.Add(TimeSpan.FromMinutes(5)), sessions[i].Id, "Manual", "seed", new byte[0]);
                     }
                 }
 
                 if (_usePostgres)
                 {
                     var conn = (NpgsqlConnection)_db.Database.GetDbConnection();
-                    using var writer = conn.BeginBinaryImport("COPY \"Attendance\" (\"StudentId\", \"SubjectId\", \"FacultyId\", \"SectionId\", \"BranchId\", \"Semester\", \"Date\", \"Period\", \"Status\", \"MarkedAt\", \"AttendanceSessionId\", \"Source\", \"DeviceId\") FROM STDIN (FORMAT BINARY)");
+                    using var writer = conn.BeginBinaryImport("COPY \"Attendance\" (\"StudentId\", \"SubjectId\", \"FacultyId\", \"SectionId\", \"BranchId\", \"Semester\", \"Date\", \"Period\", \"Status\", \"MarkedAt\", \"AttendanceSessionId\", \"Source\", \"DeviceId\", \"RowVersion\") FROM STDIN (FORMAT BINARY)");
                     foreach (DataRow row in table.Rows)
                     {
                         writer.StartRow();
@@ -678,6 +679,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         writer.Write(row.Field<int>("AttendanceSessionId"), NpgsqlTypes.NpgsqlDbType.Integer);
                         writer.Write(row.Field<string>("Source")!, NpgsqlTypes.NpgsqlDbType.Varchar);
                         writer.Write(row.Field<string>("DeviceId")!, NpgsqlTypes.NpgsqlDbType.Varchar);
+                        writer.Write(row.Field<byte[]>("RowVersion")!, NpgsqlTypes.NpgsqlDbType.Bytea);
                     }
                     writer.Complete();
                 }
