@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 
@@ -62,7 +63,11 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     }
 });
 
-builder.Services.AddDataProtection();
+var dataProtectionKeys = Environment.GetEnvironmentVariable("DATA_PROTECTION_KEYS")
+    ?? (builder.Environment.IsDevelopment() ? Path.Combine(builder.Environment.ContentRootPath, ".keys") : "/tmp/attendx-keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeys))
+    .SetApplicationName("AttendX");
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
     {
@@ -134,6 +139,7 @@ builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHostedService<DatabaseInitializationService>();
 
 var app = builder.Build();
+app.Lifetime.ApplicationStarted.Register(() => app.Logger.LogInformation("AttendX started. Environment={Environment}", app.Environment.EnvironmentName));
 
 if (app.Environment.IsDevelopment()) app.UseDeveloperExceptionPage();
 else { app.UseExceptionHandler("/Error"); }

@@ -21,15 +21,17 @@ public static class ConnectionHelper
             var port = uri.Port > 0 ? uri.Port : 5432;
             var db = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
 
-            var npgsqlSb = new Npgsql.NpgsqlConnectionStringBuilder
-            {
-                Host = host,
-                Port = port,
-                Database = db,
-                Username = user,
-                Password = pass,
-                SslMode = Npgsql.SslMode.Prefer
-            };
+             var isNeon = host.Contains(".neon.tech", StringComparison.OrdinalIgnoreCase);
+             var npgsqlSb = new Npgsql.NpgsqlConnectionStringBuilder
+             {
+                 Host = host,
+                 Port = port,
+                 Database = db,
+                 Username = user,
+                 Password = pass,
+                 SslMode = isNeon ? Npgsql.SslMode.Require : Npgsql.SslMode.Prefer,
+                 ChannelBinding = isNeon ? Npgsql.ChannelBinding.Require : Npgsql.ChannelBinding.Disable
+             };
 
             if (!string.IsNullOrEmpty(uri.Query))
             {
@@ -45,6 +47,11 @@ public static class ConnectionHelper
                         {
                             if (Enum.TryParse<Npgsql.SslMode>(v, true, out var ssl))
                                 npgsqlSb.SslMode = ssl;
+                        }
+                        else if (k.Equals("channel_binding", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (Enum.TryParse<Npgsql.ChannelBinding>(v, true, out var cb))
+                                npgsqlSb.ChannelBinding = cb;
                         }
                         else if (k.Equals("pooling", StringComparison.OrdinalIgnoreCase) && bool.TryParse(v, out var pool))
                         {

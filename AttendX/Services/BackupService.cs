@@ -104,7 +104,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, IOptions<AttendX
     {
         if (IsPostgres)
         {
-            return (false, "Database backups on PostgreSQL are managed via Supabase/Railway automated backups.");
+            return (false, "Database backups on PostgreSQL are managed via Neon automated backups and instant restore.");
         }
 
         var fileName = $"{DbName}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.bak";
@@ -136,7 +136,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, IOptions<AttendX
     {
         if (IsPostgres)
         {
-            return (false, "Database restoration on PostgreSQL is managed via Supabase/Railway.");
+            return (false, "Database restoration on PostgreSQL is managed via Neon instant restore / branch restore.");
         }
 
         if (string.IsNullOrWhiteSpace(fileName) || Path.GetFileName(fileName) != fileName || !fileName.EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
