@@ -50,7 +50,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
         {
             npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
             npgsql.CommandTimeout(120);
-            npgsql.MaxBatchSize(500);
+            npgsql.MaxBatchSize(100);
         });
     }
     else
