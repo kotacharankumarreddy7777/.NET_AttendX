@@ -3,6 +3,7 @@ services:
     name: attendx
     env: docker
     dockerfilePath: ./Dockerfile
+    plan: starter
     healthCheckPath: /health/live
     envVars:
       - key: DATABASE_URL
@@ -22,4 +23,8 @@ services:
       - key: PORT
         value: 8080
       - key: DATA_PROTECTION_KEYS
-        value: /tmp/attendx-keys
+        value: /data/keys
+    disk:
+      name: attendx-keys
+      mountPath: /data
+      sizeGB: 1
