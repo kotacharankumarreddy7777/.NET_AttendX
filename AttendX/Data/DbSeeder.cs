@@ -289,44 +289,78 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             _db.ChangeTracker.Clear();
         }
 
-        // Ensure every faculty has a login and standardized email
+        // Ensure every faculty has a login and standardized email (bulk path: no per-user roundtrips)
         var allFaculty = await _db.Faculty.ToListAsync();
+        _db.ChangeTracker.AutoDetectChangesEnabled = false;
+        var userIds = allFaculty.Select(f => f.IdentityUserId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        var existingUsers = (await _db.Users.Where(u => userIds.Contains(u.Id)).ToListAsync()).ToDictionary(u => u.Id);
+        var emails = allFaculty.Select(f => EmailHelper.FacultyEmail(f.FacultyID, f.FullName).ToUpperInvariant()).Distinct().ToList();
+        var existingByEmail = (await _db.Users.Where(u => u.NormalizedEmail != null && emails.Contains(u.NormalizedEmail)).ToListAsync())
+            .ToDictionary(u => u.NormalizedEmail!, StringComparer.OrdinalIgnoreCase);
+
+        var bulkRoleIds = (await _db.Roles.AsNoTracking().ToListAsync()).ToDictionary(r => r.Name!, r => r.Id, StringComparer.OrdinalIgnoreCase);
+        var facultyRoleId = bulkRoleIds[RoleNames.Faculty];
+        var hodRoleId = bulkRoleIds[RoleNames.Hod];
+        var existingRolePairs = (await _db.UserRoles.Where(ur => ur.RoleId == facultyRoleId || ur.RoleId == hodRoleId).ToListAsync())
+            .Select(ur => (ur.UserId, ur.RoleId)).ToHashSet();
+
         foreach (var f in allFaculty)
         {
-                var expectedEmail = EmailHelper.FacultyEmail(f.FacultyID, f.FullName);
-            if (f.Email != expectedEmail)
-            {
-                f.Email = expectedEmail;
-            }
+            var expectedEmail = EmailHelper.FacultyEmail(f.FacultyID, f.FullName);
+            var normEmail = expectedEmail.ToUpperInvariant();
+            if (f.Email != expectedEmail) f.Email = expectedEmail;
 
-            var u = f.IdentityUserId != null ? await _users.FindByIdAsync(f.IdentityUserId) : await _users.FindByEmailAsync(f.Email);
+            ApplicationUser? u = f.IdentityUserId != null && existingUsers.TryGetValue(f.IdentityUserId, out var byId) ? byId
+                : existingByEmail.TryGetValue(normEmail, out var byEmail) ? byEmail
+                : null;
+
             if (u == null)
             {
-                u = NewUser(f.Email, f.FullName, AccountPasswordHash(f.FacultyID), true);
-                await _users.CreateAsync(u, AccountPassword(f.FacultyID));
-                await _users.AddToRoleAsync(u, RoleNames.Faculty);
-                if (f.IsHOD) await _users.AddToRoleAsync(u, RoleNames.Hod);
+                u = NewUser(expectedEmail, f.FullName, AccountPasswordHash(f.FacultyID), true);
+                _db.Users.Add(u);
+                existingUsers[u.Id] = u;
+                existingByEmail[normEmail] = u;
+                if (!existingRolePairs.Contains((u.Id, facultyRoleId)))
+                {
+                    _db.UserRoles.Add(new IdentityUserRole<string> { UserId = u.Id, RoleId = facultyRoleId });
+                    existingRolePairs.Add((u.Id, facultyRoleId));
+                }
+                if (f.IsHOD && !existingRolePairs.Contains((u.Id, hodRoleId)))
+                {
+                    _db.UserRoles.Add(new IdentityUserRole<string> { UserId = u.Id, RoleId = hodRoleId });
+                    existingRolePairs.Add((u.Id, hodRoleId));
+                }
             }
             else
             {
-                if (u.Email != f.Email)
+                if (u.Email != expectedEmail)
                 {
-                    u.Email = f.Email;
-                    u.NormalizedEmail = f.Email.ToUpperInvariant();
-                    u.UserName = f.Email;
-                    u.NormalizedUserName = f.Email.ToUpperInvariant();
-                    await _users.UpdateAsync(u);
+                    u.Email = expectedEmail;
+                    u.NormalizedEmail = normEmail;
+                    u.UserName = expectedEmail;
+                    u.NormalizedUserName = normEmail;
                 }
                 if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
                 {
                     u.PasswordHash = AccountPasswordHash(f.FacultyID);
                     u.MustChangePassword = true;
-                    await _users.UpdateAsync(u);
+                }
+                if (!existingRolePairs.Contains((u.Id, facultyRoleId)))
+                {
+                    _db.UserRoles.Add(new IdentityUserRole<string> { UserId = u.Id, RoleId = facultyRoleId });
+                    existingRolePairs.Add((u.Id, facultyRoleId));
+                }
+                if (f.IsHOD && !existingRolePairs.Contains((u.Id, hodRoleId)))
+                {
+                    _db.UserRoles.Add(new IdentityUserRole<string> { UserId = u.Id, RoleId = hodRoleId });
+                    existingRolePairs.Add((u.Id, hodRoleId));
                 }
             }
             f.IdentityUserId = u.Id;
         }
         await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        _db.ChangeTracker.AutoDetectChangesEnabled = true;
     }
 
     private async Task SeedStudentsAsync(CancellationToken cancellationToken = default)
@@ -429,38 +463,60 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             }
         }
 
-        // Ensure every student has a login and standardized email
+        // Ensure every student has a login and standardized email (bulk path)
+        _db.ChangeTracker.AutoDetectChangesEnabled = false;
         var allStudents = await _db.Students.ToListAsync();
+        var studentUserIds = allStudents.Select(s => s.IdentityUserId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        var existingStudentUsers = (await _db.Users.Where(u => studentUserIds.Contains(u.Id)).ToListAsync()).ToDictionary(u => u.Id);
+        var studentEmails = allStudents.Select(s => EmailHelper.StudentEmail(s.StudentID, s.FullName).ToUpperInvariant()).Distinct().ToList();
+        var existingStudentByEmail = (await _db.Users.Where(u => u.NormalizedEmail != null && studentEmails.Contains(u.NormalizedEmail)).ToListAsync())
+            .ToDictionary(u => u.NormalizedEmail!, StringComparer.OrdinalIgnoreCase);
+
+        var studentRoleIds = (await _db.Roles.AsNoTracking().ToListAsync()).ToDictionary(r => r.Name!, r => r.Id, StringComparer.OrdinalIgnoreCase);
+        var studentRoleId = studentRoleIds[RoleNames.Student];
+        var existingStudentRolePairs = (await _db.UserRoles.Where(ur => ur.RoleId == studentRoleId).ToListAsync())
+            .Select(ur => (ur.UserId, ur.RoleId)).ToHashSet();
+
         foreach (var s in allStudents)
         {
             var expectedEmail = EmailHelper.StudentEmail(s.StudentID, s.FullName);
-            if (s.Email != expectedEmail)
-            {
-                s.Email = expectedEmail;
-            }
+            var normEmail = expectedEmail.ToUpperInvariant();
+            if (s.Email != expectedEmail) s.Email = expectedEmail;
 
-            var u = s.IdentityUserId != null ? await _users.FindByIdAsync(s.IdentityUserId) : await _users.FindByEmailAsync(s.Email);
+            ApplicationUser? u = s.IdentityUserId != null && existingStudentUsers.TryGetValue(s.IdentityUserId, out var byId) ? byId
+                : existingStudentByEmail.TryGetValue(normEmail, out var byEmail) ? byEmail
+                : null;
+
             if (u == null)
             {
-                u = NewUser(s.Email, s.FullName, HashFor(s.StudentID), true);
-                await _users.CreateAsync(u, AccountPassword(s.StudentID));
-                await _users.AddToRoleAsync(u, RoleNames.Student);
+                u = NewUser(expectedEmail, s.FullName, HashFor(s.StudentID), true);
+                _db.Users.Add(u);
+                existingStudentUsers[u.Id] = u;
+                existingStudentByEmail[normEmail] = u;
+                if (!existingStudentRolePairs.Contains((u.Id, studentRoleId)))
+                {
+                    _db.UserRoles.Add(new IdentityUserRole<string> { UserId = u.Id, RoleId = studentRoleId });
+                    existingStudentRolePairs.Add((u.Id, studentRoleId));
+                }
             }
             else
             {
-                if (u.Email != s.Email)
+                if (u.Email != expectedEmail)
                 {
-                    u.Email = s.Email;
-                    u.NormalizedEmail = s.Email.ToUpperInvariant();
-                    u.UserName = s.Email;
-                    u.NormalizedUserName = s.Email.ToUpperInvariant();
-                    await _users.UpdateAsync(u);
+                    u.Email = expectedEmail;
+                    u.NormalizedEmail = normEmail;
+                    u.UserName = expectedEmail;
+                    u.NormalizedUserName = normEmail;
                 }
                 if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
                 {
                     u.PasswordHash = HashFor(s.StudentID);
                     u.MustChangePassword = true;
-                    await _users.UpdateAsync(u);
+                }
+                if (!existingStudentRolePairs.Contains((u.Id, studentRoleId)))
+                {
+                    _db.UserRoles.Add(new IdentityUserRole<string> { UserId = u.Id, RoleId = studentRoleId });
+                    existingStudentRolePairs.Add((u.Id, studentRoleId));
                 }
             }
             s.IdentityUserId = u.Id;
