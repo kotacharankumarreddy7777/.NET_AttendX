@@ -2,6 +2,7 @@
 @inject INoticeService NoticeSvc
 @inject ISettingsService SettingsSvc
 @inject IOptions<InstitutionOptions> Inst
+@inject IAppearanceService AppearanceSvc
 @inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
 @inject AppDbContext Db
 @{
@@ -38,21 +39,22 @@
         }
     }
     if (string.IsNullOrEmpty(emailDisplay)) emailDisplay = roleText;
-    // Active nav item: match the controller, and when actions are given, only those actions (so e.g. Attendance/Corrections
-    // does not light up "Today's Classes" and Notices/Index does not light up "Notices").
     string A(string c, params string[] actions) =>
         string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase) &&
         (actions.Length == 0 || actions.Contains(act, StringComparer.OrdinalIgnoreCase)) ? "active" : "";
     string[] todayActions = ["Index", "Mark", "Scan", "SessionToken", "ScanPost", "Sync"];
     var inst = Inst.Value;
+    var branding = await AppearanceSvc.GetBrandingAsync();
+    var prefs = Context.Items["UserPreferences"] as AttendX.Models.UserPreference ?? new AttendX.Models.UserPreference { UserId = appUser?.Id ?? "" };
+    var tokens = AppearanceSvc.DesignTokens(branding, prefs);
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="@prefs.Theme" class="@(prefs.Density == "compact" ? "density-compact" : "")" style="@tokens">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="csrf" content="@token" />
-    <meta name="theme-color" content="#14305A" />
+    <meta name="theme-color" content="@branding.PrimaryColor" />
     <link rel="manifest" href="~/manifest.webmanifest" />
     <title>@ViewData["Title"] - @inst.ShortName</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -83,6 +85,7 @@
         <a class="@A("Exam", "Results")" asp-controller="Exam" asp-action="Results" title="Exams & Results"><i class="bi bi-file-earmark-bar-graph"></i> <span class="nav-text">Exams & Results</span></a>
         <a class="@A("Notices", "Board")" asp-controller="Notices" asp-action="Board" title="Notices"><i class="bi bi-megaphone"></i> <span class="nav-text">Notices</span></a>
         <a class="@A("Student", "Report")" asp-controller="Student" asp-action="Report" title="Attendance Report"><i class="bi bi-file-earmark-pdf"></i> <span class="nav-text">Attendance Report</span></a>
+        <a class="@A("Appearance", "Index")" asp-controller="Appearance" asp-action="Index" title="Appearance"><i class="bi bi-palette"></i> <span class="nav-text">Appearance</span></a>
         <a class="@A("Account", "ChangePassword")" asp-controller="Account" asp-action="ChangePassword" title="Change Password"><i class="bi bi-key"></i> <span class="nav-text">Change Password</span></a>
     }
     @if (staff)
@@ -99,6 +102,7 @@
         <div class="grp"><span class="nav-text">Reports</span></div>
         <a class="@A("Reports")" asp-controller="Reports" asp-action="Index" title="Reports"><i class="bi bi-file-earmark-bar-graph"></i> <span class="nav-text">Reports</span></a>
         <a class="@A("Analytics")" asp-controller="Analytics" asp-action="Index" title="Attendance Summary"><i class="bi bi-table"></i> <span class="nav-text">Attendance Summary</span></a>
+        <a class="@A("Appearance", "Index")" asp-controller="Appearance" asp-action="Index" title="Appearance"><i class="bi bi-palette"></i> <span class="nav-text">Appearance</span></a>
         <a class="@A("Notices", "Board")" asp-controller="Notices" asp-action="Board" title="Notices"><i class="bi bi-megaphone"></i> <span class="nav-text">Notices</span></a>
     }
     @if (admin || hod)
@@ -125,6 +129,7 @@
     {
         <a class="@A("Backup")" asp-controller="Backup" asp-action="Index" title="Backup and Export"><i class="bi bi-database-down"></i> <span class="nav-text">Backup and Export</span></a>
         <a class="@A("Settings")" asp-controller="Settings" asp-action="Index" title="Settings"><i class="bi bi-gear"></i> <span class="nav-text">Settings</span></a>
+        <a class="@A("Appearance", "Index")" asp-controller="Appearance" asp-action="Index" title="Appearance & Branding"><i class="bi bi-palette"></i> <span class="nav-text">Appearance &amp; Branding</span></a>
     }
     @if (staff) { <a class="@A("Account", "ChangePassword")" asp-controller="Account" asp-action="ChangePassword" title="Change Password"><i class="bi bi-key"></i> <span class="nav-text">Change Password</span></a> }
 </aside>

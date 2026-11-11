@@ -49,6 +49,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
         {
             npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
             npgsql.CommandTimeout(120);
+            npgsql.MaxBatchSize(500);
         });
     }
     else
@@ -65,10 +66,10 @@ builder.Services.AddDataProtection();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
     {
-        o.Password.RequiredLength = 5;
-        o.Password.RequireDigit = false;
-        o.Password.RequireUppercase = false;
-        o.Password.RequireLowercase = false;
+        o.Password.RequiredLength = 8;
+        o.Password.RequireDigit = true;
+        o.Password.RequireUppercase = true;
+        o.Password.RequireLowercase = true;
         o.Password.RequireNonAlphanumeric = false;
         o.User.RequireUniqueEmail = true;
         o.Lockout.MaxFailedAccessAttempts = 5;
@@ -128,6 +129,7 @@ builder.Services.AddScoped<INoticeService, NoticeService>();
 builder.Services.AddScoped<IStudentPortalService, StudentPortalService>();
 builder.Services.AddScoped<IMasterDataExportService, MasterDataExportService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAppearanceService, AppearanceService>();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHostedService<DatabaseInitializationService>();
 
@@ -156,6 +158,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<AppearanceMiddleware>();
 
 // Liveness: process is up. No dependency checks.
 app.MapGet("/health/live", (ReadinessState state) => Results.Json(new { status = "live" }));

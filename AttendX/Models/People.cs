@@ -19,7 +19,7 @@ public class Student
     [StringLength(200)] public string? QRPath { get; set; }
     /// <summary>Login account of this student (Identity user). Students sign in with Institution ID (StudentID) + email + password.</summary>
     [StringLength(450)] public string? IdentityUserId { get; set; }
-    public DateTime JoiningDate { get; set; } = DateTime.UtcNow.Date;
+    public DateTime JoiningDate { get; set; } = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -285,6 +285,31 @@ body{transition:background-color .3s ease}
   --success:#1E7F4F; --success-bg:#E7F4EC; --warning:#9A6B00; --warning-bg:#FDF3DC; --danger:#B42318; --danger-bg:#FCE9E7; --info:#1D5FA8; --info-bg:#E6F0FB;
   --header-h:56px; --side-w:210px; --side-w-collapsed:72px; --radius:4px;
 }
+/* ---------- customizable design tokens (set inline by AppearanceService) ---------- */
+:root{
+  --ax-primary:var(--navy); --ax-secondary:var(--navy-dark); --ax-accent:var(--accent);
+  --ax-radius:var(--radius); --ax-density-pad:0.5rem 0.75rem; --ax-font-size:1rem;
+  --ax-sidebar-collapsed:false; --ax-animations:true;
+}
+/* ---------- dark mode ---------- */
+[data-theme="dark"]{
+  --bg:#0B1120; --surface:#121929; --border:#2E3A4E; --text:#EAF0FA; --muted:#9FB0C8; --row-hover:#1E2A3E;
+  --navy-dark:#0E2442;
+}
+[data-theme="dark"] .pt-header{background:var(--navy)!important}
+[data-theme="dark"] .auth-header{background:var(--navy)!important}
+[data-theme="dark"] .btn-ax,.btn-primary{background:var(--ax-primary,var(--navy))!important;border-color:var(--ax-primary,var(--navy))!important}
+/* ---------- density ---------- */
+body.density-compact .pt-side a{padding:.32rem .6rem;font-size:.85rem}
+body.density-compact .pt-main{padding-top:calc(var(--header-h) + 2px)}
+body.density-compact .table>thead>tr>th,body.density-compact .table>tbody>tr>td{padding:.32rem .5rem;font-size:.875rem}
+body.density-compact .btn-ax,.btn{padding:.275rem .6rem;font-size:.875rem}
+body.density-compact .form-control,.form-select{padding:.3rem .55rem;font-size:.875rem}
+body.density-compact .ax-card{padding:.55rem}
+/* ---------- radius ---------- */
+.btn-ax,.btn,.ax-card,.pt-header,.pt-side a,.alert,.badge,.modal-content,.dropdown-menu{border-radius:var(--ax-radius,var(--radius))!important}
+/* ---------- animations off ---------- */
+body[data-animations="false"] *{animation:none !important;transition:none !important}
 *,*::before,*::after{box-sizing:border-box}
 html{font-size:14px;-webkit-text-size-adjust:100%;scroll-behavior:smooth;overflow-x:hidden;overflow-y:auto;height:auto;min-height:100vh}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif;line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden;overflow-y:auto}

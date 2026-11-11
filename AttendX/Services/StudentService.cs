@@ -239,7 +239,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
             var section = sections.FirstOrDefault(s => s.BranchId == branch.Id && s.Name.Equals(Get("section"), StringComparison.OrdinalIgnoreCase));
             if (section == null) { result.Errors.Add($"Line {line}: section '{Get("section")}' not found in {branch.Code}."); continue; }
             if (!int.TryParse(Get("semester"), out var sem)) { result.Errors.Add($"Line {line}: invalid semester."); continue; }
-            var join = DateTime.TryParse(Get("joiningdate"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var jd) ? jd : DateTime.UtcNow.Date;
+            var join = DateTime.TryParse(Get("joiningdate"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var jd) ? jd : DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
             var vm = new StudentFormViewModel { FullName = Get("fullname"), Email = Get("email"), Phone = Get("phone"), BranchId = branch.Id, SectionId = section.Id, Semester = sem, JoiningDate = join };
             var ctx = new ValidationContext(vm);

@@ -1,4 +1,6 @@
 using System.Data;
+using System.Globalization;
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -228,8 +230,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         if (await _db.Holidays.AnyAsync()) return;
         foreach (var r in Read("holidays.csv"))
         {
-            if (!DateTime.TryParse(r.TryGetValue("date", out var dv) ? dv : "", out var d)) continue;
-            _db.Holidays.Add(new Holiday { Date = d.Date, Name = r.TryGetValue("name", out var nv) ? nv : "", Type = r.TryGetValue("type", out var tv) ? tv : "Holiday" });
+            if (!DateTime.TryParse(r.TryGetValue("date", out var dv) ? dv : "", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var d)) continue;
+            var dateUtc = DateTime.SpecifyKind(d.Date, DateTimeKind.Utc);
+            _db.Holidays.Add(new Holiday { Date = dateUtc, Name = r.TryGetValue("name", out var nv) ? nv : "", Type = r.TryGetValue("type", out var tv) ? tv : "Holiday" });
         }
         await _db.SaveChangesAsync();
     }
@@ -328,10 +331,15 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
     private async Task SeedStudentsAsync(CancellationToken cancellationToken = default)
     {
-        // Cache password hashes per ID — each student ID yields a distinct password, so we hash each once only.
-        var hashCache = new Dictionary<string, string>();
-        string HashFor(string id) => hashCache.TryGetValue(id, out var h) ? h : hashCache[id] = AccountPasswordHash(id);
+        // Pre-compute password hashes in parallel (PBKDF2 is CPU-bound; each student ID yields one hash).
         var rows = Read("students.csv");
+        var hashCache = new ConcurrentDictionary<string, string>();
+        Parallel.ForEach(rows.Where(r => !string.IsNullOrWhiteSpace(r.TryGetValue("studentid", out var sv) ? sv.Trim() : "")), r =>
+        {
+            var sid = r["studentid"].Trim();
+            hashCache[sid] = AccountPasswordHash(sid);
+        });
+        string HashFor(string id) => hashCache.TryGetValue(id, out var h) ? h : AccountPasswordHash(id);
         var studentRole = (await _db.Roles.FirstAsync(r => r.Name == RoleNames.Student)).Id;
 
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
@@ -364,7 +372,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     _db.Students.Add(new Student
                     {
                         StudentID = r["studentid"], FullName = r["fullname"], Email = email, Phone = r["phone"], BranchId = b.Id, SectionId = sec.Id, Semester = sem,
-                        Year = YearHelper.FromSemester(sem), JoiningDate = DateTime.Parse(r["joiningdate"]).Date, QRPath = "on-demand", IsActive = true, IdentityUserId = user.Id
+                        Year = YearHelper.FromSemester(sem), JoiningDate = DateTime.SpecifyKind(DateTime.Parse(r["joiningdate"], CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal).Date, DateTimeKind.Utc), QRPath = "on-demand", IsActive = true, IdentityUserId = user.Id
                     });
                 existingNormalizedEmails.Add(normEmail);
                 existingStudentIDs.Add(sid);
@@ -408,7 +416,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         SectionId = sec.Id,
                         Semester = sem,
                         Year = YearHelper.FromSemester(sem),
-                        JoiningDate = DateTime.UtcNow.Date.AddMonths(-6),
+                        JoiningDate = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc).AddMonths(-6),
                         QRPath = "on-demand",
                         IsActive = true,
                         IdentityUserId = user.Id
@@ -537,8 +545,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         if (tts.Count == 0 || students.Count == 0) return;
 
         var currentYear = await _settings.GetCurrentYearAsync();
-        var startDate = currentYear?.StartDate ?? new DateTime(2026, 8, 1);
-        var today = DateTime.UtcNow.Date;
+        var startDate = currentYear?.StartDate ?? new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+        var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
         if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding attendance from {Start} to {Today} (real timetable mapping)...", startDate.ToString("yyyy-MM-dd"), today.ToString("yyyy-MM-dd"));
 
         var rnd = new Random(2026);
@@ -546,7 +554,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         // Exclude exam periods where no regular classes are held
         var examDates = await _db.ExamTimetables.AsNoTracking()
             .Where(e => e.ExamDate >= startDate && e.ExamDate <= today)
-            .Select(e => e.ExamDate.Date)
+            .Select(e => DateTime.SpecifyKind(e.ExamDate.Date, DateTimeKind.Utc))
             .Distinct()
             .ToListAsync();
         var excludeDates = holidays.Union(examDates).ToHashSet();
@@ -681,11 +689,11 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         {
             if (!academics.Any(a => a.Name == "2026-27"))
             {
-                academics.Add(new AcademicYear { Name = "2026-27", StartDate = new DateTime(2026, 8, 1), EndDate = new DateTime(2027, 5, 31), IsCurrent = true });
+                academics.Add(new AcademicYear { Name = "2026-27", StartDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2027, 5, 31, 0, 0, 0, DateTimeKind.Utc), IsCurrent = true });
             }
             if (!academics.Any(a => a.Name == "2027-28"))
             {
-                academics.Add(new AcademicYear { Name = "2027-28", StartDate = new DateTime(2027, 8, 1), EndDate = new DateTime(2028, 5, 31), IsCurrent = false });
+                academics.Add(new AcademicYear { Name = "2027-28", StartDate = new DateTime(2027, 8, 1, 0, 0, 0, DateTimeKind.Utc), EndDate = new DateTime(2028, 5, 31, 0, 0, 0, DateTimeKind.Utc), IsCurrent = false });
             }
             await _db.SaveChangesAsync(cancellationToken);
             academics = await _db.AcademicYears.ToListAsync(cancellationToken);
@@ -710,13 +718,13 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             // Even sem: Mid1 Mar, Mid2 Apr, Final May + summer break Jun-Jul
             var windowsForYear = new List<(DateTime Start, DateTime End, string Type)>
             {
-                (new DateTime(startY, 9, 22), new DateTime(startY, 9, 27), "Mid1"),
-                (new DateTime(startY, 11, 17), new DateTime(startY, 11, 22), "Mid2"),
-                (new DateTime(startY, 12, 21), new DateTime(startY + 1, 1, 5), "Final"),
+                (new DateTime(startY, 9, 22, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY, 9, 27, 0, 0, 0, DateTimeKind.Utc), "Mid1"),
+                (new DateTime(startY, 11, 17, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY, 11, 22, 0, 0, 0, DateTimeKind.Utc), "Mid2"),
+                (new DateTime(startY, 12, 21, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 1, 5, 0, 0, 0, DateTimeKind.Utc), "Final"),
                 // Even sem next calendar year
-                (new DateTime(startY + 1, 3, 10), new DateTime(startY + 1, 3, 16), "Mid1"),
-                (new DateTime(startY + 1, 4, 8), new DateTime(startY + 1, 4, 14), "Mid2"),
-                (new DateTime(startY + 1, 5, 5), new DateTime(startY + 1, 5, 20), "Final")
+                (new DateTime(startY + 1, 3, 10, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 3, 16, 0, 0, 0, DateTimeKind.Utc), "Mid1"),
+                (new DateTime(startY + 1, 4, 8, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 4, 14, 0, 0, 0, DateTimeKind.Utc), "Mid2"),
+                (new DateTime(startY + 1, 5, 5, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 5, 20, 0, 0, 0, DateTimeKind.Utc), "Final")
             };
 
             foreach (var subj in subjects)

@@ -27,7 +27,7 @@ public class LiveController(AppDbContext db, INoticeService notices, ICurrentUse
     public async Task<IActionResult> Health()
     {
         if (!(_user.IsAdmin || _user.IsHod || _user.IsFaculty)) return Forbid();
-        var today = _clock.Now.Date;
+        var today = _clock.NowUtc.Date;
         var scope = await _user.GetScopeBranchIdAsync();
         bool isGlobal = _user.IsAdmin;
         var students = isGlobal
@@ -36,15 +36,15 @@ public class LiveController(AppDbContext db, INoticeService notices, ICurrentUse
         var attendanceToday = isGlobal
             ? await _db.Attendance.CountAsync(a => a.Date == today)
             : scope != null ? await _db.Attendance.CountAsync(a => a.Date == today && a.BranchId == scope) : 0;
-        return Json(new { ok = true, students, attendanceToday, serverTime = _clock.Now.ToString("hh:mm tt, dd MMM yyyy") });
+        return Json(new { ok = true, students, attendanceToday, serverTime = _clock.NowUtc.ToString("hh:mm tt, dd MMM yyyy") });
     }
 
     [HttpGet]
     public async Task<IActionResult> Slots(int? yearId, int? branchId, int? sectionId, int? semester)
     {
         if (!(_user.IsAdmin || _user.IsHod || _user.IsFaculty)) return Forbid();
-        var today = _clock.Now.Date;
-        var now = _clock.Now;
+        var today = _clock.NowUtc.Date;
+        var now = _clock.NowUtc;
         var q = _db.Timetables.AsNoTracking().Where(t => t.IsActive && t.Day == today.DayOfWeek);
         if (yearId != null) q = q.Where(t => t.AcademicYearId == yearId);
         if (branchId != null) q = q.Where(t => t.BranchId == branchId);

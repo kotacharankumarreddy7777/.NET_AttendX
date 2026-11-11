@@ -62,7 +62,7 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
         n.Title = m.Title.Trim(); n.Body = m.Body.Trim(); n.Audience = m.Audience;
         n.BranchId = (m.Audience is "Branch" or "Section") ? m.BranchId : null;
         n.SectionId = m.Audience == "Section" ? m.SectionId : null;
-        n.ExpiresAt = m.ExpiresAt?.Date.AddDays(1).AddSeconds(-1); n.IsPinned = m.IsPinned;
+        if (m.ExpiresAt != null) { var e = m.ExpiresAt.Value.Date.AddDays(1).AddSeconds(-1); n.ExpiresAt = DateTime.SpecifyKind(e, DateTimeKind.Utc); } else { n.ExpiresAt = null; } n.IsPinned = m.IsPinned;
         try { await _db.SaveChangesAsync(); }
         catch (DbUpdateException)
         {

@@ -30,7 +30,7 @@ public class NotificationService : INotificationService
             Audience = normalized,
             BranchId = branchId,
             SectionId = sectionId,
-            PublishedAt = _clock?.Now ?? DateTime.UtcNow,
+            PublishedAt = _clock?.NowUtc ?? DateTime.UtcNow,
             CreatedBy = "System"
         });
         await _db.SaveChangesAsync();

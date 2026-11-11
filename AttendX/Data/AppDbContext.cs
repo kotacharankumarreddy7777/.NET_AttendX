@@ -24,6 +24,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<AttendanceQuery> AttendanceQueries => Set<AttendanceQuery>();
     public DbSet<ExamTimetable> ExamTimetables => Set<ExamTimetable>();
     public DbSet<ExamMark> ExamMarks => Set<ExamMark>();
+    public DbSet<InstitutionBranding> InstitutionBranding => Set<InstitutionBranding>();
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -33,6 +35,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(x => x.MarksObtained).HasPrecision(5, 2);
             e.Property(x => x.MaxMarks).HasPrecision(5, 2);
         });
+
+        // User preference uniqueness + branding singleton
+        b.Entity<UserPreference>().HasKey(x => x.UserId);
+        b.Entity<InstitutionBranding>().HasData(new InstitutionBranding { Id = 1, UpdatedAt = new DateTime(2026, 11, 10, 9, 55, 38, 900, DateTimeKind.Utc).AddTicks(9670) });
 
         b.Entity<AcademicYear>().HasIndex(x => x.Name).IsUnique();
 
@@ -97,8 +103,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.Semester, x.ExamType, x.ExamDate });
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.BranchId, x.Semester, x.SubjectId, x.ExamType }).IsUnique();
 
-        b.Entity<Student>().Property(x => x.RowVersion).IsRowVersion();
-        b.Entity<Attendance>().Property(x => x.RowVersion).IsRowVersion();
+        b.Entity<Student>().Property(x => x.RowVersion).IsConcurrencyToken();
+        b.Entity<Attendance>().Property(x => x.RowVersion).IsConcurrencyToken();
 
         // Keep Identity FKs as Cascade; Restrict only domain cross-cutting FKs to avoid multiple-cascade-path errors on SQL Server.
         foreach (var fk in b.Model.GetEntityTypes()

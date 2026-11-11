@@ -17,18 +17,16 @@ namespace AttendX.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn)
                 .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
-
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("AttendX.Models.AcademicYear", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
@@ -49,7 +47,7 @@ namespace AttendX.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("AcademicYears");
+                    b.ToTable("AcademicYears", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.ApplicationUser", b =>
@@ -134,9 +132,8 @@ namespace AttendX.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("bigint")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("AttendanceSessionId")
                         .HasColumnType("integer");
@@ -212,16 +209,15 @@ namespace AttendX.Migrations
                     b.HasIndex("StudentId", "Date", "Period")
                         .IsUnique();
 
-                    b.ToTable("Attendance");
+                    b.ToTable("Attendance", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.AttendanceQuery", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("BranchId")
                         .HasColumnType("integer");
@@ -270,16 +266,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("StudentId", "Status");
 
-                    b.ToTable("AttendanceQueries");
+                    b.ToTable("AttendanceQueries", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.AttendanceSession", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("AcademicYearId")
                         .HasColumnType("integer");
@@ -339,16 +334,15 @@ namespace AttendX.Migrations
                     b.HasIndex("TimetableId", "Date")
                         .IsUnique();
 
-                    b.ToTable("AttendanceSessions");
+                    b.ToTable("AttendanceSessions", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.AttendanceSettings", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<decimal>("DefaultThreshold")
                         .HasPrecision(5, 2)
@@ -386,16 +380,15 @@ namespace AttendX.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AttendanceSettings");
+                    b.ToTable("AttendanceSettings", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.AuditLog", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("bigint")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -449,16 +442,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("Timestamp");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.BackupHistory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -491,16 +483,15 @@ namespace AttendX.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BackupHistories");
+                    b.ToTable("BackupHistories", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.Branch", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -523,16 +514,15 @@ namespace AttendX.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Branches");
+                    b.ToTable("Branches", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.ExamMark", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                        .HasColumnType("bigint")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -575,16 +565,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.ToTable("ExamMarks");
+                    b.ToTable("ExamMarks", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.ExamTimetable", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("AcademicYearId")
                         .HasColumnType("integer");
@@ -641,16 +630,15 @@ namespace AttendX.Migrations
                     b.HasIndex("AcademicYearId", "BranchId", "Semester", "SubjectId", "ExamType")
                         .IsUnique();
 
-                    b.ToTable("ExamTimetables");
+                    b.ToTable("ExamTimetables", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.Faculty", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int?>("BranchId")
                         .HasColumnType("integer");
@@ -713,16 +701,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("IdentityUserId");
 
-                    b.ToTable("Faculty");
+                    b.ToTable("Faculty", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.FacultySubjectMapping", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("AcademicYearId")
                         .HasColumnType("integer");
@@ -758,16 +745,15 @@ namespace AttendX.Migrations
                     b.HasIndex("FacultyId", "SubjectId", "SectionId", "AcademicYearId")
                         .IsUnique();
 
-                    b.ToTable("FacultySubjectMappings");
+                    b.ToTable("FacultySubjectMappings", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.Holiday", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
@@ -786,16 +772,65 @@ namespace AttendX.Migrations
 
                     b.HasIndex("Date");
 
-                    b.ToTable("Holidays");
+                    b.ToTable("Holidays", (string)null);
+                });
+
+            modelBuilder.Entity("AttendX.Models.InstitutionBranding", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+
+                    b.Property<string>("InstitutionName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("SecondaryColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("ShortName")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("InstitutionBranding", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            InstitutionName = "AttendX Institution",
+                            PrimaryColor = "#2563eb",
+                            SecondaryColor = "#64748b",
+                            ShortName = "AttendX",
+                            UpdatedAt = new DateTime(2026, 11, 10, 9, 55, 38, 900, DateTimeKind.Utc).AddTicks(9670)
+                        });
                 });
 
             modelBuilder.Entity("AttendX.Models.Notice", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("Audience")
                         .IsRequired()
@@ -836,16 +871,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("PublishedAt");
 
-                    b.ToTable("Notices");
+                    b.ToTable("Notices", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.PeriodDefinition", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("interval");
@@ -861,16 +895,15 @@ namespace AttendX.Migrations
                     b.HasIndex("PeriodNo")
                         .IsUnique();
 
-                    b.ToTable("PeriodDefinitions");
+                    b.ToTable("PeriodDefinitions", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.Section", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("BranchId")
                         .HasColumnType("integer");
@@ -888,16 +921,15 @@ namespace AttendX.Migrations
                     b.HasIndex("BranchId", "Name")
                         .IsUnique();
 
-                    b.ToTable("Sections");
+                    b.ToTable("Sections", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.Student", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("BranchId")
                         .HasColumnType("integer");
@@ -975,16 +1007,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("BranchId", "SectionId", "Semester");
 
-                    b.ToTable("Students");
+                    b.ToTable("Students", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.Subject", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("BranchId")
                         .HasColumnType("integer");
@@ -1015,16 +1046,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("BranchId", "Semester");
 
-                    b.ToTable("Subjects");
+                    b.ToTable("Subjects", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.ThresholdRule", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int?>("BranchId")
                         .HasColumnType("integer");
@@ -1049,16 +1079,15 @@ namespace AttendX.Migrations
 
                     b.HasIndex("SectionId");
 
-                    b.ToTable("ThresholdRules");
+                    b.ToTable("ThresholdRules", (string)null);
                 });
 
             modelBuilder.Entity("AttendX.Models.Timetable", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<int>("AcademicYearId")
                         .HasColumnType("integer");
@@ -1121,7 +1150,72 @@ namespace AttendX.Migrations
                         .IsUnique()
                         .HasFilter("\"IsActive\" = TRUE");
 
-                    b.ToTable("Timetables");
+                    b.ToTable("Timetables", (string)null);
+                });
+
+            modelBuilder.Entity("AttendX.Models.UserPreference", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("AccentColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<bool>("AnimationsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("BorderRadius")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("ContentWidth")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Density")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("FontFamily")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("FontSize")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("SecondaryColor")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<bool>("SidebarCollapsed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserPreferences", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1154,9 +1248,8 @@ namespace AttendX.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("ClaimType")
                         .HasColumnType("text");
@@ -1179,9 +1272,8 @@ namespace AttendX.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<string>("ClaimType")
                         .HasColumnType("text");

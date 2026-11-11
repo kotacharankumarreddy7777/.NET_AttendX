@@ -9,7 +9,17 @@ using Xunit;
 
 namespace AttendX.Tests;
 
-internal class FakeClock : IClock { public DateTime Now { get; set; } = new(2026, 10, 12, 10, 20, 0); }   // Monday 10:20
+/// <summary>IST wall-clock (2026-10-12 10:20 IST = 2026-10-12 04:50 UTC, a Monday).</summary>
+internal class FakeClock : IClock
+{
+    private DateTime _nowIst = new(2026, 10, 12, 10, 20, 0, DateTimeKind.Unspecified);
+
+    public DateTime NowIst => _nowIst;
+    public DateTime NowUtc => new DateTimeOffset(DateTime.SpecifyKind(_nowIst, DateTimeKind.Unspecified), SystemClock.IstOffset).UtcDateTime;
+    public DateTime TodayIst => DateTime.SpecifyKind(new DateTime(_nowIst.Year, _nowIst.Month, _nowIst.Day), DateTimeKind.Utc);
+
+    public void Set(DateTime newIst) { _nowIst = new DateTime(newIst.Year, newIst.Month, newIst.Day, newIst.Hour, newIst.Minute, newIst.Second, DateTimeKind.Unspecified); }
+}
 
 internal class FakeUser : ICurrentUser
 {
@@ -96,7 +106,7 @@ public class AttendanceServiceTests
     {
         var map = _students.ToDictionary(s => s.Id, s => s.Id == _students[0].Id ? "Absent" : "Present");
         map[_outsider.Id] = "Present";                          // student of another section must be ignored
-        var r = await _svc.SaveManualAsync(_tt.Id, _clock.Now.Date, map, null, Dev);
+        var r = await _svc.SaveManualAsync(_tt.Id, _clock.TodayIst, map, null, Dev);
         Assert.True(r.Ok, r.Message);
         Assert.Equal(3, r.Added);
         Assert.Equal(3, await _db.Attendance.CountAsync());
@@ -106,8 +116,8 @@ public class AttendanceServiceTests
     [Fact]
     public async Task Faculty_can_mark_or_make_changes_anytime_during_the_entire_day()
     {
-        _clock.Now = new DateTime(2026, 10, 12, 13, 0, 0);
-        var r = await _svc.SaveManualAsync(_tt.Id, _clock.Now.Date, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
+        _clock.Set(new DateTime(2026, 10, 12, 13, 0, 0));
+        var r = await _svc.SaveManualAsync(_tt.Id, _clock.TodayIst, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
         Assert.True(r.Ok, r.Message);
         Assert.Equal(3, await _db.Attendance.CountAsync());
     }
@@ -116,22 +126,22 @@ public class AttendanceServiceTests
     public async Task Another_faculty_cannot_mark_this_class()
     {
         _user.Faculty = _other;
-        var r = await _svc.SaveManualAsync(_tt.Id, _clock.Now.Date, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
+        var r = await _svc.SaveManualAsync(_tt.Id, _clock.TodayIst, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
         Assert.False(r.Ok);
     }
 
     [Fact]
     public async Task Admin_correction_after_period_needs_a_reason_and_is_audited()
     {
-        await _svc.SaveManualAsync(_tt.Id, _clock.Now.Date, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
-        _clock.Now = new DateTime(2026, 10, 12, 15, 0, 0);
+        await _svc.SaveManualAsync(_tt.Id, _clock.TodayIst, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
+        _clock.Set(new DateTime(2026, 10, 12, 15, 0, 0));
         _user.IsAdmin = true; _user.IsFaculty = false; _user.Faculty = null;
         var change = new Dictionary<int, string> { [_students[0].Id] = "Absent" };
 
-        var noReason = await _svc.SaveManualAsync(_tt.Id, _clock.Now.Date, change, " ", Dev);
+        var noReason = await _svc.SaveManualAsync(_tt.Id, _clock.TodayIst, change, " ", Dev);
         Assert.False(noReason.Ok);
 
-        var ok = await _svc.SaveManualAsync(_tt.Id, _clock.Now.Date, change, "Marked wrongly by mistake", Dev);
+        var ok = await _svc.SaveManualAsync(_tt.Id, _clock.TodayIst, change, "Marked wrongly by mistake", Dev);
         Assert.True(ok.Ok, ok.Message);
         Assert.Equal(1, ok.Updated);
         var audit = await _db.AuditLogs.FirstAsync(a => a.Action == "AttendanceCorrected");
@@ -159,7 +169,7 @@ public class AttendanceServiceTests
         Assert.Equal(ScanCode.WrongClass, (await _svc.ScanAsync(_tt.Id, _qr.GetStudentPayload(_outsider), token, Dev)).Code);
         Assert.Equal(ScanCode.SessionExpired, (await _svc.ScanAsync(_tt.Id, good, "not-a-valid-token", Dev)).Code);
 
-        _clock.Now = _clock.Now.AddMinutes(1);                  // token of an old 30 s window is now stale
+        _clock.Set(_clock.NowIst.AddMinutes(1));                  // token of an old 30 s window is now stale
         Assert.Equal(ScanCode.SessionExpired, (await _svc.ScanAsync(_tt.Id, good, token, Dev)).Code);
         Assert.Equal(0, await _db.Attendance.CountAsync());
     }
@@ -167,7 +177,7 @@ public class AttendanceServiceTests
     [Fact]
     public async Task Qr_scan_after_the_late_limit_is_stored_as_late()
     {
-        _clock.Now = new DateTime(2026, 10, 12, 10, 30, 0);     // > start + 15 min
+        _clock.Set(new DateTime(2026, 10, 12, 10, 30, 0));     // > start + 15 min
         var token = await Token();
         var r = await _svc.ScanAsync(_tt.Id, _qr.GetStudentPayload(_students[1]), token, Dev);
         Assert.Equal(ScanCode.Marked, r.Code);
@@ -192,11 +202,11 @@ public class AttendanceServiceTests
     [Fact]
     public async Task Marking_is_blocked_on_a_holiday()
     {
-        _db.Holidays.Add(new Holiday { Date = _clock.Now.Date, Name = "Test Holiday", Type = "Holiday" });
+        _db.Holidays.Add(new Holiday { Date = _clock.TodayIst, Name = "Test Holiday", Type = "Holiday" });
         await _db.SaveChangesAsync();
-        var r = await _svc.SaveManualAsync(_tt.Id, _clock.Now.Date, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
+        var r = await _svc.SaveManualAsync(_tt.Id, _clock.TodayIst, _students.ToDictionary(s => s.Id, _ => "Present"), null, Dev);
         Assert.False(r.Ok);
         Assert.Contains("Test Holiday", r.Message);
-        Assert.Empty(await _svc.GetSlotsAsync(_clock.Now.Date, null, null, null));
+        Assert.Empty(await _svc.GetSlotsAsync(_clock.TodayIst, null, null, null));
     }
 }

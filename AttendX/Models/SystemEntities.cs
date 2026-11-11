@@ -61,3 +61,33 @@ public class BackupHistory
     [StringLength(500)] public string? Message { get; set; }
     [StringLength(150)] public string? By { get; set; }
 }
+
+/// <summary>Singleton row (Id = 1) holding admin-controlled institutional branding.</summary>
+public class InstitutionBranding
+{
+    public int Id { get; set; }
+    [Required, StringLength(120)] public string InstitutionName { get; set; } = "AttendX Institution";
+    [Required, StringLength(40)] public string ShortName { get; set; } = "AttendX";
+    [Required, StringLength(7)] public string PrimaryColor { get; set; } = "#2563eb";
+    [Required, StringLength(7)] public string SecondaryColor { get; set; } = "#64748b";
+    [StringLength(300)] public string? LogoUrl { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Per-user persistent UI preferences. One row per authenticated user.</summary>
+public class UserPreference
+{
+    [StringLength(450)] public string UserId { get; set; } = "";
+    [Required, StringLength(10)] public string Theme { get; set; } = "system";        // system | light | dark
+    [Required, StringLength(7)] public string AccentColor { get; set; } = "#2563eb";
+    [Required, StringLength(7)] public string PrimaryColor { get; set; } = "#2563eb";
+    [Required, StringLength(7)] public string SecondaryColor { get; set; } = "#64748b";
+    [Required, StringLength(10)] public string Density { get; set; } = "comfortable"; // comfortable | compact
+    [Required, StringLength(10)] public string FontSize { get; set; } = "medium";      // small | medium | large
+    [Required, StringLength(20)] public string FontFamily { get; set; } = "system";     // system | serif | mono
+    [Required, StringLength(10)] public string BorderRadius { get; set; } = "md";      // none | sm | md | lg | full
+    public bool AnimationsEnabled { get; set; } = true;
+    public bool SidebarCollapsed { get; set; } = false;
+    [Required, StringLength(10)] public string ContentWidth { get; set; } = "wide";    // wide | normal | narrow
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

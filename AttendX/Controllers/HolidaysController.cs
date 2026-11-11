@@ -8,7 +8,7 @@ public class HolidaysController(AppDbContext db, IAuditService audit) : Controll
 
     public async Task<IActionResult> Index() => View(await _db.Holidays.AsNoTracking().OrderBy(h => h.Date).ToListAsync());
 
-    public IActionResult Create() => View("Form", new Holiday { Date = DateTime.UtcNow.Date });
+    public IActionResult Create() => View("Form", new Holiday { Date = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc) });
 
     public async Task<IActionResult> Edit(int id)
     {
@@ -22,7 +22,7 @@ public class HolidaysController(AppDbContext db, IAuditService audit) : Controll
         if (m.Name == null || string.IsNullOrWhiteSpace(m.Name)) ModelState.AddModelError(nameof(m.Name), "Name is required.");
         if (m.Type is not ("Holiday" or "Event" or "Exam")) ModelState.AddModelError(nameof(m.Type), "Choose Holiday, Event or Exam.");
         if (!ModelState.IsValid) return View("Form", m);
-        m.Date = m.Date.Date;
+        m.Date = DateTime.SpecifyKind(m.Date.Date, DateTimeKind.Utc);
         Holiday h;
         if (m.Id > 0)
         {

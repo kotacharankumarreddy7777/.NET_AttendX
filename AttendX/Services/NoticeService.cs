@@ -15,7 +15,7 @@ public class NoticeService(AppDbContext db, ICurrentUser user, IClock clock) : I
 
     public async Task<List<Notice>> VisibleAsync(int take = 50)
     {
-        var now = _clock.Now;
+        var now = _clock.NowUtc;
         IQueryable<Notice> q = _db.Notices.AsNoTracking().Where(n => n.ExpiresAt == null || n.ExpiresAt >= now);
         if (_user.IsAdmin) { }
         else if (_user.IsHod || _user.IsFaculty)
@@ -38,7 +38,7 @@ public class NoticeService(AppDbContext db, ICurrentUser user, IClock clock) : I
 
     public async Task<int> RecentCountAsync()
     {
-        var since = _clock.Now.AddDays(-7);
+        var since = _clock.NowUtc.AddDays(-7);
         return (await VisibleAsync(100)).Count(n => n.PublishedAt >= since);
     }
 }

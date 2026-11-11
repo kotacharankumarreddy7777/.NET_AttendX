@@ -28,8 +28,8 @@ public class AuditController(AppDbContext db, ICurrentUser user) : Controller
                 (a.Details != null && EF.Functions.Like(a.Details, "%" + esc + "%", "\\")) ||
                 (a.Reason != null && EF.Functions.Like(a.Reason, "%" + esc + "%", "\\")));
         }
-        if (from != null) { var f = from.Value.Date; q = q.Where(a => a.Timestamp >= f); }
-        if (to != null) { var t = to.Value.Date.AddDays(1); q = q.Where(a => a.Timestamp < t); }
+        if (from != null) { var f = from.Value.Date; q = q.Where(a => a.Timestamp >= DateTime.SpecifyKind(f, DateTimeKind.Utc)); }
+        if (to != null) { var t = to.Value.Date.AddDays(1); q = q.Where(a => a.Timestamp < DateTime.SpecifyKind(t, DateTimeKind.Utc)); }
         page = Math.Max(1, page);
         var list = new PagedList<AuditLog> { Page = page, PageSize = 40, TotalCount = await q.CountAsync() };
         list.Items = await q.OrderByDescending(a => a.Timestamp).Skip((page - 1) * 40).Take(40).ToListAsync();

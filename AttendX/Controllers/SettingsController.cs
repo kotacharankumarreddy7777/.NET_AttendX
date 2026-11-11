@@ -104,7 +104,7 @@ public class SettingsController(AppDbContext db, ISettingsService settings, IAud
     {
         if (string.IsNullOrWhiteSpace(name) || name.Length > 9 || end <= start) { TempData["Error"] = "Enter a name like 2027-28 and a valid date range."; return RedirectToAction(nameof(Index)); }
         if (await _db.AcademicYears.AnyAsync(y => y.Name == name.Trim())) { TempData["Error"] = "That academic year already exists."; return RedirectToAction(nameof(Index)); }
-        _db.AcademicYears.Add(new AcademicYear { Name = name.Trim(), StartDate = start.Date, EndDate = end.Date });
+        _db.AcademicYears.Add(new AcademicYear { Name = name.Trim(), StartDate = DateTime.SpecifyKind(start.Date, DateTimeKind.Utc), EndDate = DateTime.SpecifyKind(end.Date, DateTimeKind.Utc) });
         await _db.SaveChangesAsync();
         await _audit.LogAsync("AcademicYearAdded", "Settings", name);
         TempData["Success"] = "Academic year added.";
