@@ -103,8 +103,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.Semester, x.ExamType, x.ExamDate });
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.BranchId, x.Semester, x.SubjectId, x.ExamType }).IsUnique();
 
-        b.Entity<Student>().Property(x => x.RowVersion).IsConcurrencyToken();
-        b.Entity<Attendance>().Property(x => x.RowVersion).IsConcurrencyToken();
+        b.Entity<Student>().Property(x => x.RowVersion).ValueGeneratedNever().IsConcurrencyToken();
+        b.Entity<Attendance>().Property(x => x.RowVersion).ValueGeneratedNever().IsConcurrencyToken();
 
         // Keep Identity FKs as Cascade; Restrict only domain cross-cutting FKs to avoid multiple-cascade-path errors on SQL Server.
         foreach (var fk in b.Model.GetEntityTypes()

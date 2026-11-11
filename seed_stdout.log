@@ -1,0 +1,18 @@
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]
+      No XML encryptor configured. Key {06cf9ed8-113d-486e-a89a-ce027fc9dd3a} may be persisted to storage in unencrypted form.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://0.0.0.0:8080
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\ASUS\Desktop\AttendX_Solution\AttendX_Solution\AttendX_Solution\AttendX\bin\Release\net10.0
+info: AttendX[0]
+      AttendX started. Environment=Development
+info: AttendX.Services.DatabaseInitializationService[0]
+      Database initialization started.
+info: Microsoft.EntityFrameworkCore.Migrations[20405]
+      No migrations were applied. The database is already up to date.
+info: AttendX.Data.DbSeeder[0]
+      Seeding 126 faculty with logins...
