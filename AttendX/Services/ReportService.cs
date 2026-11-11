@@ -78,10 +78,10 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
         await ApplyScopeAsync(f);
         var settings = await _settings.GetAsync();
         var w = settings.LateWeight;
-        var today = _clock.Now.Date;
+        var today = _clock.NowUtc.Date;
         var t = new ReportTable { Threshold = settings.DefaultThreshold };
         string range = f.From != null || f.To != null ? $"{f.From:dd MMM yyyy} to {f.To:dd MMM yyyy}".Replace(" to ", " to ") : "All dates";
-        t.Subtitle = $"AttendX - {range} - generated {_clock.Now:dd MMM yyyy HH:mm}";
+        t.Subtitle = $"AttendX - {range} - generated {_clock.NowUtc:dd MMM yyyy HH:mm}";
         string Pct(int p, int l, int tot) => AttendanceMath.Percent(p, l, tot, w).ToString("0.0") + "%";
 
         switch (f.Type)
@@ -173,13 +173,13 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
             }
             case "monthly":
             {
-                if (f.From == null) f.From = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
+                if (f.From == null) f.From = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-5);
                 t.Title = "Monthly attendance report";
                 t.Columns = new() { "Month", "Sessions", "Records", "Present", "Late", "Absent", "%" };
                 var g = await Query(f).GroupBy(a => new { a.Date.Year, a.Date.Month }).Select(x => new { x.Key.Year, x.Key.Month, Sessions = x.Select(r => r.AttendanceSessionId).Distinct().Count(), Total = x.Count(),
                     P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late), A = x.Count(r => r.Status == AttendanceStatus.Absent) }).ToListAsync();
                 foreach (var r in g.OrderBy(x => x.Year).ThenBy(x => x.Month))
-                    t.Rows.Add(new[] { new DateTime(r.Year, r.Month, 1).ToString("MMMM yyyy"), r.Sessions.ToString(), r.Total.ToString(), r.P.ToString(), r.L.ToString(), r.A.ToString(), Pct(r.P, r.L, r.Total) });
+                    t.Rows.Add(new[] { new DateTime(r.Year, r.Month, 1, 0, 0, 0, DateTimeKind.Utc).ToString("MMMM yyyy"), r.Sessions.ToString(), r.Total.ToString(), r.P.ToString(), r.L.ToString(), r.A.ToString(), Pct(r.P, r.L, r.Total) });
                 t.PercentColumn = 6; t.Footer = Footer(g.Sum(x => x.Total), g.Sum(x => x.P), g.Sum(x => x.L), g.Sum(x => x.A), w, 2);
                 break;
             }
@@ -187,7 +187,7 @@ public class ReportService(AppDbContext db, ICurrentUser user, ISettingsService 
             case "low":
             case "defaulter":
             {
-                if (f.Type == "range" && f.From == null && f.To == null) { f.From = new DateTime(today.Year, today.Month, 1); f.To = today; }
+                if (f.Type == "range" && f.From == null && f.To == null) { f.From = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc); f.To = today; }
                 var list = await SummariesAsync(f);
                 if (f.Type == "low") { list = [.. list.Where(s => s.Percent < s.Threshold + 10)]; t.Title = "Low attendance report (below threshold + 10 points)"; }
                 else if (f.Type == "defaulter") { list = [.. list.Where(s => s.Percent < s.Threshold)]; t.Title = "Defaulter report (below the required threshold)"; }

@@ -12,7 +12,7 @@ public class SubjectsController(AppDbContext db, ICurrentUser user, IAuditServic
     public async Task<IActionResult> Index(int? branchId, int? semester, string? search)
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        if (scope != null) branchId = scope;
+        if (scope.HasValue) branchId = scope;
         var q = _db.Subjects.AsNoTracking().Include(s => s.Branch).AsQueryable();
         if (branchId != null) q = q.Where(s => s.BranchId == branchId);
         if (semester != null) q = q.Where(s => s.Semester == semester);
@@ -40,10 +40,15 @@ public class SubjectsController(AppDbContext db, ICurrentUser user, IAuditServic
         if (!ModelState.IsValid) return View("Form", m);
         if (!await _db.Branches.AnyAsync(b => b.Id == m.BranchId && b.IsActive)) { ModelState.AddModelError(nameof(m.BranchId), "Selected branch does not exist."); return View("Form", m); }
         var code = (m.SubjectCode ?? "").Trim().ToUpperInvariant();
-        if (await _db.Subjects.AnyAsync(s => s.SubjectCode.ToUpper() == code && s.Id != (m.Id ?? 0)))
+        if (await _db.Subjects.AnyAsync(s => s.SubjectCode.ToUpperInvariant() == code && s.Id != (m.Id ?? 0)))
         { ModelState.AddModelError("", "This subject code already exists."); return View("Form", m); }
         Subject s;
-        if (m.Id.HasValue) s = (await _db.Subjects.FindAsync(m.Id.Value))!;
+        if (m.Id.HasValue)
+        {
+            var existing = await _db.Subjects.FindAsync(m.Id.Value);
+            if (existing == null) { TempData["Error"] = "That subject no longer exists."; return RedirectToAction(nameof(Index), new { branchId = m.BranchId, semester = m.Semester }); }
+            s = existing;
+        }
         else { s = new Subject(); _db.Subjects.Add(s); }
         s.SubjectName = m.SubjectName.Trim(); s.SubjectCode = code; s.BranchId = m.BranchId; s.Semester = m.Semester; s.Credits = m.Credits; s.IsActive = m.IsActive;
         try { await _db.SaveChangesAsync(); }
@@ -67,7 +72,7 @@ public class SubjectsController(AppDbContext db, ICurrentUser user, IAuditServic
     private async Task<List<SelectListItem>> Branches(int? scope)
     {
         var q = _db.Branches.AsNoTracking().Where(b => b.IsActive);
-        if (scope != null) q = q.Where(b => b.Id == scope);
+        if (scope.HasValue) q = q.Where(b => b.Id == scope);
         return await q.OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name + " (" + b.Code + ")", b.Id.ToString())).ToListAsync();
     }
 }

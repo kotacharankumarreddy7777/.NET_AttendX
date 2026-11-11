@@ -31,7 +31,7 @@ public class StudentController(IStudentPortalService portal, IExportService expo
     {
         var t = await _portal.BuildReportAsync();
         if (t == null) return NotFound();
-        return File(_export.ToPdf(t), "application/pdf", $"My_Attendance_{DateTime.Now:yyyyMMdd}.pdf");
+        return File(_export.ToPdf(t), "application/pdf", $"My_Attendance_{DateTime.UtcNow:yyyyMMdd}.pdf");
     }
 
     private async Task<Student?> Me()
@@ -62,7 +62,7 @@ public class StudentController(IStudentPortalService portal, IExportService expo
         phone = (phone ?? "").Trim();
         if (!Regex.IsMatch(phone, @"^[0-9+\- ]{10,15}$")) { TempData["Error"] = "Enter a valid phone number (10-15 digits)."; return RedirectToAction(nameof(Index)); }
         var old = s.Phone;
-        s.Phone = phone; s.UpdatedAt = DateTime.Now;
+        s.Phone = phone; s.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _audit.LogAsync("StudentPhoneChanged", "Student", s.StudentID, old, phone, branchId: s.BranchId);
         TempData["Success"] = "Phone number updated.";

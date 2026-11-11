@@ -19,7 +19,7 @@ public class Notice
     [Required, StringLength(20)] public string Audience { get; set; } = "All";
     public int? BranchId { get; set; }
     public int? SectionId { get; set; }
-    public DateTime PublishedAt { get; set; } = DateTime.Now;
+    public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ExpiresAt { get; set; }
     public bool IsPinned { get; set; }
     [StringLength(150)] public string CreatedBy { get; set; } = "";
@@ -41,6 +41,6 @@ public class AttendanceQuery
     [StringLength(15)] public string Status { get; set; } = "Open";
     [StringLength(500)] public string? Response { get; set; }
     [StringLength(150)] public string? ResponderName { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? RespondedAt { get; set; }
 }

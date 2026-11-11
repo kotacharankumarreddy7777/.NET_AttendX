@@ -38,7 +38,6 @@ public class AttendXOptions
     public string SeedFacultyPassword { get; set; } = "";
     public string SeedStudentPassword { get; set; } = "";
     public string AccountPasswordSuffix { get; set; } = "@AttendX123";
-    public bool ResetNonAdminUsersOnStartup { get; set; } = false;
     public string EffectiveAdminPassword => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ADMIN_PASSWORD")) ? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")! : AdminPassword;
     public string EffectiveSeedFacultyPassword => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SEED_FACULTY_PASSWORD")) ? Environment.GetEnvironmentVariable("SEED_FACULTY_PASSWORD")! : (!string.IsNullOrWhiteSpace(SeedFacultyPassword) ? SeedFacultyPassword : "");
     public string EffectiveSeedStudentPassword => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SEED_STUDENT_PASSWORD")) ? Environment.GetEnvironmentVariable("SEED_STUDENT_PASSWORD")! : (!string.IsNullOrWhiteSpace(SeedStudentPassword) ? SeedStudentPassword : "");
@@ -47,8 +46,6 @@ public class AttendXOptions
     public bool SeedDemoData { get; set; } = true;
     public bool ForceReseed { get; set; } = false;
     public int SeedHistoryDays { get; set; } = 14;
-    public bool UseMigrations { get; set; } = false;
-    public bool RecreateIfSchemaMismatch { get; set; } = false;
 }
 
 /// <summary>Name shown in the portal header and login pages (appsettings.json -> "Institution").</summary>

@@ -15,7 +15,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var settings = await settingsService.GetAsync();
         var year = await settingsService.GetCurrentYearAsync();
         var w = settings.LateWeight;
-        var now = clock.Now; var today = now.Date;
+        var now = clock.NowUtc; var today = now.Date;
         var vm = new AdminDashboardViewModel { IsHod = scope != null };
 
         var students = db.Students.AsNoTracking().AsQueryable();
@@ -115,9 +115,9 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var dg = await att.Where(a => a.Date >= from14 && a.Date <= today).GroupBy(a => a.Date).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
         foreach (var r in dg.OrderBy(q => q.Key)) { ch.Daily.Labels.Add(r.Key.ToString("dd MMM")); ch.Daily.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
 
-        var from6m = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
+        var from6m = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-5);
         var mg = await att.Where(a => a.Date >= from6m).GroupBy(a => new { a.Date.Year, a.Date.Month }).Select(x => new { x.Key.Year, x.Key.Month, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
-        foreach (var r in mg.OrderBy(q => q.Year).ThenBy(q => q.Month)) { ch.Monthly.Labels.Add(new DateTime(r.Year, r.Month, 1).ToString("MMM yyyy")); ch.Monthly.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
+        foreach (var r in mg.OrderBy(q => q.Year).ThenBy(q => q.Month)) { ch.Monthly.Labels.Add(new DateTime(r.Year, r.Month, 1, 0, 0, 0, DateTimeKind.Utc).ToString("MMM yyyy")); ch.Monthly.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
 
         var sbj = await last30.GroupBy(a => a.SubjectId).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
         var sids = sbj.Select(x => x.Key).ToList();
@@ -132,7 +132,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var me = await user.GetFacultyAsync();
         if (me == null) return null;
         var year = await settingsService.GetCurrentYearAsync();
-        var today = clock.Now.Date;
+        var today = clock.NowUtc.Date;
         var vm = new FacultyDashboardViewModel { Faculty = me };
         var branch = me.BranchId == null ? null : await db.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == me.BranchId);
         vm.Department = branch?.Name ?? me.Department;

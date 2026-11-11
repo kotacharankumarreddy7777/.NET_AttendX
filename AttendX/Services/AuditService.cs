@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace AttendX.Services;
 
 public interface IAuditService
@@ -12,12 +14,14 @@ public class AuditService : IAuditService
     private readonly AppDbContext _db;
     private readonly ICurrentUser _user;
     private readonly IClock? _clock;
+    private readonly ILogger<AuditService>? _log;
 
-    public AuditService(AppDbContext db, ICurrentUser user, IClock? clock = null)
+    public AuditService(AppDbContext db, ICurrentUser user, IClock? clock = null, ILogger<AuditService>? log = null)
     {
         _db = db;
         _user = user;
         _clock = clock;
+        _log = log;
     }
 
     public async Task LogAsync(string action, string entityType, string? entityId = null, string? oldValues = null, string? newValues = null,
@@ -25,7 +29,7 @@ public class AuditService : IAuditService
     {
         _db.AuditLogs.Add(new AuditLog
         {
-            Timestamp = _clock?.Now ?? DateTime.Now,
+            Timestamp = _clock?.NowUtc ?? DateTime.UtcNow,
             ActorId = actorId ?? _user.UserId,
             ActorName = actorName ?? _user.DisplayName,
             Action = action,
@@ -39,9 +43,10 @@ public class AuditService : IAuditService
             IpAddress = _user.IpAddress
         });
         try { await _db.SaveChangesAsync(); }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
             _db.ChangeTracker.Clear();
+            _log?.LogError(ex, "Audit log write failed for action {Action} on {EntityType} {EntityId}", action, entityType, entityId);
         }
     }
 }

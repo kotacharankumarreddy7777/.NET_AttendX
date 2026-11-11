@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AttendX.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreatePostgres : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -453,6 +453,60 @@ namespace AttendX.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ExamTimetables",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    AcademicYearId = table.Column<int>(type: "integer", nullable: false),
+                    BranchId = table.Column<int>(type: "integer", nullable: false),
+                    SectionId = table.Column<int>(type: "integer", nullable: true),
+                    Semester = table.Column<int>(type: "integer", nullable: false),
+                    SubjectId = table.Column<int>(type: "integer", nullable: false),
+                    FacultyId = table.Column<int>(type: "integer", nullable: false),
+                    ExamType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    ExamDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StartTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    EndTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    RoomNo = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ExamTimetables", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ExamTimetables_AcademicYears_AcademicYearId",
+                        column: x => x.AcademicYearId,
+                        principalTable: "AcademicYears",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ExamTimetables_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ExamTimetables_Faculty_FacultyId",
+                        column: x => x.FacultyId,
+                        principalTable: "Faculty",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ExamTimetables_Sections_SectionId",
+                        column: x => x.SectionId,
+                        principalTable: "Sections",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ExamTimetables_Subjects_SubjectId",
+                        column: x => x.SubjectId,
+                        principalTable: "Subjects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "FacultySubjectMappings",
                 columns: table => new
                 {
@@ -587,6 +641,41 @@ namespace AttendX.Migrations
                         name: "FK_AttendanceQueries_Subjects_SubjectId",
                         column: x => x.SubjectId,
                         principalTable: "Subjects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ExamMarks",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ExamTimetableId = table.Column<int>(type: "integer", nullable: false),
+                    StudentId = table.Column<int>(type: "integer", nullable: false),
+                    MarksObtained = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    MaxMarks = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
+                    IsLocked = table.Column<bool>(type: "boolean", nullable: false),
+                    UnlockRequestedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    UnlockUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Remarks = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastModifiedBy = table.Column<string>(type: "text", nullable: true),
+                    LastModifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ExamMarks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ExamMarks_ExamTimetables_ExamTimetableId",
+                        column: x => x.ExamTimetableId,
+                        principalTable: "ExamTimetables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ExamMarks_Students_StudentId",
+                        column: x => x.StudentId,
+                        principalTable: "Students",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -847,6 +936,47 @@ namespace AttendX.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_ExamMarks_ExamTimetableId",
+                table: "ExamMarks",
+                column: "ExamTimetableId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExamMarks_StudentId",
+                table: "ExamMarks",
+                column: "StudentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExamTimetables_AcademicYearId_BranchId_Semester_SubjectId_E~",
+                table: "ExamTimetables",
+                columns: new[] { "AcademicYearId", "BranchId", "Semester", "SubjectId", "ExamType" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExamTimetables_AcademicYearId_Semester_ExamType_ExamDate",
+                table: "ExamTimetables",
+                columns: new[] { "AcademicYearId", "Semester", "ExamType", "ExamDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExamTimetables_BranchId",
+                table: "ExamTimetables",
+                column: "BranchId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExamTimetables_FacultyId",
+                table: "ExamTimetables",
+                column: "FacultyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExamTimetables_SectionId",
+                table: "ExamTimetables",
+                column: "SectionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ExamTimetables_SubjectId",
+                table: "ExamTimetables",
+                column: "SubjectId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Faculty_BranchId",
                 table: "Faculty",
                 column: "BranchId");
@@ -1033,6 +1163,9 @@ namespace AttendX.Migrations
                 name: "BackupHistories");
 
             migrationBuilder.DropTable(
+                name: "ExamMarks");
+
+            migrationBuilder.DropTable(
                 name: "FacultySubjectMappings");
 
             migrationBuilder.DropTable(
@@ -1055,6 +1188,9 @@ namespace AttendX.Migrations
 
             migrationBuilder.DropTable(
                 name: "AttendanceSessions");
+
+            migrationBuilder.DropTable(
+                name: "ExamTimetables");
 
             migrationBuilder.DropTable(
                 name: "Students");

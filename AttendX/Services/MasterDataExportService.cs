@@ -38,7 +38,7 @@ public class MasterDataExportService(AppDbContext db, IOptions<AttendXOptions> o
         using var wb = new XLWorkbook();
 
         var info = wb.Worksheets.Add("README");
-        info.Cell(1, 1).Value = "AttendX master data (exported " + DateTime.Now.ToString("dd MMM yyyy HH:mm") + ")";
+        info.Cell(1, 1).Value = "AttendX master data (exported " + DateTime.UtcNow.ToString("dd MMM yyyy HH:mm") + ")";
         info.Cell(2, 1).Value = "Passwords are never exported. The 'Default password' columns have been removed for security.";
         info.Cell(3, 1).Value = "Regenerate any time: Admin > Backup / Restore > Download master data (Excel).";
         info.Column(1).Width = 120;

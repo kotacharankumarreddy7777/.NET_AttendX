@@ -1,0 +1,194 @@
+@model AttendX.Models.UserPreference
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
+@inject IAppearanceService AppearanceSvc
+@{
+    ViewData["Title"] = "Appearance & Personalization";
+    var tokens = ViewData["Tokens"] as string ?? "";
+    var branding = ViewData["Branding"] as AttendX.Models.InstitutionBranding ?? new AttendX.Models.InstitutionBranding();
+    var isAdmin = ViewData["IsAdmin"] as bool? ?? false;
+    var userId = UserManager.GetUserId(User);
+    bool anim = Model.AnimationsEnabled;
+    bool sidebar = Model.SidebarCollapsed;
+}
+<div class="ax-card" style="@tokens">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="page-title">Appearance &amp; Personalization</h1>
+            <p class="text-muted small">Personal UI preferences are saved to your account and apply across desktop and mobile. Institutional branding (admin only) appears in the header and sidebar.</p>
+        </div>
+        <a class="btn-ax btn-sm" href="@Url.Action("Index", "Settings")"><i class="bi bi-gear"></i> Back to Settings</a>
+    </div>
+
+    <form asp-controller="Appearance" asp-action="Save" method="post" class="row g-3">
+        <input type="hidden" name="UserId" value="@Model.UserId" />
+
+        <div class="col-md-4">
+            <label class="form-label">Theme</label>
+            <select class="form-select" name="Theme" id="themeSelect">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+            <div class="form-text">Applies immediately; system follows your OS preference.</div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Accent color</label>
+            <input class="form-control form-control-color" name="AccentColor" value="@Model.AccentColor" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Primary color</label>
+            <input class="form-control form-control-color" name="PrimaryColor" value="@Model.PrimaryColor" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Secondary color</label>
+            <input class="form-control form-control-color" name="SecondaryColor" value="@Model.SecondaryColor" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Density</label>
+            <select class="form-select" name="Density" id="densitySelect">
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Font size</label>
+            <select class="form-select" name="FontSize" id="fontSizeSelect">
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Font family</label>
+            <select class="form-select" name="FontFamily" id="fontFamilySelect">
+                <option value="system">System</option>
+                <option value="serif">Serif</option>
+                <option value="mono">Monospace</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Border radius</label>
+            <select class="form-select" name="BorderRadius" id="radiusSelect">
+                <option value="none">None</option>
+                <option value="sm">Small</option>
+                <option value="md">Medium</option>
+                <option value="lg">Large</option>
+                <option value="full">Pill</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Content width</label>
+            <select class="form-select" name="ContentWidth" id="widthSelect">
+                <option value="wide">Wide</option>
+                <option value="normal">Normal</option>
+                <option value="narrow">Narrow</option>
+            </select>
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="AnimationsEnabled" value="true" id="animations" />
+                <label class="form-check-label" for="animations">Enable animations</label>
+            </div>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="SidebarCollapsed" value="true" id="sidebarCollapsed" />
+                <label class="form-check-label" for="sidebarCollapsed">Collapsed sidebar by default</label>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <button class="btn-ax" type="submit">Save preferences</button>
+            <a class="btn btn-outline-secondary" asp-controller="Appearance" asp-action="Reset">Reset to defaults</a>
+        </div>
+    </form>
+
+    @if (isAdmin)
+    {
+        <hr class="my-4" />
+        <h5 class="mb-3">Institutional branding (admin)</h5>
+        <form asp-controller="Appearance" asp-action="SaveBranding" method="post" class="row g-3">
+            <input type="hidden" name="Id" value="@branding.Id" />
+            <div class="col-md-4">
+                <label class="form-label">Institution name</label>
+                <input class="form-control" name="InstitutionName" value="@branding.InstitutionName" required />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Short name</label>
+                <input class="form-control" name="ShortName" value="@branding.ShortName" required maxlength="40" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Primary color</label>
+                <input class="form-control form-control-color" name="PrimaryColor" value="@branding.PrimaryColor" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Secondary color</label>
+                <input class="form-control form-control-color" name="SecondaryColor" value="@branding.SecondaryColor" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Logo URL</label>
+                <input class="form-control" name="LogoUrl" value="@branding.LogoUrl" placeholder="https://..." />
+            </div>
+            <div class="col-12">
+                <button class="btn-ax" type="submit">Save branding</button>
+            </div>
+        </form>
+    }
+
+    <div class="mt-4 ax-card p-3" style="border:1px dashed var(--border);">
+        <h6 class="mb-2">Live preview</h6>
+        <div class="preview-box" id="preview" style="padding:1rem;border-radius:var(--ax-radius,4px);background:var(--surface);border:1px solid var(--border);color:var(--text);">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge" style="background:var(--ax-accent,#B8892D);color:#fff">Accent</span>
+                <span class="badge bg-secondary text-white">Secondary</span>
+                <button class="btn-ax btn-sm">Primary button</button>
+            </div>
+            <table class="table table-sm mt-2">
+                <thead><tr><th>#</th><th>Sample</th></tr></thead>
+                <tbody><tr><td>1</td><td>Sample table row</td></tr></tbody>
+            </table>
+        </div>
+        <p class="text-muted small mt-2">Colors, radius, density and font size update live on this page once saved.</p>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const setSel = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    setSel('themeSelect', '@Model.Theme');
+    setSel('densitySelect', '@Model.Density');
+    setSel('fontSizeSelect', '@Model.FontSize');
+    setSel('fontFamilySelect', '@Model.FontFamily');
+    setSel('radiusSelect', '@Model.BorderRadius');
+    setSel('widthSelect', '@Model.ContentWidth');
+    document.getElementById('animations').checked = @Model.AnimationsEnabled.ToString().ToLower();
+    document.getElementById('sidebarCollapsed').checked = @Model.SidebarCollapsed.ToString().ToLower();
+
+    const themeSelect = document.getElementById('themeSelect');
+    const html = document.documentElement;
+    const applyTheme = () => {
+        const v = themeSelect.value;
+        if (v === 'system') {
+            html.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } else {
+            html.dataset.theme = v;
+        }
+    };
+    themeSelect.addEventListener('change', applyTheme);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    applyTheme();
+
+    const inputs = document.querySelectorAll('input[type="color"]');
+    inputs.forEach(i => {
+        i.addEventListener('input', () => {
+            const box = document.getElementById('preview');
+            if (i.name === 'AccentColor') box.style.setProperty('--ax-accent', i.value);
+            if (i.name === 'PrimaryColor') box.style.setProperty('--ax-primary', i.value);
+            if (i.name === 'SecondaryColor') box.style.setProperty('--ax-secondary', i.value);
+        });
+    });
+</script>
+}

@@ -3,7 +3,7 @@ services:
     name: attendx
     env: docker
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /
+    healthCheckPath: /health/live
     envVars:
       - key: DATABASE_URL
         sync: false

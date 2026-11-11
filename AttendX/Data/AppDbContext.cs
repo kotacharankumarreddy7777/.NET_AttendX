@@ -24,6 +24,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<AttendanceQuery> AttendanceQueries => Set<AttendanceQuery>();
     public DbSet<ExamTimetable> ExamTimetables => Set<ExamTimetable>();
     public DbSet<ExamMark> ExamMarks => Set<ExamMark>();
+    public DbSet<InstitutionBranding> InstitutionBranding => Set<InstitutionBranding>();
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -33,6 +35,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(x => x.MarksObtained).HasPrecision(5, 2);
             e.Property(x => x.MaxMarks).HasPrecision(5, 2);
         });
+
+        // User preference uniqueness + branding singleton
+        b.Entity<UserPreference>().HasKey(x => x.UserId);
+        b.Entity<InstitutionBranding>().HasData(new InstitutionBranding { Id = 1, UpdatedAt = new DateTime(2026, 11, 10, 9, 55, 38, 900, DateTimeKind.Utc).AddTicks(9670) });
 
         b.Entity<AcademicYear>().HasIndex(x => x.Name).IsUnique();
 
@@ -44,7 +50,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Subject>().HasIndex(x => x.SubjectCode).IsUnique();
         b.Entity<Subject>().HasIndex(x => new { x.BranchId, x.Semester });
 
-        string activeFilter = Database.IsSqlServer() ? "[IsActive] = 1" : "\"IsActive\" = TRUE";
+        const string activeFilter = "\"IsActive\" = TRUE";
 
         // Duplicate ACTIVE student IDs are impossible; an ID may be reused after the old student is deactivated.
         b.Entity<Student>().HasIndex(x => x.StudentID).IsUnique().HasFilter(activeFilter);
@@ -74,19 +80,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         // Core duplicate protection: a student can have only ONE record per date + period.
         b.Entity<Attendance>().HasIndex(x => new { x.StudentId, x.Date, x.Period }).IsUnique();
         // Dashboard/report aggregates filter on a date range, so Date needs its own index with the aggregated columns included.
-        var attendanceDateIndex = b.Entity<Attendance>().HasIndex(x => x.Date);
-        if (Database.IsSqlServer())
-        {
-            Microsoft.EntityFrameworkCore.SqlServerIndexBuilderExtensions.IncludeProperties(
-                attendanceDateIndex,
-                nameof(Models.Attendance.Status), nameof(Models.Attendance.BranchId), nameof(Models.Attendance.Semester), nameof(Models.Attendance.SectionId),
-                nameof(Models.Attendance.SubjectId), nameof(Models.Attendance.FacultyId), nameof(Models.Attendance.AttendanceSessionId), nameof(Models.Attendance.MarkedAt));
-        }
-        else
-        {
-            // PostgreSQL does not support INCLUDE on indexes, so we add an explicit BRIN/B-tree column set instead.
-            // The unique check + date aggregate filter still benefit from the (StudentId, Date, Period) unique index above.
-        }
+        b.Entity<Attendance>().HasIndex(x => x.Date);
         b.Entity<Attendance>().HasIndex(x => new { x.SectionId, x.Date });
         b.Entity<Attendance>().HasIndex(x => new { x.BranchId, x.Semester, x.Date });
         b.Entity<Attendance>().HasIndex(x => new { x.SubjectId, x.Date });
@@ -109,8 +103,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.Semester, x.ExamType, x.ExamDate });
         b.Entity<ExamTimetable>().HasIndex(x => new { x.AcademicYearId, x.BranchId, x.Semester, x.SubjectId, x.ExamType }).IsUnique();
 
-        b.Entity<Student>().Property(x => x.RowVersion).IsRowVersion();
-        b.Entity<Attendance>().Property(x => x.RowVersion).IsRowVersion();
+        b.Entity<Student>().Property(x => x.RowVersion).IsConcurrencyToken();
+        b.Entity<Attendance>().Property(x => x.RowVersion).IsConcurrencyToken();
 
         // Keep Identity FKs as Cascade; Restrict only domain cross-cutting FKs to avoid multiple-cascade-path errors on SQL Server.
         foreach (var fk in b.Model.GetEntityTypes()

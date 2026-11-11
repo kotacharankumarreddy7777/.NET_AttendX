@@ -30,17 +30,10 @@ public class ErrorViewModel
 {
     public int Code { get; set; } = 500;
     public string Title { get; set; } = "Something went wrong";
-    public string Message { get; set; } = "An unexpected error occurred. Please try again.";
-    public string? ErrorType { get; set; }
-    public string? ErrorMessage { get; set; }
+    public string Message { get; set; } = "An unexpected error occurred. Our team has been notified.";
     public string? RequestId { get; set; }
-    public string? TraceIdentifier { get; set; }
-    public string? RequestPath { get; set; }
-    public DateTime? TimestampUtc { get; set; }
-    public bool HasDetail => !string.IsNullOrWhiteSpace(ErrorType);
-    public string DetailSummary => HasDetail
-        ? $"{ErrorType}: {ErrorMessage}\n---\nPath: {RequestPath}\nRequestId: {RequestId}\nTraceIdentifier: {TraceIdentifier}\nTime (UTC): {TimestampUtc:O}"
-        : "";
+    public bool HasDetail => !string.IsNullOrWhiteSpace(RequestId);
+    public string Reference => HasDetail ? RequestId! : "";
 }
 
 public class ChangePasswordViewModel
@@ -89,7 +82,7 @@ public class StudentFormViewModel
     [Range(1, int.MaxValue, ErrorMessage = "Select a branch")] public int BranchId { get; set; }
     [Range(1, int.MaxValue, ErrorMessage = "Select a section")] public int SectionId { get; set; }
     [Range(1, 8)] public int Semester { get; set; } = 1;
-    [DataType(DataType.Date), Display(Name = "Joining date")] public DateTime JoiningDate { get; set; } = DateTime.Today;
+    [DataType(DataType.Date), Display(Name = "Joining date")] public DateTime JoiningDate { get; set; } = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
     public IFormFile? Photo { get; set; }
     public string? WebcamPhoto { get; set; }
     public string? ExistingPhoto { get; set; }

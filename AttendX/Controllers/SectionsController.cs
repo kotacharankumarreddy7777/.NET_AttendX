@@ -50,13 +50,19 @@ public class SectionsController(AppDbContext db, IAuditService audit) : Controll
         m.Branches = await Branches();
         if (!ModelState.IsValid) return View("Form", m);
         if (!await _db.Branches.AnyAsync(b => b.Id == m.BranchId && b.IsActive)) { ModelState.AddModelError(nameof(m.BranchId), "Selected branch does not exist."); return View("Form", m); }
-        var name = m.Name.Trim().ToUpperInvariant();
+        var name = (m.Name ?? "").Trim().ToUpperInvariant();
+        if (name.Length == 0) { ModelState.AddModelError(nameof(m.Name), "Name is required."); return View("Form", m); }
         if (await _db.Sections.AnyAsync(s => s.BranchId == m.BranchId && s.Name == name && s.Id != (m.Id ?? 0)))
         { ModelState.AddModelError("", "This section already exists in the branch."); return View("Form", m); }
         try
         {
             Section s;
-            if (m.Id.HasValue) s = (await _db.Sections.FindAsync(m.Id.Value))!;
+            if (m.Id.HasValue)
+            {
+                var existing = await _db.Sections.FindAsync(m.Id.Value);
+                if (existing == null) { TempData["Error"] = "That section no longer exists."; return RedirectToAction(nameof(Index), new { branchId = m.BranchId }); }
+                s = existing;
+            }
             else { s = new Section(); _db.Sections.Add(s); }
             s.BranchId = m.BranchId; s.Name = name; s.IsActive = m.IsActive;
             await _db.SaveChangesAsync();

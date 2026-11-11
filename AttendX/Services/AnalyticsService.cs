@@ -42,7 +42,7 @@ public class AnalyticsService(AppDbContext db, ICurrentUser user, ISettingsServi
         var settings = await _settings.GetAsync();
         var rules = await _db.ThresholdRules.AsNoTracking().ToListAsync();
         var w = settings.LateWeight;
-        var today = _clock.Now.Date;
+        var today = _clock.NowUtc.Date;
         var from = today.AddDays(-55);
 
         IQueryable<Attendance> q = _db.Attendance.AsNoTracking().Where(a => a.Date >= from && a.Date <= today);

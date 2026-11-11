@@ -83,7 +83,7 @@ public class MarkPageViewModel
 
 public class CorrectionPickerViewModel
 {
-    public DateTime Date { get; set; } = DateTime.Today;
+    public DateTime Date { get; set; } = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
     public int? BranchId { get; set; }
     public int? SectionId { get; set; }
     public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Branches { get; set; } = new();

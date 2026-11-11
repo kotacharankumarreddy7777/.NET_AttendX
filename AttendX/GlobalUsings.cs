@@ -2,6 +2,7 @@ global using System.ComponentModel.DataAnnotations;
 global using Microsoft.AspNetCore.Authorization;
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.EntityFrameworkCore;
+global using Microsoft.Extensions.Diagnostics.HealthChecks;
 global using AttendX.Data;
 global using AttendX.Infrastructure;
 global using AttendX.Models;

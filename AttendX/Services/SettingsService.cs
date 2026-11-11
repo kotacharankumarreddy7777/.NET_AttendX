@@ -58,7 +58,7 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
         row.OfflineSyncEnabled = s.OfflineSyncEnabled;
         row.OfflineMaxDelayMinutes = s.OfflineMaxDelayMinutes;
         row.PeriodCount = s.PeriodCount;
-        row.UpdatedAt = DateTime.Now;
+        row.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
 
@@ -70,16 +70,22 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
         int start;
         try
         {
-            start = int.TryParse((_o.AcademicYear ?? "").Split('-')[0], out var sy) ? sy : DateTime.Today.Year;
+            start = int.TryParse((_o.AcademicYear ?? "").Split('-')[0], out var sy) ? sy : DateTime.UtcNow.Year;
         }
         catch
         {
-            start = DateTime.Today.Year;
+            start = DateTime.UtcNow.Year;
         }
-        var ny = new AcademicYear { Name = _o.AcademicYear, StartDate = new DateTime(start, 6, 1), EndDate = new DateTime(start + 1, 5, 31), IsCurrent = true };
+        var ny = new AcademicYear
+        {
+            Name = _o.AcademicYear ?? DateTime.UtcNow.Year.ToString(),
+            StartDate = new DateTime(start, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDate = new DateTime(start + 1, 5, 31, 0, 0, 0, DateTimeKind.Utc),
+            IsCurrent = true
+        };
         _db.AcademicYears.Add(ny);
         try { await _db.SaveChangesAsync(); }
-        catch (DbUpdateException ex) { throw new InvalidOperationException("Could not create academic year.", ex); }
+        catch (DbUpdateException ex) { throw new InvalidOperationException("Could not create academic year: " + ex.InnerException?.ToString(), ex); }
         return ny;
     }
 }

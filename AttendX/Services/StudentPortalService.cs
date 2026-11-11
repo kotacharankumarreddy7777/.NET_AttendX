@@ -35,7 +35,7 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         var year = await _settings.GetCurrentYearAsync();
         var rules = await _db.ThresholdRules.AsNoTracking().ToListAsync();
         var w = settings.LateWeight;
-        var now = _clock.Now; var today = now.Date;
+        var now = _clock.NowUtc; var today = now.Date;
 
         var vm = new StudentDashboardViewModel { Student = me, BranchName = me.Branch?.Name ?? "", SectionName = me.Section?.Name ?? "" };
         vm.ClassStrength = await _db.Students.CountAsync(s => s.IsActive && s.BranchId == me.BranchId && s.SectionId == me.SectionId && s.Semester == me.Semester);
@@ -164,7 +164,7 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         message = (message ?? "").Trim();
         if (message.Length < 5 || message.Length > 500) return (false, "Please describe the problem in 5 to 500 characters.");
         date = date.Date;
-        var today = _clock.Now.Date;
+        var today = _clock.NowUtc.Date;
         if (date > today || date < today.AddDays(-30)) return (false, "You can raise a query only for the last 30 days.");
 
         var year = await _settings.GetCurrentYearAsync();
@@ -192,7 +192,7 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         var t = new ReportTable
         {
             Title = $"Attendance report - {vm.Student.FullName} ({vm.Student.StudentID})",
-            Subtitle = $"{vm.BranchName} / {vm.SectionName} / Semester {vm.Student.Semester} - overall {vm.Percent}% (required {vm.Threshold}%) - generated {_clock.Now:dd MMM yyyy HH:mm}",
+            Subtitle = $"{vm.BranchName} / {vm.SectionName} / Semester {vm.Student.Semester} - overall {vm.Percent}% (required {vm.Threshold}%) - generated {_clock.NowUtc:dd MMM yyyy HH:mm}",
             Columns = new() { "Subject code", "Subject", "Faculty", "Total", "Present", "Late", "Absent", "%" },
             PercentColumn = 7, Threshold = vm.Threshold
         };

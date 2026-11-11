@@ -107,7 +107,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, IOptions<AttendX
             return (false, "Database backups on PostgreSQL are managed via Supabase/Railway automated backups.");
         }
 
-        var fileName = $"{DbName}_{DateTime.Now:yyyyMMdd_HHmmss}.bak";
+        var fileName = $"{DbName}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.bak";
         var path = Path.Combine(Folder, fileName);
         try
         {

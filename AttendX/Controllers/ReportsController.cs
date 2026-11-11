@@ -34,7 +34,7 @@ public class ReportsController(IReportService reports, IExportService export, Ap
         if (string.IsNullOrWhiteSpace(f.Type)) f.Type = "section";
         if (!Types.Any(t => t.Value == f.Type)) return BadRequest("Unknown report type.");
         var table = await _reports.BuildAsync(f);
-        var stamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
+        var stamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmm");
         var name = $"AttendX_{f.Type}_{stamp}";
         return format.ToLowerInvariant() switch
         {
@@ -47,7 +47,7 @@ public class ReportsController(IReportService reports, IExportService export, Ap
     private async Task<ReportPageViewModel> Build(ReportFilter f)
     {
         var scope = await _user.GetScopeBranchIdAsync();
-        bool locked = !_user.IsAdmin && scope != null && _user.IsHod;
+        bool locked = scope.HasValue && !_user.IsAdmin;      // HOD (and Faculty, whose scope is null) get branch-restricted views
         if (locked) f.BranchId = scope;
         var vm = new ReportPageViewModel { Filter = f, BranchLocked = locked };
         vm.Types = [.. Types.Select(t => new SelectListItem(t.Label, t.Value, t.Value == f.Type))];

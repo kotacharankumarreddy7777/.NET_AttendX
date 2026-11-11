@@ -28,7 +28,7 @@ public class CalendarService(AppDbContext db, IClock clock) : ICalendarService
 
     public async Task<List<Holiday>> UpcomingAsync(int take)
     {
-        var today = _clock.Now.Date;
+        var today = _clock.NowUtc.Date;
         return await _db.Holidays.AsNoTracking().Where(h => h.Date >= today && h.Type == "Holiday").OrderBy(h => h.Date).Take(take).ToListAsync();
     }
 

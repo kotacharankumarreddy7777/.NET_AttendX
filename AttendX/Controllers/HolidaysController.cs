@@ -8,7 +8,7 @@ public class HolidaysController(AppDbContext db, IAuditService audit) : Controll
 
     public async Task<IActionResult> Index() => View(await _db.Holidays.AsNoTracking().OrderBy(h => h.Date).ToListAsync());
 
-    public IActionResult Create() => View("Form", new Holiday { Date = DateTime.Today });
+    public IActionResult Create() => View("Form", new Holiday { Date = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc) });
 
     public async Task<IActionResult> Edit(int id)
     {
@@ -19,13 +19,19 @@ public class HolidaysController(AppDbContext db, IAuditService audit) : Controll
     [HttpPost]
     public async Task<IActionResult> Save([Bind("Id,Date,Name,Type")] Holiday m)
     {
+        if (m.Name == null || string.IsNullOrWhiteSpace(m.Name)) ModelState.AddModelError(nameof(m.Name), "Name is required.");
         if (m.Type is not ("Holiday" or "Event" or "Exam")) ModelState.AddModelError(nameof(m.Type), "Choose Holiday, Event or Exam.");
         if (!ModelState.IsValid) return View("Form", m);
-        m.Date = m.Date.Date;
+        m.Date = DateTime.SpecifyKind(m.Date.Date, DateTimeKind.Utc);
         Holiday h;
-        if (m.Id > 0) h = (await _db.Holidays.FindAsync(m.Id))!;
+        if (m.Id > 0)
+        {
+            var existing = await _db.Holidays.FindAsync(m.Id);
+            if (existing == null) { TempData["Error"] = "That holiday no longer exists."; return RedirectToAction(nameof(Index)); }
+            h = existing;
+        }
         else { h = new Holiday(); _db.Holidays.Add(h); }
-        h.Date = m.Date; h.Name = m.Name.Trim(); h.Type = m.Type;
+        h.Date = m.Date; h.Name = (m.Name ?? "").Trim(); h.Type = m.Type;
         await _db.SaveChangesAsync();
         await _audit.LogAsync(m.Id > 0 ? "HolidayUpdated" : "HolidayCreated", "Holiday", h.Date.ToString("yyyy-MM-dd"), newValues: $"{h.Type}: {h.Name}");
         TempData["Success"] = "Saved.";

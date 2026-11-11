@@ -28,12 +28,16 @@ public class BranchesController(AppDbContext db, IAuditService audit) : Controll
         if (!ModelState.IsValid) return View("Form", m);
         var code = (m.Code ?? "").Trim().ToUpperInvariant(); var name = (m.Name ?? "").Trim();
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(code)) { ModelState.AddModelError("", "Name and code are required."); return View("Form", m); }
-        if (await _db.Branches.AnyAsync(b => b.Id != (m.Id ?? 0) && (b.Code.ToUpper() == code || b.Name.ToUpper() == name.ToUpper())))
+        if (await _db.Branches.AnyAsync(b => b.Id != (m.Id ?? 0) && (b.Code.ToUpper() == code || b.Name.ToUpperInvariant() == name.ToUpperInvariant())))
         { ModelState.AddModelError("", "A branch with this name or code already exists."); return View("Form", m); }
         try
         {
             Branch b; string? old = null;
-            if (m.Id.HasValue) { b = (await _db.Branches.FindAsync(m.Id.Value))!; old = JsonSerializer.Serialize(new { b.Name, b.Code, b.IsActive }); }
+            if (m.Id.HasValue)
+            {
+                b = await _db.Branches.FindAsync(m.Id.Value) ?? throw new InvalidOperationException("Branch not found.");
+                old = JsonSerializer.Serialize(new { b.Name, b.Code, b.IsActive });
+            }
             else { b = new Branch(); _db.Branches.Add(b); }
             b.Name = name; b.Code = code; b.IsActive = m.IsActive;
             await _db.SaveChangesAsync();

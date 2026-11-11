@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
 var builder = WebApplication.CreateBuilder(args);
 
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
@@ -26,8 +24,10 @@ if (string.IsNullOrWhiteSpace(rawCs))
 
 var cs = ConnectionHelper.ConvertToNpgsqlConnectionString(rawCs);
 
+// Npgsql uses the 'Host' keyword; SQL Server uses 'Server'. URL schemes are also accepted.
 var usePostgres = rawCs.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
-              || rawCs.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+              || rawCs.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)
+              || cs.Contains("Host=", StringComparison.OrdinalIgnoreCase);
 
 var qrSecret = Environment.GetEnvironmentVariable("QR_SECRET");
 if (!string.IsNullOrWhiteSpace(qrSecret))
@@ -49,6 +49,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
         {
             npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
             npgsql.CommandTimeout(120);
+            npgsql.MaxBatchSize(500);
         });
     }
     else
@@ -59,17 +60,16 @@ builder.Services.AddDbContext<AppDbContext>(o =>
             sql.CommandTimeout(120);
         });
     }
-    o.ConfigureWarnings(wb => wb.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 });
 
 builder.Services.AddDataProtection();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
     {
-        o.Password.RequiredLength = 5;
-        o.Password.RequireDigit = false;
-        o.Password.RequireUppercase = false;
-        o.Password.RequireLowercase = false;
+        o.Password.RequiredLength = 8;
+        o.Password.RequireDigit = true;
+        o.Password.RequireUppercase = true;
+        o.Password.RequireLowercase = true;
         o.Password.RequireNonAlphanumeric = false;
         o.User.RequireUniqueEmail = true;
         o.Lockout.MaxFailedAccessAttempts = 5;
@@ -105,6 +105,9 @@ builder.Services.AddControllersWithViews(o =>
 });
 
 builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddSingleton<ReadinessState>();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: new[] { "ready" });
 builder.Services.AddScoped<ForcePasswordChangeFilter>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
@@ -126,7 +129,9 @@ builder.Services.AddScoped<INoticeService, NoticeService>();
 builder.Services.AddScoped<IStudentPortalService, StudentPortalService>();
 builder.Services.AddScoped<IMasterDataExportService, MasterDataExportService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAppearanceService, AppearanceService>();
 builder.Services.AddScoped<DbSeeder>();
+builder.Services.AddHostedService<DatabaseInitializationService>();
 
 var app = builder.Build();
 
@@ -153,25 +158,28 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<AppearanceMiddleware>();
+
+// Liveness: process is up. No dependency checks.
+app.MapGet("/health/live", (ReadinessState state) => Results.Json(new { status = "live" }));
+// Readiness: process is up AND initialization + database connectivity are verified.
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (ctx, report) =>
+    {
+        ctx.Response.ContentType = "application/json";
+        var status = report.Status == HealthStatus.Healthy ? "ready" : "unhealthy";
+        var state = ctx.RequestServices.GetRequiredService<ReadinessState>();
+        await ctx.Response.WriteAsJsonAsync(new
+        {
+            status,
+            checks = report.Entries.ToDictionary(e => e.Key, e => e.Value.Status.ToString()),
+            failure = state.Failure
+        });
+    }
+});
+
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Seed BEFORE opening the port so no request hits an empty DB mid-reseed.
-// Render port check retries, so blocking here is safe; total seed budget = 25 min.
-await app.StartAsync();
-{
-    var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
-    var log = loggerFactory.CreateLogger("Program");
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(25));
-        await seeder.SeedAsync(cts.Token);
-        log.LogInformation("Database seeding completed.");
-    }
-    catch (Exception ex)
-    {
-        log.LogError(ex, "Database seeding failed — continuing to serve requests.");
-    }
-}
-await app.WaitForShutdownAsync();
+await app.RunAsync();
