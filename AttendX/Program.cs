@@ -139,6 +139,14 @@ builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHostedService<DatabaseInitializationService>();
 
 var app = builder.Build();
+
+var forwardedHeaders = new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+};
+forwardedHeaders.KnownIPNetworks.Clear();
+forwardedHeaders.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaders);
 app.Lifetime.ApplicationStarted.Register(() => app.Logger.LogInformation("AttendX started. Environment={Environment}", app.Environment.EnvironmentName));
 
 if (app.Environment.IsDevelopment()) app.UseDeveloperExceptionPage();
