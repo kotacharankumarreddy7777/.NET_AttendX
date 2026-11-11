@@ -253,7 +253,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var rows = Read("faculty.csv");
         var facultyHash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedFacultyPassword);
         var studentHash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), SeedStudentPassword);
-        var roleIds = await _db.Roles.ToDictionaryAsync(r => r.Name!, r => r.Id);
+        var roleIds = (await _db.Roles.AsNoTracking().ToListAsync(cancellationToken)).ToDictionary(r => r.Name!, r => r.Id, StringComparer.OrdinalIgnoreCase);
         var branches = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Code);
         var existingEmails = (await _db.Users.Select(u => u.NormalizedEmail).ToListAsync()).ToHashSet();
         var existingFacultyIds = (await _db.Faculty.AsNoTracking().Select(f => f.FacultyID).ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
