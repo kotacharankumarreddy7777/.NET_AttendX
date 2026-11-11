@@ -770,14 +770,14 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         foreach (var year in academics)
         {
             int startY = int.Parse(year.Name.Split('-')[0]);
-            // Odd sem (running now): Mid1 Sep (completed), Mid2 3rd week Nov, Final end Dec
-            // Even sem: Mid1 Mar, Mid2 Apr, Final May + summer break Jun-Jul
-            var windowsForYear = new List<(DateTime Start, DateTime End, string Type)>
+            var oddSemWindows = new List<(DateTime Start, DateTime End, string Type)>
             {
                 (new DateTime(startY, 9, 22, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY, 9, 27, 0, 0, 0, DateTimeKind.Utc), "Mid1"),
                 (new DateTime(startY, 11, 17, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY, 11, 22, 0, 0, 0, DateTimeKind.Utc), "Mid2"),
-                (new DateTime(startY, 12, 21, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 1, 5, 0, 0, 0, DateTimeKind.Utc), "Final"),
-                // Even sem next calendar year
+                (new DateTime(startY, 12, 21, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 1, 5, 0, 0, 0, DateTimeKind.Utc), "Final")
+            };
+            var evenSemWindows = new List<(DateTime Start, DateTime End, string Type)>
+            {
                 (new DateTime(startY + 1, 3, 10, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 3, 16, 0, 0, 0, DateTimeKind.Utc), "Mid1"),
                 (new DateTime(startY + 1, 4, 8, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 4, 14, 0, 0, 0, DateTimeKind.Utc), "Mid2"),
                 (new DateTime(startY + 1, 5, 5, 0, 0, 0, DateTimeKind.Utc), new DateTime(startY + 1, 5, 20, 0, 0, 0, DateTimeKind.Utc), "Final")
@@ -788,7 +788,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 int facId = facMap.TryGetValue((subj.BranchId, subj.Semester, subj.Id), out int f) ? f : 0;
                 if (facId == 0) continue;
 
-                foreach (var w in windowsForYear)
+                // Odd semester runs Aug-Dec, even semester runs Jan-May; do not generate windows for the wrong parity
+                var windowsForSubject = (subj.Semester % 2 == 1) ? oddSemWindows : evenSemWindows;
+                foreach (var w in windowsForSubject)
                 {
                     // Pick a weekday in window (Mon-Sat) based on subject hash for determinism
                     int dayOffset = (subj.Id + subj.BranchId) % ((int)(w.End - w.Start).TotalDays + 1);
