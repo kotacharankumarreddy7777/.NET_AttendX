@@ -5,6 +5,6 @@ public interface IClock { DateTime Now { get; } }
 
 public class SystemClock : IClock
 {
-    public DateTime Now => DateTime.UtcNow;
+    public DateTime Now => DateTime.UtcNow.Add(TimeSpan.FromHours(5.5)); // IST (UTC+5:30)
 }
 
