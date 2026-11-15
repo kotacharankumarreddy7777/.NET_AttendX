@@ -907,7 +907,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     var sid = maxSessionId + 1 + chunkSessionIds.Count;
                     chunkSessionIds.Add(sid);
                     var startedAt = date + t.StartTime;
-                    sessionRows.Add($"({sid},{t.Id},{yearId},'{date:yyyy-MM-dd}',{t.Period},{t.SubjectId},{t.SectionId},{t.FacultyId},'Manual','seed','{adminUserId}',make_timestamp({startedAt.Year},{startedAt.Month},{startedAt.Day},{startedAt.Hour},{startedAt.Minute},{startedAt.Second}))");
+                    sessionRows.Add($"({sid},{t.Id},{yearId},'{date:yyyy-MM-dd}',{t.Period},{t.SubjectId},{t.SectionId},{t.FacultyId},'Manual','seed',NULL,CURRENT_TIMESTAMP)");
                 }
             }
             sessionSb.Append(string.Join(",", sessionRows));
@@ -930,7 +930,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         string status = rnd.NextDouble() < p ? (rnd.NextDouble() < 0.06 ? "Late" : "Present") : "Absent";
                         var statusVal = status == "Present" ? 1 : status == "Late" ? 3 : 2;
                         var markedAt = date + t.StartTime.Add(TimeSpan.FromMinutes(5));
-                        attRows.Add($"({maxAttendanceId + 1 + attRows.Count},{s.Id},{t.SubjectId},{t.FacultyId},{t.SectionId},{s.BranchId},{s.Semester},'{date:yyyy-MM-dd}',{t.Period},{statusVal},make_timestamp({markedAt.Year},{markedAt.Month},{markedAt.Day},{markedAt.Hour},{markedAt.Minute},{markedAt.Second}),{chunkSessionIds[sessionIdx]},'Manual','seed',decode('00','hex'))");
+                        attRows.Add($"({maxAttendanceId + 1 + attRows.Count},{s.Id},{t.SubjectId},{t.FacultyId},{t.SectionId},{s.BranchId},{s.Semester},'{date:yyyy-MM-dd}',{t.Period},{statusVal},CURRENT_TIMESTAMP,{chunkSessionIds[sessionIdx]},'Manual','seed',decode('00','hex'))");
                         totalAttendance++;
                     }
                     sessionIdx++;
