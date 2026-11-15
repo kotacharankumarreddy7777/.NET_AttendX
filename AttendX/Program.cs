@@ -38,27 +38,26 @@ builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection
 if (builder.Configuration.GetConnectionString("DefaultConnection") is null)
 {
     var neonCs = builder.Configuration["DATABASE_URL"] ?? builder.Configuration["ConnectionStrings:DATABASE_URL"];
-    if (neonCs is not null)
-    {
-        // Npgsql doesn't understand channel_binding=require from Neon's pooled URL; drop unsupported params.
-        var withoutBinding = neonCs;
-        var qIdx = withoutBinding.IndexOf('?');
-        if (qIdx >= 0)
-        {
-            var query = withoutBinding[(qIdx + 1)..];
-            var kept = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
-                .Where(p => !p.StartsWith("channel_binding="))
-                .ToList();
-            withoutBinding = withoutBinding[..qIdx] + (kept.Count > 0 ? "?" + string.Join("&", kept) : "");
-        }
-        builder.Configuration.GetSection("ConnectionStrings")["DefaultConnection"] = withoutBinding;
-    }
+    if (neonCs is not null) builder.Configuration.GetSection("ConnectionStrings")["DefaultConnection"] = neonCs;
 }
 
 var cs = builder.Configuration.GetConnectionString("DefaultConnection")
          ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing in appsettings.json");
+
+// Npgsql doesn't understand channel_binding=require from Neon's pooled URL; drop unsupported params.
+var withoutBinding = cs;
+var qIdx = withoutBinding.IndexOf('?');
+if (qIdx >= 0)
+{
+    var query = withoutBinding[(qIdx + 1)..];
+    var kept = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
+        .Where(p => !p.StartsWith("channel_binding="))
+        .ToList();
+    withoutBinding = withoutBinding[..qIdx] + (kept.Count > 0 ? "?" + string.Join("&", kept) : "");
+}
+
 builder.Services.AddResponseCompression(options => { options.EnableForHttps = true; });
-builder.Services.AddDbContextPool<AppDbContext>(o => o.UseNpgsql(cs, npgsql =>
+builder.Services.AddDbContextPool<AppDbContext>(o => o.UseNpgsql(withoutBinding, npgsql =>
 {
     npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null!);
 }));
@@ -183,7 +182,7 @@ builder.Services.AddSignalR();
         .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(cs));
+        .UsePostgreSqlStorage(withoutBinding));
 #pragma warning restore CS0618
 builder.Services.AddHangfireServer();
 
