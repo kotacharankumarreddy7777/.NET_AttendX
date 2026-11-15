@@ -38,7 +38,7 @@
                         <td>Sem @(r.Student?.Semester.ToString() ?? "-")</td>
                         <td><span class="badge @(r.IsEligible ? "bg-success" : "bg-danger")">@(r.IsEligible ? "Eligible" : "Ineligible")</span></td>
                         <td class="small text-muted">@(r.EligibilityReason ?? "-")</td>
-                        <td>@(r.HallTicketGenerated ? "<span class='badge bg-success'>Generated</span>" : "<span class='badge bg-secondary'>Pending</span>")</td>
+                        <td>@Html.Raw(r.HallTicketGenerated ? "<span class='badge bg-success'>Generated</span>" : "<span class='badge bg-secondary'>Pending</span>")</td>
                         <td class="text-end">
                             @if (User.IsInRole(RoleNames.Admin))
                             {
