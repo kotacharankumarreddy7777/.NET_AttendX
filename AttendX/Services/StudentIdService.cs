@@ -13,7 +13,12 @@ public class StudentIdService(AppDbContext db) : IStudentIdService
 {
     private readonly AppDbContext _db = db;
 
-    public static string Prefix(int semester, string sectionName, string branchCode) => $"{semester}{sectionName}-{branchCode}-";
+    public static string Prefix(int semester, string sectionName, string branchCode)
+    {
+        if (!string.IsNullOrEmpty(sectionName) && sectionName.Length > 0 && sectionName[0] - '0' == semester)
+            return $"{sectionName}-{branchCode}-";
+        return $"{semester}{sectionName}-{branchCode}-";
+    }
 
     /// <summary>Pure function: next sequence number given the existing IDs that start with the prefix.</summary>
     public static int NextSequence(IEnumerable<string> existingIds, string prefix)

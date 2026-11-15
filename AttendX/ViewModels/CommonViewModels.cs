@@ -132,3 +132,21 @@ public class SettingsViewModel
     public List<SelectListItem> Branches { get; set; } = new();
     public List<SelectListItem> Sections { get; set; } = new();
 }
+
+public class ExamTimetableFormViewModel
+{
+    public int ExamId { get; set; }
+    [Range(1, int.MaxValue)] public int BranchId { get; set; }
+    [Range(1, int.MaxValue)] public int SectionId { get; set; }
+    [Range(1, 8)] public int Semester { get; set; }
+    [Range(1, int.MaxValue)] public int SubjectId { get; set; }
+    [Range(1, int.MaxValue)] public int FacultyId { get; set; }
+    [DataType(DataType.Date)] public DateTime ExamDate { get; set; } = DateTime.Today;
+    [DataType(DataType.Time)] public TimeSpan StartTime { get; set; }
+    [DataType(DataType.Time)] public TimeSpan EndTime { get; set; }
+    [Required, StringLength(20)] public string RoomNo { get; set; } = "";
+    public List<SelectListItem> Branches { get; set; } = new();
+    public List<SelectListItem> Sections { get; set; } = new();
+    public List<SelectListItem> Subjects { get; set; } = new();
+    public List<SelectListItem> Faculty { get; set; } = new();
+}

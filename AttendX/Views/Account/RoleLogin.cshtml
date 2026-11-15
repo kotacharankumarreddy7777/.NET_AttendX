@@ -1,9 +1,10 @@
 @model RoleLoginViewModel
 @{
     Layout = "_AuthLayout";
-    bool isAdmin = Model.Role == "admin", isFaculty = Model.Role == "faculty";
-    string title = isAdmin ? "Administrator Login" : isFaculty ? "Faculty Login" : "Student Login";
+    bool isAdmin = Model.Role == "admin", isFaculty = Model.Role == "faculty", isStudent = Model.Role == "student", isParent = Model.Role == "parent";
+    string title = isAdmin ? "Administrator Login" : isFaculty ? "Faculty Login" : isParent ? "Parent Login" : "Student Login";
     string idLabel = isFaculty ? "Faculty ID" : "Student ID";
+    if (isParent) idLabel = "Ward's Student ID";
     ViewData["Title"] = title;
     string roleVal = Model.Role ?? "";
 }
@@ -11,7 +12,7 @@
     <script>
         (function () {
             var role = '@roleVal';
-            if (role !== 'faculty' && role !== 'student') return;
+            if (role !== 'faculty' && role !== 'student' && role !== 'parent') return;
             var idInput = document.querySelector('#InstitutionId');
             var emailInput = document.querySelector('#Email');
             if (!idInput || !emailInput) return;
@@ -26,8 +27,16 @@
 
             idInput.addEventListener('blur', function () { fetchEmail(idInput.value); });
             idInput.addEventListener('input', function () {
-                if (role === 'student' && idInput.value.length >= 3) {
-                                emailInput.value = idInput.value.trim() + '@@attendx.edu.in';
+                if (role === 'student') {
+                    var val = idInput.value.trim().replace(/^([1-8])\1+/, '$1');
+                    if (val.length >= 3) {
+                        emailInput.value = val + '@@attendx.edu.in';
+                    }
+                } else if (role === 'parent') {
+                    var val2 = idInput.value.trim().replace(/^([1-8])\1+/, '$1');
+                    if (val2.length >= 3) {
+                        emailInput.value = 'parent.' + val2 + '@@attendx.edu.in';
+                    }
                 }
             });
         })();
@@ -57,8 +66,9 @@
     <div class="auth-links">
         <a asp-controller="Home" asp-action="Index">All logins</a>|
         @if (!isAdmin) { <a asp-controller="Account" asp-action="AdminLogin">Administrator</a> }
-        @if (isAdmin || !isFaculty) { <a asp-controller="Account" asp-action="FacultyLogin">Faculty</a> }
-        @if (isFaculty || isAdmin) { <a asp-controller="Account" asp-action="StudentLogin">Student</a> }
+        @if (!isFaculty) { <a asp-controller="Account" asp-action="FacultyLogin">Faculty</a> }
+        @if (!isStudent) { <a asp-controller="Account" asp-action="StudentLogin">Student</a> }
+        @if (!isParent) { <a asp-controller="Account" asp-action="ParentLogin">Parent</a> }
     </div>
 </div>
 @if (!isAdmin) {

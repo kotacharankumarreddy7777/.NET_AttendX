@@ -56,7 +56,7 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
             n = (await _db.Notices.FindAsync(m.Id.Value))!;
             if (scope != null && n.BranchId != scope) return Forbid();
         }
-        else { n = new Notice { PublishedAt = DateTime.Now, CreatedBy = _user.DisplayName }; _db.Notices.Add(n); }
+        else { n = new Notice { PublishedAt = DateTime.UtcNow, CreatedBy = _user.DisplayName }; _db.Notices.Add(n); }
         n.Title = m.Title.Trim(); n.Body = m.Body.Trim(); n.Audience = m.Audience;
         n.BranchId = (m.Audience is "Branch" or "Section") ? m.BranchId : null;
         n.SectionId = m.Audience == "Section" ? m.SectionId : null;
@@ -85,3 +85,4 @@ public class NoticesController(AppDbContext db, INoticeService notices, ICurrent
         return m;
     }
 }
+

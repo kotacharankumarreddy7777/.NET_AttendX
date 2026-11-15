@@ -66,7 +66,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
 
         var s = new Student
         {
-            FullName = m.FullName.Trim(), Email = email, Phone = m.Phone.Trim(),
+            FullName = m.FullName.Trim(), Phone = m.Phone.Trim(),
             BranchId = m.BranchId, SectionId = m.SectionId, Semester = m.Semester,
             Year = YearHelper.FromSemester(m.Semester),          // never taken from the form
             JoiningDate = m.JoiningDate.Date, PhotoPath = photoPath, IsActive = true
@@ -78,6 +78,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
             for (int attempt = 1; attempt <= 5; attempt++)
             {
                 s.StudentID = await _ids.GenerateAsync(s.Semester, s.SectionId, s.BranchId);
+                s.Email = $"{m.FullName.Trim().ToLowerInvariant().Replace(" ", ".")}.{s.StudentID}@attendx.edu.in";
                 _db.Students.Add(s);
                 try { await _db.SaveChangesAsync(); break; }
                 catch (DbUpdateException) when (attempt < 5) { _db.Entry(s).State = EntityState.Detached; s.Id = 0; }
@@ -124,7 +125,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
         s.BranchId = m.BranchId; s.SectionId = m.SectionId; s.Semester = m.Semester;
         s.Year = YearHelper.FromSemester(m.Semester);
         s.JoiningDate = m.JoiningDate.Date;
-        s.UpdatedAt = DateTime.Now;
+        s.UpdatedAt = DateTime.UtcNow;
         if (photoPath != null) { _photos.DeleteSafe(s.PhotoPath); s.PhotoPath = photoPath; }
 
         await Gate.WaitAsync();
@@ -167,7 +168,7 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
             }
         }
         s.IsActive = active;
-        s.UpdatedAt = DateTime.Now;
+        s.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         if (s.IdentityUserId != null)
         {
@@ -237,3 +238,4 @@ public class StudentService(AppDbContext db, IStudentIdService ids, IQrService q
 
     private static string Snapshot(Student s) => JsonSerializer.Serialize(new { s.StudentID, s.FullName, s.Email, s.Phone, s.BranchId, s.SectionId, s.Semester, s.Year, s.IsActive });
 }
+

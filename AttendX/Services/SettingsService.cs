@@ -48,7 +48,7 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
         row.OfflineSyncEnabled = s.OfflineSyncEnabled;
         row.OfflineMaxDelayMinutes = s.OfflineMaxDelayMinutes;
         row.PeriodCount = s.PeriodCount;
-        row.UpdatedAt = DateTime.Now;
+        row.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
 
@@ -64,3 +64,4 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
         return ny;
     }
 }
+

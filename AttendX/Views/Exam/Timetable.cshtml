@@ -1,0 +1,62 @@
+@model List<ExamTimetable>
+@{
+    ViewData["Title"] = "Exam Timetable";
+    var exam = ViewBag.Exam as Exam;
+    var scope = ViewBag.Scope as int?;
+}
+<h1 class="page-title">@(exam?.Name ?? "Exam") - Timetable</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a class="btn btn-outline-secondary" asp-action="Index">Back to Exams</a>
+    @if (User.IsInRole(RoleNames.Admin))
+    {
+        <a class="btn btn-ax" asp-action="AddTimetableSlot" asp-route-examId="@(exam?.Id)"><i class="bi bi-plus-lg"></i> Schedule Exam Slot</a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <partial name="_EmptyState" model='new EmptyStateModel("no_timetable", "No exam slots scheduled", "Add exam slots to publish the timetable.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' />
+}
+else
+{
+    <div class="ax-card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Subject</th>
+                        <th>Branch / Section</th>
+                        <th>Semester</th>
+                        <th>Invigilator</th>
+                        <th>Room</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model)
+                    {
+                        <tr>
+                            <td>@t.ExamDate.ToString("dd MMM yyyy")</td>
+                            <td>@t.StartTime.ToString(@"hh\:mm") - @t.EndTime.ToString(@"hh\:mm")</td>
+                            <td>@t.Subject!.SubjectCode</td>
+                            <td><b>@t.Branch!.Code</b> / @t.Section!.Name</td>
+                            <td>Sem @t.Semester</td>
+                            <td>@t.Faculty!.FullName</td>
+                            <td>@t.RoomNo</td>
+                            <td class="text-end">
+                                @if (User.IsInRole(RoleNames.Admin))
+                                {
+                                    <form asp-action="RemoveTimetableSlot" asp-route-id="@t.Id" asp-route-examId="@(exam?.Id)" method="post" class="d-inline" data-confirm="Remove this exam slot?">
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

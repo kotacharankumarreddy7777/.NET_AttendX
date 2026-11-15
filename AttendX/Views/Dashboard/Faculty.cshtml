@@ -45,7 +45,7 @@ else if (Model.Next != null)
             <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Period</th><th>Time</th><th>Subject</th><th>Class</th><th>Room</th><th>Status</th><th></th></tr></thead><tbody>
             @foreach (var s in Model.Today)
             {
-                <tr><td>@s.Period</td><td>@UiHelpers.Time(s.Start)-@UiHelpers.Time(s.End)</td><td>@s.SubjectCode</td><td>@s.SectionName</td><td>@s.Room</td>
+                <tr data-timetable="@s.TimetableId"><td>@s.Period</td><td>@UiHelpers.Time(s.Start)-@UiHelpers.Time(s.End)</td><td>@s.SubjectCode</td><td>@s.SectionName</td><td>@s.Room</td>
                     <td><span class="badge @(s.State == "Open" ? "bg-success" : s.State == "Closed" ? "bg-secondary" : "bg-primary")">@s.State</span> @if (s.HasSession) { <span class="small text-muted">@s.MarkedCount marked</span> }</td>
                     <td class="text-end">@if (s.State == "Open") { <a class="btn btn-sm btn-ax" asp-controller="Attendance" asp-action="Mark" asp-route-id="@s.TimetableId">Mark</a> }</td></tr>
             }
@@ -77,6 +77,14 @@ else if (Model.Next != null)
         @foreach (var h in ex.Holidays) { <div class="d-flex justify-content-between small"><span>@h.Name</span><span class="text-muted">@h.Date.ToString("ddd, dd MMM yyyy")</span></div> }
     </div></div></div>
 </div>
+@if (ex.ExamDuties.Any())
+{
+    <div class="ax-card mb-3"><div class="card-h"><i class="bi bi-file-earmark-text me-1"></i>Exam Invigilation Duties (Upcoming)</div>
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Date</th><th>Time</th><th>Subject</th><th>Sem/Section</th><th>Room</th><th></th></tr></thead><tbody>
+        @foreach (var d in ex.ExamDuties) { <tr><td>@d.ExamName</td><td>@d.ExamDate.ToString("dd MMM yyyy")</td><td>@d.StartTime.ToString(@"hh\:mm")-@d.EndTime.ToString(@"hh\:mm")</td><td><b class="mono">@d.SubjectCode</b><br /><span class="small text-muted">@d.SubjectName</span></td><td>Sem @d.Semester / @d.SectionName</td><td>@d.RoomNo</td><td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-controller="Exam" asp-action="Marks" asp-route-examTimetableId="@d.ExamTimetableId">Enter Marks</a></td></tr> }
+        </tbody></table></div>
+    </div>
+}
 <div class="ax-card"><div class="card-h">Weekly Timetable</div>
     @if (!ex.Week.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_timetable", "Timetable not available", "The timetable has not been published.")' /> }
     else { <partial name="_WeekGrid" model='new WeekGridModel { Periods = ex.Periods, Week = ex.Week, Caption = "Class" }' /> }

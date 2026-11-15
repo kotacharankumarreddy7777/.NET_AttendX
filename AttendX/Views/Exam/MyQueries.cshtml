@@ -1,0 +1,32 @@
+@model List<ExamMark>
+@{
+    ViewData["Title"] = "My Modification Queries";
+    bool isFaculty = User.IsInRole(RoleNames.Faculty);
+    bool isHodOrAdmin = User.IsInRole(RoleNames.Admin) || User.IsInRole(RoleNames.Hod);
+}
+<div class="mb-3"><h1 class="page-title">My Modification Queries</h1><div class="text-muted small">@(isFaculty ? "Queries you raised after marks were locked." : "All modification queries (HOD/Admin view).")</div></div>
+
+@if (!Model.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_queries", "No modification queries", "")' /> }
+else {
+<div class="ax-card"><div class="table-responsive">
+    <table class="table table-sm table-hover">
+        <thead><tr><th>Exam</th><th>Subject</th><th>Section</th><th>Reason</th><th>Status</th><th>Raised</th><th>Window</th></tr></thead>
+        <tbody>
+        @foreach (var g in Model.GroupBy(m => m.ExamTimetableId))
+        {
+            var first = g.First();
+            var tt = first.ExamTimetable;
+            <tr>
+                <td>@tt?.Exam?.Name<br /><span class="small text-muted">@tt?.ExamDate.ToString("dd MMM yyyy")</span></td>
+                <td class="mono">@tt?.Subject?.SubjectCode</td>
+                <td>Sem @tt?.Semester / @tt?.Section?.Name</td>
+                <td class="small">@first.ModificationQueryReason</td>
+                <td><span class="badge @(first.ModificationQueryStatus == "Approved" ? "bg-success" : first.ModificationQueryStatus == "Pending" ? "bg-warning" : "bg-danger")">@first.ModificationQueryStatus</span></td>
+                <td class="small">@first.ModificationQueryBy<br />@first.ModificationQueryAt?.ToString("dd MMM HH:mm")</td>
+                <td class="small">@(first.ModificationWindowStart?.ToString("dd MMM HH:mm") ?? "-")<br />→ @(first.ModificationWindowEnd?.ToString("dd MMM HH:mm") ?? "-")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div></div>
+}

@@ -131,6 +131,49 @@ public class StudentPortalService(AppDbContext db, ICurrentUser user, ISettingsS
         var next = FindNextClass(tt, now);
         vm.NextClassText = next;
 
+        // ----- exams: upcoming, completed + results
+        var myExamRows = await _db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Exam).Include(x => x.Subject)
+            .Where(x => x.IsActive && x.BranchId == me.BranchId && x.SectionId == me.SectionId && x.Semester == me.Semester)
+            .OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime)
+            .ToListAsync();
+        var regs = await _db.ExamRegistrations.AsNoTracking()
+            .Where(r => r.StudentId == me.Id)
+            .ToDictionaryAsync(r => r.ExamId, r => r.IsEligible);
+        foreach (var x in myExamRows)
+        {
+            var isUpcoming = x.ExamDate.Date >= today;
+            var row = new StudentExamRow
+            {
+                ExamName = x.Exam!.Name, Type = x.Exam.Type,
+                ExamDate = x.ExamDate, StartTime = x.StartTime, EndTime = x.EndTime,
+                SubjectCode = x.Subject!.SubjectCode, SubjectName = x.Subject.SubjectName, RoomNo = x.RoomNo,
+                IsEligible = regs.TryGetValue(x.ExamId, out var elig) ? elig : true
+            };
+            if (isUpcoming) vm.UpcomingExams.Add(row); else vm.CompletedExams.Add(row);
+        }
+        var myMarks = await _db.ExamMarks.AsNoTracking()
+            .Include(m => m.ExamTimetable)!.ThenInclude(et => et!.Exam)
+            .Include(m => m.ExamTimetable)!.ThenInclude(et => et!.Subject)
+            .Where(m => m.StudentId == me.Id)
+            .OrderByDescending(m => m.MarkedAt)
+            .ToListAsync();
+        foreach (var m in myMarks)
+        {
+            var examTt = m.ExamTimetable;
+            vm.Results.Add(new StudentExamResultRow
+            {
+                ExamName = examTt?.Exam?.Name ?? "Exam",
+                SubjectCode = examTt?.Subject?.SubjectCode ?? "-",
+                SubjectName = examTt?.Subject?.SubjectName ?? "",
+                InternalMark = m.InternalMark,
+                ExternalMark = m.ExternalMark,
+                TotalMark = m.TotalMark,
+                Grade = m.Grade,
+                IsExternal = examTt?.Exam?.Type == "External"
+            });
+        }
+
         // ----- misc
         vm.Recent = await _db.Attendance.AsNoTracking().Include(a => a.Subject).Where(a => a.StudentId == me.Id).OrderByDescending(a => a.Date).ThenByDescending(a => a.Period).Take(25).ToListAsync();
         vm.Notices = await _notices.VisibleAsync(6);

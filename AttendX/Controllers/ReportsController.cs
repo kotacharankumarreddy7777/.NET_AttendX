@@ -25,7 +25,7 @@ public class ReportsController(IReportService reports, IExportService export, Ap
     public async Task<IActionResult> Export(ReportFilter f, string format = "excel")
     {
         var table = await _reports.BuildAsync(f);
-        var stamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
+        var stamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmm");
         var name = $"AttendX_{f.Type}_{stamp}";
         return format.ToLowerInvariant() switch
         {
@@ -54,3 +54,4 @@ public class ReportsController(IReportService reports, IExportService export, Ap
         return vm;
     }
 }
+

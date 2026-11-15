@@ -21,9 +21,9 @@ public class Student
     [StringLength(450)] public string? IdentityUserId { get; set; }
     public DateTime JoiningDate { get; set; } = DateTime.Today;
     public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
-    [Timestamp] public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    [ConcurrencyCheck] public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
 
 public class Faculty
@@ -40,6 +40,7 @@ public class Faculty
     public bool IsHOD { get; set; }
     public bool IsActive { get; set; } = true;
     [StringLength(450)] public string? IdentityUserId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
+

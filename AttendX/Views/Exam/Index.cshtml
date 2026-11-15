@@ -1,0 +1,49 @@
+@model List<Exam>
+@{
+    ViewData["Title"] = "Exams";
+    var scope = ViewBag.Scope as int?;
+}
+<h1 class="page-title">Exams</h1>
+@if (User.IsInRole(RoleNames.Admin))
+{
+    <a class="btn btn-ax mb-3" asp-action="Create"><i class="bi bi-plus-lg"></i> Create Exam</a>
+}
+<div class="ax-card mb-3">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Semester</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model)
+                {
+                    <tr>
+                        <td>@e.Name</td>
+                        <td><span class="badge bg-secondary">@e.Type</span></td>
+                        <td>Sem @e.Semester</td>
+                        <td>@e.StartDate.ToString("dd MMM yyyy")</td>
+                        <td>@e.EndDate.ToString("dd MMM yyyy")</td>
+                        <td><span class="badge @(e.IsActive ? "bg-success" : "bg-secondary")">@(e.IsActive ? "Active" : "Inactive")</span></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Timetable" asp-route-examId="@e.Id">Timetable</a>
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="Registrations" asp-route-examId="@e.Id">Registrations</a>
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="MarksByExam" asp-route-examId="@e.Id">Marks</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+@if (!Model.Any())
+{
+    <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No exams found", "Create your first exam to get started.")' />
+}

@@ -67,6 +67,21 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var slots = await attendance.GetSlotsAsync(today, null, scope, null);
         vm.MissingSlots = [.. slots.Where(s => s.State == "Closed" && !s.HasSession).Take(10)];
 
+        // Period-wise grouped classes for the "Today's Classes" cards (Admin can change period count in Settings)
+        var periodDefs = await db.PeriodDefinitions.AsNoTracking().OrderBy(p => p.PeriodNo).ToListAsync();
+        vm.PeriodCount = periodDefs.Count;
+        var slotsByPeriod = slots.GroupBy(s => s.Period).ToDictionary(g => g.Key, g => g.ToList());
+        foreach (var p in periodDefs)
+        {
+            var list = slotsByPeriod.GetValueOrDefault(p.PeriodNo) ?? new List<SlotView>();
+            vm.TodayByPeriod.Add(new PeriodGroup
+            {
+                PeriodNo = p.PeriodNo,
+                TimeRange = $"{p.StartTime:hh\\:mm}-{p.EndTime:hh\\:mm}",
+                Classes = [.. list.OrderBy(x => x.BranchCode).ThenBy(x => x.SectionName)]
+            });
+        }
+
         // faculty activity (last 7 days): sessions are counted straight from AttendanceSessions instead of
         // COUNT(DISTINCT AttendanceSessionId) over every attendance row.
         var from7 = today.AddDays(-6);
@@ -186,5 +201,24 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var uid = user.UserId;
         var logins = await db.AuditLogs.AsNoTracking().Where(a => a.ActorId == uid && a.Action == "Login").OrderByDescending(a => a.Timestamp).Take(2).ToListAsync();
         ex.LastLogin = logins.Skip(1).FirstOrDefault()?.Timestamp ?? logins.FirstOrDefault()?.Timestamp;
+
+        // Faculty exam invigilation duties (upcoming)
+        var duties = await db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Exam).Include(x => x.Subject).Include(x => x.Section)
+            .Where(x => x.IsActive && x.FacultyId == me.Id && x.ExamDate.Date >= today)
+            .OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime)
+            .Take(10)
+            .ToListAsync();
+        foreach (var d in duties)
+        {
+            ex.ExamDuties.Add(new FacultyExamDutyRow
+            {
+                ExamName = d.Exam!.Name, ExamDate = d.ExamDate,
+                StartTime = d.StartTime, EndTime = d.EndTime,
+                SubjectCode = d.Subject!.SubjectCode, SubjectName = d.Subject.SubjectName,
+                RoomNo = d.RoomNo, Semester = d.Semester, SectionName = d.Section?.Name ?? "",
+                ExamTimetableId = d.Id
+            });
+        }
     }
 }

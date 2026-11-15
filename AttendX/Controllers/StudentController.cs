@@ -19,6 +19,60 @@ public class StudentController(IStudentPortalService portal, IExportService expo
         return vm == null ? View("NoStudent") : View(vm);
     }
 
+    /// <summary>Full exam timetable + results for the logged-in student.</summary>
+    public async Task<IActionResult> Exams()
+    {
+        var s = await Me();
+        if (s == null) return NotFound();
+        var today = DateTime.UtcNow.Date;
+        var rows = await _db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Exam).Include(x => x.Subject)
+            .Where(x => x.IsActive && x.BranchId == s.BranchId && x.SectionId == s.SectionId && x.Semester == s.Semester)
+            .OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime)
+            .ToListAsync();
+        var regs = await _db.ExamRegistrations.AsNoTracking()
+            .Where(r => r.StudentId == s.Id)
+            .ToDictionaryAsync(r => r.ExamId, r => r.IsEligible);
+        var marks = await _db.ExamMarks.AsNoTracking()
+            .Include(m => m.ExamTimetable)!.ThenInclude(et => et!.Exam)
+            .Include(m => m.ExamTimetable)!.ThenInclude(et => et!.Subject)
+            .Where(m => m.StudentId == s.Id)
+            .OrderByDescending(m => m.MarkedAt)
+            .ToListAsync();
+        ViewBag.Student = s;
+        ViewBag.Today = today;
+        ViewBag.Registrations = regs;
+        ViewBag.Marks = marks;
+        return View(rows);
+    }
+
+    /// <summary>Printable hall ticket gated by attendance eligibility.</summary>
+    public async Task<IActionResult> HallTicket()
+    {
+        var s = await Me();
+        if (s == null) return NotFound();
+        var settings = await _db.AttendanceSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync();
+        var rows = await _db.Attendance.AsNoTracking().Where(a => a.StudentId == s.Id).ToListAsync();
+        var percent = rows.Count == 0 ? 100m : AttendX.Services.AttendanceMath.Percent(
+            rows.Count(a => a.Status == AttendX.Models.AttendanceStatus.Present),
+            rows.Count(a => a.Status == AttendX.Models.AttendanceStatus.Late),
+            rows.Count, settings?.LateWeight ?? 1m);
+        var threshold = settings?.DefaultThreshold ?? 75m;
+        var eligible = percent >= threshold;
+        var exams = await _db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Exam).Include(x => x.Subject)
+            .Where(x => x.IsActive && x.BranchId == s.BranchId && x.SectionId == s.SectionId && x.Semester == s.Semester)
+            .Where(x => x.ExamDate.Date >= DateTime.UtcNow.Date)
+            .OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime)
+            .ToListAsync();
+        ViewBag.Student = s;
+        ViewBag.Percent = percent;
+        ViewBag.Threshold = threshold;
+        ViewBag.Eligible = eligible;
+        ViewBag.Exams = exams;
+        return View();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Query(DateTime date, int subjectId, string message)
     {
@@ -31,7 +85,7 @@ public class StudentController(IStudentPortalService portal, IExportService expo
     {
         var t = await _portal.BuildReportAsync();
         if (t == null) return NotFound();
-        return File(_export.ToPdf(t), "application/pdf", $"My_Attendance_{DateTime.Now:yyyyMMdd}.pdf");
+        return File(_export.ToPdf(t), "application/pdf", $"My_Attendance_{DateTime.UtcNow:yyyyMMdd}.pdf");
     }
 
     private async Task<Student?> Me()
@@ -62,10 +116,11 @@ public class StudentController(IStudentPortalService portal, IExportService expo
         phone = (phone ?? "").Trim();
         if (!Regex.IsMatch(phone, @"^[0-9+\- ]{10,15}$")) { TempData["Error"] = "Enter a valid phone number (10-15 digits)."; return RedirectToAction(nameof(Index)); }
         var old = s.Phone;
-        s.Phone = phone; s.UpdatedAt = DateTime.Now;
+        s.Phone = phone; s.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _audit.LogAsync("StudentPhoneChanged", "Student", s.StudentID, old, phone, branchId: s.BranchId);
         TempData["Success"] = "Phone number updated.";
         return RedirectToAction(nameof(Index));
     }
 }
+

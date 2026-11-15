@@ -9,6 +9,30 @@ public class AcademicYear
     public bool IsCurrent { get; set; }
 }
 
+/// <summary>
+/// One semester of an academic year. Odd semesters (1,3,5,7) run Aug–Dec, even semesters (2,4,6,8) run Jan–May.
+/// Used by the academic calendar, timetable generation, exam scheduling and attendance history seeding.
+/// </summary>
+public class Semester
+{
+    public int Id { get; set; }
+    public int AcademicYearId { get; set; }
+    public AcademicYear? AcademicYear { get; set; }
+    /// <summary>1..8 (odd = 1,3,5,7 ; even = 2,4,6,8).</summary>
+    [Range(1, 8)] public int Number { get; set; }
+    /// <summary>Odd / Even.</summary>
+    [Required, StringLength(10)] public string Type { get; set; } = "Odd";
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    /// <summary>Last teaching day (before end-sem exams).</summary>
+    public DateTime ClassesEndDate { get; set; }
+    /// <summary>End-semester exam start.</summary>
+    public DateTime ExamStartDate { get; set; }
+    /// <summary>End-semester exam end.</summary>
+    public DateTime ExamEndDate { get; set; }
+    public bool IsCurrent { get; set; }
+}
+
 public class Branch
 {
     public int Id { get; set; }

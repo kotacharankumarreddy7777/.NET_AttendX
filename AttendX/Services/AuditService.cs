@@ -17,7 +17,7 @@ public class AuditService(AppDbContext db, ICurrentUser user) : IAuditService
     {
         _db.AuditLogs.Add(new AuditLog
         {
-            Timestamp = DateTime.Now,
+            Timestamp = DateTime.UtcNow,
             ActorId = actorId ?? _user.UserId,
             ActorName = actorName ?? _user.DisplayName,
             Action = action,
@@ -33,3 +33,4 @@ public class AuditService(AppDbContext db, ICurrentUser user) : IAuditService
         await _db.SaveChangesAsync();
     }
 }
+

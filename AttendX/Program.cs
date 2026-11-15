@@ -1,25 +1,52 @@
 using Microsoft.AspNetCore.Identity;
+using Serilog;
+using Serilog.Events;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Hangfire.Dashboard;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Swashbuckle.AspNetCore.SwaggerUI;
+using AttendX.Hubs;
 
-try
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/attendx-.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+// Neon: .env.local / .env hold DATABASE_URL pulled by `neon deploy`. Process env wins over the file.
+foreach (var f in new[] { ".env.local", ".env" })
 {
-    foreach (var proc in System.Diagnostics.Process.GetProcessesByName("AttendX"))
+    if (File.Exists(f))
     {
-        if (proc.Id != Environment.ProcessId) proc.Kill();
+        DotNetEnv.Env.Load(f, new DotNetEnv.LoadOptions(true, false, false));
+        Log.Logger.Information("Loaded Neon env from {File}", f);
     }
 }
-catch { }
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 builder.Services.Configure<AttendXOptions>(builder.Configuration.GetSection("AttendX"));
 builder.Services.Configure<InstitutionOptions>(builder.Configuration.GetSection("Institution"));
+builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notification"));
+
+// Neon writes DATABASE_URL (pooled) / DATABASE_URL_UNPOOLED (direct) into .env.local; appsettings.json calls it DefaultConnection.
+if (builder.Configuration.GetConnectionString("DefaultConnection") is null)
+{
+    var neonCs = builder.Configuration["DATABASE_URL"] ?? builder.Configuration["ConnectionStrings:DATABASE_URL"];
+    if (neonCs is not null) builder.Configuration.GetSection("ConnectionStrings")["DefaultConnection"] = neonCs;
+}
 
 var cs = builder.Configuration.GetConnectionString("DefaultConnection")
          ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing in appsettings.json");
 builder.Services.AddResponseCompression(options => { options.EnableForHttps = true; });
-builder.Services.AddDbContextPool<AppDbContext>(o => o.UseSqlServer(cs, sql =>
+builder.Services.AddDbContextPool<AppDbContext>(o => o.UseNpgsql(cs, npgsql =>
 {
-    sql.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null);
+    npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null!);
 }));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(o =>
@@ -44,22 +71,64 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Lax;
     o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
-    o.ExpireTimeSpan = TimeSpan.FromHours(8);
+    o.Cookie.Name = "AttendX.Auth";
+    o.ExpireTimeSpan = TimeSpan.FromHours(12);     // 12-hour session for active users
     o.SlidingExpiration = true;
+    // RememberMe: when checked, Identity issues a persistent cookie (no session-only limit)
 });
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(PolicyNames.AdminOnly, p => p.RequireRole(RoleNames.Admin))
     .AddPolicy(PolicyNames.AdminOrHod, p => p.RequireRole(RoleNames.Admin, RoleNames.Hod))
     .AddPolicy(PolicyNames.AnyStaff, p => p.RequireRole(RoleNames.Admin, RoleNames.Hod, RoleNames.Faculty))
-    .AddPolicy(PolicyNames.StudentOnly, p => p.RequireRole(RoleNames.Student));
+    .AddPolicy(PolicyNames.StudentOnly, p => p.RequireRole(RoleNames.Student))
+    .AddPolicy(PolicyNames.ParentOnly, p => p.RequireRole(RoleNames.Parent))
+    .AddPolicy(PolicyNames.StudentOrParent, p => p.RequireRole(RoleNames.Student, RoleNames.Parent));
 
 builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
 builder.Services.AddHttpContextAccessor();
+
+// REST API + Swagger UI at /swagger
 builder.Services.AddControllersWithViews(o =>
 {
-    o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());   // CSRF protection on every POST
+    o.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
     o.Filters.AddService<ForcePasswordChangeFilter>();
+}).AddJsonOptions(o =>
+{
+    o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    o.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+});
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(o =>
+{
+    o.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "AttendX REST API",
+        Version = "v1",
+        Description = "Attendance, exam, leave and student APIs for mobile/3rd-party integrations. Authenticate with the same application cookie as the web UI (log in at /admin/login, /faculty/login, /student/login or /parent/login) and pass the RequestVerificationToken header for POST/PUT/DELETE.",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact { Name = "AttendX" }
+    });
+    o.AddSecurityDefinition("cookie", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Cookie,
+        Name = "AttendX.Auth",
+        Description = "Session cookie issued by the web login."
+    });
+    o.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "cookie" }
+            },
+            Array.Empty<string>()
+        }
+    });
+    var xmlFile = System.IO.Path.ChangeExtension(typeof(Program).Assembly.Location, ".xml");
+    if (System.IO.File.Exists(xmlFile)) o.IncludeXmlComments(xmlFile);
+    // Only document API controllers ([ApiController]) — not MVC view controllers
+    o.DocInclusionPredicate((docName, apiDesc) => apiDesc.ActionDescriptor is Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor cad && (cad.ControllerTypeInfo?.GetCustomAttributes(typeof(ApiControllerAttribute), true)?.Any() ?? false));
 });
 
 builder.Services.AddSingleton<IClock, SystemClock>();
@@ -83,7 +152,26 @@ builder.Services.AddScoped<ICalendarService, CalendarService>();
 builder.Services.AddScoped<INoticeService, NoticeService>();
 builder.Services.AddScoped<IStudentPortalService, StudentPortalService>();
 builder.Services.AddScoped<IMasterDataExportService, MasterDataExportService>();
+builder.Services.AddScoped<IExamService, ExamService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ILeaveService, LeaveService>();
 builder.Services.AddScoped<DbSeeder>();
+
+// Health Checks
+builder.Services.AddHealthChecks();
+
+// SignalR real-time hubs
+builder.Services.AddSignalR();
+
+// Hangfire background jobs
+#pragma warning disable CS0618
+    builder.Services.AddHangfire(config => config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(cs));
+#pragma warning restore CS0618
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
@@ -93,7 +181,7 @@ using (var scope = app.Services.CreateScope())
     try { await scope.ServiceProvider.GetRequiredService<DbSeeder>().SeedAsync(); }
     catch (Exception ex)
     {
-        log.LogCritical(ex, "Database creation/seeding failed. Check the connection string and that SQL Server LocalDB is installed.");
+        log.LogCritical(ex, "Database creation/seeding failed. Check the connection string and that PostgreSQL is installed.");
         throw;
     }
 }
@@ -116,5 +204,38 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHealthChecks("/healthz");
+
+// REST API + Swagger UI (cookie auth)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AttendX API v1");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "AttendX REST API";
+});
+
+// SignalR real-time hubs
+app.MapHub<AttendanceHub>("/hubs/attendance");
+app.MapHub<NotificationHub>("/hubs/notifications");
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthFilter() }
+});
+
+RecurringJob.AddOrUpdate<IAttendanceService>("auto-mark-absent", s => s.MarkAbsentAfterGracePeriodAsync(), "0 23 * * *");
+RecurringJob.AddOrUpdate<INotificationService>("daily-deficiency-sweep", n => n.SendLowAttendanceSweepAsync(), "0 8 * * *");
+
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+app.MapControllers();   // /api/* attribute-routed API controllers
 app.Run();
+
+public class HangfireAuthFilter : IDashboardAuthorizationFilter
+{
+    public bool Authorize(DashboardContext context)
+    {
+        return context.GetHttpContext().User.IsInRole(RoleNames.Admin);
+    }
+}

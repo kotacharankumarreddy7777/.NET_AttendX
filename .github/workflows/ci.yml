@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: AttendXDb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [ '5432:5432' ]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Apply migrations
+        run: dotnet ef database update --project AttendX/AttendX.csproj --startup-project AttendX/AttendX.csproj
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=AttendXDb;Username=postgres;Password=postgres;"
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=AttendXDb;Username=postgres;Password=postgres;"
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t attendx:${{ github.sha }} .
+      - name: Verify image
+        run: docker run --rm attendx:${{ github.sha }} --version || true
+
+  # Optional: trigger Render redeploy on main pushes. Enable by adding the
+  # RENDER_DEPLOY_HOOK secret (Render > Service > Settings > Deploy Hooks).
+  render-deploy:
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Trigger Render deploy
+        if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
+        run: curl -sSfX POST "${{ secrets.RENDER_DEPLOY_HOOK }}" || echo "Render deploy hook failed (non-blocking)"

@@ -1,0 +1,46 @@
+@model List<ExamTimetable>
+@{
+    ViewData["Title"] = "My Exams & Results";
+    var student = ViewBag.Student as Student;
+    var today = (DateTime)ViewBag.Today;
+    var regs = ViewBag.Registrations as Dictionary<int, bool> ?? new();
+    var marks = ViewBag.Marks as List<ExamMark> ?? new();
+}
+<div class="mb-3"><h1 class="page-title">My Exams &amp; Results</h1><div class="text-muted small">@student?.FullName (@student?.StudentID) — Sem @student?.Semester</div></div>
+
+<div class="ax-card mb-3"><div class="card-h">Upcoming Exams</div>
+@{
+    var upcoming = Model.Where(x => x.ExamDate.Date >= today).ToList();
+}
+@if (!upcoming.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No upcoming exams", "Your exam timetable will appear here once published.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+else {
+<div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Type</th><th>Date</th><th>Time</th><th>Subject</th><th>Room</th><th>Eligible</th></tr></thead><tbody>
+@foreach (var e in upcoming) {
+    var elig = regs.TryGetValue(e.ExamId, out var ev) ? ev : true;
+    <tr><td>@e.Exam?.Name</td><td>@e.Exam?.Type</td><td>@e.ExamDate.ToString("dd MMM yyyy")</td><td>@e.StartTime.ToString(@"hh\:mm")-@e.EndTime.ToString(@"hh\:mm")</td><td><b class="mono">@e.Subject?.SubjectCode</b><br /><span class="small text-muted">@e.Subject?.SubjectName</span></td><td>@e.RoomNo</td><td>@if (elig) { <span class="badge bg-success">Yes</span> } else { <span class="badge bg-danger">No</span> }</td></tr>
+}
+</tbody></table></div> }
+</div>
+
+<div class="ax-card mb-3"><div class="card-h">Completed Papers</div>
+@{
+    var completed = Model.Where(x => x.ExamDate.Date < today).ToList();
+}
+@if (!completed.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No past papers", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+else {
+<div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Date</th><th>Subject</th><th>Room</th></tr></thead><tbody>
+@foreach (var e in completed) { <tr><td>@e.Exam?.Name</td><td>@e.ExamDate.ToString("dd MMM yyyy")</td><td class="mono">@e.Subject?.SubjectCode</td><td>@e.RoomNo</td></tr> }
+</tbody></table></div> }
+</div>
+
+<div class="ax-card"><div class="card-h">My Results</div>
+@if (!marks.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No results yet", "Marks will be published after evaluation.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+else {
+<div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Subject</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>Status</th></tr></thead><tbody>
+@foreach (var m in marks) {
+    var tt = m.ExamTimetable;
+    var isExternal = tt?.Exam?.Type == "External";
+    <tr><td>@tt?.Exam?.Name</td><td class="mono">@tt?.Subject?.SubjectCode</td><td>@m.InternalMark</td><td>@(isExternal ? m.ExternalMark.ToString() : "-")</td><td><b>@m.TotalMark</b></td><td>@(m.Grade ?? "-")</td><td><span class="badge @(m.LockStatus == "Locked" ? "bg-danger" : "bg-secondary")">@m.LockStatus</span></td></tr>
+}
+</tbody></table></div> }
+</div>

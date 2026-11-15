@@ -1,0 +1,61 @@
+@model List<ExamRegistration>
+@{
+    ViewData["Title"] = "Exam Registrations";
+    var exam = ViewBag.Exam as Exam;
+}
+<h1 class="page-title">@(exam?.Name ?? "Exam") - Registrations</h1>
+<div class="ax-card mb-3">
+    <div class="card-h d-flex justify-content-between align-items-center">
+        <span>Student Registrations</span>
+        @if (User.IsInRole(RoleNames.Admin))
+        {
+            <form asp-action="GenerateRegistrations" asp-route-examId="@(exam?.Id)" method="post" class="d-inline">
+                <button class="btn btn-ax btn-sm" type="submit"><i class="bi bi-check2"></i> Generate from Attendance</button>
+            </form>
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Branch / Section</th>
+                    <th>Semester</th>
+                    <th>Eligible</th>
+                    <th>Reason</th>
+                    <th>Hall Ticket</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td class="mono">@r.Student!.StudentID</td>
+                        <td>@r.Student.FullName</td>
+                        <td>@r.Student.Branch!.Code / @r.Student.Section!.Name</td>
+                        <td>Sem @r.Student.Semester</td>
+                        <td><span class="badge @(r.IsEligible ? "bg-success" : "bg-danger")">@(r.IsEligible ? "Eligible" : "Ineligible")</span></td>
+                        <td class="small text-muted">@r.EligibilityReason ?? "-"</td>
+                        <td>@(r.HallTicketGenerated ? "<span class='badge bg-success'>Generated</span>" : "<span class='badge bg-secondary'>Pending</span>")</td>
+                        <td class="text-end">
+                            @if (User.IsInRole(RoleNames.Admin))
+                            {
+                                <form asp-action="ToggleEligibility" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <input type="hidden" name="eligible" value="@(!r.IsEligible)" />
+                                    <input type="hidden" name="examId" value="@(exam?.Id)" />
+                                    <input type="hidden" name="reason" value="@r.EligibilityReason" />
+                                    <button class="btn btn-sm @(r.IsEligible ? "btn-outline-danger" : "btn-outline-success")" type="submit">
+                                        @(r.IsEligible ? "Mark Ineligible" : "Mark Eligible")
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

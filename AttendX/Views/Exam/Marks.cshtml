@@ -1,0 +1,127 @@
+@model List<ExamMark>
+@{
+    ViewData["Title"] = "Enter Marks";
+    var tt = ViewBag.Timetable as ExamTimetable;
+    var eligibleIds = ViewBag.EligibleStudentIds as List<int> ?? new List<int>();
+    bool isExternal = ViewBag.IsExternal;
+    string lockStatus = (string?)ViewBag.LockStatus ?? "Draft";
+    bool pendingQuery = ViewBag.PendingQuery;
+    string? modStatus = ViewBag.ModificationStatus;
+    var wStart = (DateTime?)ViewBag.WindowStart;
+    var wEnd = (DateTime?)ViewBag.WindowEnd;
+    bool locked = lockStatus == "Locked";
+    bool inWindow = modStatus == "Approved" && wStart.HasValue && wEnd.HasValue && DateTime.UtcNow >= wStart.Value && DateTime.UtcNow <= wEnd.Value;
+    bool canEdit = !locked || inWindow;
+    bool isHodOrAdmin = User.IsInRole(RoleNames.Admin) || User.IsInRole(RoleNames.Hod);
+}
+<h1 class="page-title">@(tt?.Exam?.Name ?? "Exam") - Marks Entry</h1>
+<div class="ax-card mb-3">
+    <div class="card-h d-flex justify-content-between align-items-center">
+        <span>@tt?.Subject?.SubjectCode - @tt?.Subject?.SubjectName</span>
+        <span class="small text-muted">@tt?.Branch?.Code / @tt?.Section?.Name - Sem @tt?.Semester - @tt?.ExamDate.ToString("dd MMM yyyy")</span>
+    </div>
+    <div class="card-b">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+            <span class="badge @(locked ? "bg-danger" : lockStatus == "Submitted" ? "bg-warning" : "bg-secondary")">Lock: @lockStatus</span>
+            @if (isExternal) { <span class="badge bg-info text-dark">External (70)</span> } else { <span class="badge bg-info text-dark">Internal (30)</span> }
+            @if (modStatus != null && modStatus != "None") { <span class="badge @(modStatus == "Approved" ? "bg-success" : modStatus == "Pending" ? "bg-warning" : "bg-danger")">Modification: @modStatus</span> }
+            @if (inWindow && wEnd.HasValue) { <span class="small text-muted">Window: @wStart?.ToString("dd MMM HH:mm") - @wEnd?.ToString("dd MMM HH:mm")</span> }
+        </div>
+
+        @if (canEdit)
+        {
+        <form asp-action="SaveMark" method="post">
+            <input type="hidden" name="examTimetableId" value="@(tt?.Id)" />
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Student</label>
+                    <select name="studentId" class="form-select">
+                        @foreach (var sid in eligibleIds)
+                        {
+                            var st = Model.FirstOrDefault(m => m.StudentId == sid)?.Student;
+                            if (st != null)
+                            {
+                                <option value="@st.Id">@st.StudentID - @st.FullName</option>
+                            }
+                        }
+                    </select>
+                </div>
+                @if (isExternal)
+                {
+                <div class="col-md-2"><label class="form-label">Internal (30)</label><input name="internalMark" type="number" class="form-control" min="0" max="30" step="0.01" required /></div>
+                <div class="col-md-2"><label class="form-label">External (70)</label><input name="externalMark" type="number" class="form-control" min="0" max="70" step="0.01" required /></div>
+                }
+                else
+                {
+                <div class="col-md-2"><label class="form-label">Internal (30)</label><input name="internalMark" type="number" class="form-control" min="0" max="30" step="0.01" required /></div>
+                <input type="hidden" name="externalMark" value="0" />
+                }
+                <div class="col-md-3"><label class="form-label">Remarks</label><input name="remarks" class="form-control" placeholder="Optional remarks" /></div>
+                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-ax w-100" type="submit">Save</button></div>
+            </div>
+        </form>
+        }
+        else
+        {
+            <div class="alert alert-warning">Marks are locked. Faculty must raise a modification query; HOD/Admin approves and allots a time window.</div>
+        }
+
+        <div class="d-flex flex-wrap gap-2">
+            @if (!isHodOrAdmin && lockStatus == "Draft" && Model.Any())
+            {
+                <form asp-action="SubmitMarks" method="post" class="d-inline"><input type="hidden" name="examTimetableId" value="@(tt?.Id)" /><button class="btn btn-outline-primary" type="submit">Submit for Review</button></form>
+            }
+            @if (isHodOrAdmin && lockStatus != "Locked")
+            {
+                <form asp-action="LockMarks" method="post" class="d-inline" onsubmit="return confirm('Lock marks permanently? Faculty must raise a modification query afterwards.')"><input type="hidden" name="examTimetableId" value="@(tt?.Id)" /><button class="btn btn-danger" type="submit"><i class="bi bi-lock"></i> Lock Marks</button></form>
+            }
+            @if (locked && !isHodOrAdmin && !inWindow && modStatus != "Pending")
+            {
+                <button class="btn btn-outline-warning" data-bs-toggle="collapse" data-bs-target="#raiseQuery"><i class="bi bi-arrow-repeat"></i> Raise Modification Query</button>
+            }
+        </div>
+        @if (locked && !isHodOrAdmin && !inWindow && modStatus != "Pending")
+        {
+            <div class="collapse mt-2" id="raiseQuery">
+                <form asp-action="RaiseLockQuery" method="post" class="row g-2">
+                    <input type="hidden" name="examTimetableId" value="@(tt?.Id)" />
+                    <div class="col-12"><label class="form-label">Reason</label><input name="reason" class="form-control" maxlength="500" required placeholder="Explain why marks need correction..." /></div>
+                    <div class="col-12"><button class="btn btn-warning" type="submit">Submit Query to HOD/Admin</button></div>
+                </form>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="ax-card">
+    <div class="card-h">Marks Entered (@Model.Count)</div>
+    <div class="card-b">
+        @if (!Model.Any())
+        {
+            <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No marks entered yet", "Use the form above to enter marks for eligible students.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Student ID</th><th>Name</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>Status</th><th>Marked By</th></tr></thead>
+                    <tbody>
+                        @foreach (var m in Model)
+                        {
+                            <tr>
+                                <td class="mono">@m.Student?.StudentID</td>
+                                <td>@m.Student?.FullName</td>
+                                <td>@m.InternalMark</td>
+                                <td>@(isExternal ? m.ExternalMark.ToString() : "-")</td>
+                                <td><b>@m.TotalMark</b></td>
+                                <td><span class="badge bg-secondary">@(m.Grade ?? "-")</span></td>
+                                <td><span class="badge @(m.LockStatus == "Locked" ? "bg-danger" : m.LockStatus == "Submitted" ? "bg-warning" : "bg-secondary")">@m.LockStatus</span></td>
+                                <td class="small text-muted">@(m.MarkedBy ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

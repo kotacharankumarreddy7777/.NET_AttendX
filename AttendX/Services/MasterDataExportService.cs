@@ -32,10 +32,11 @@ public class MasterDataExportService(AppDbContext db, IOptions<AttendXOptions> o
 
     public async Task<byte[]> BuildAsync()
     {
+        _db.Database.SetCommandTimeout(300);
         using var wb = new XLWorkbook();
 
         var info = wb.Worksheets.Add("README");
-        info.Cell(1, 1).Value = "AttendX master data (exported " + DateTime.Now.ToString("dd MMM yyyy HH:mm") + ")";
+        info.Cell(1, 1).Value = "AttendX master data (exported " + DateTime.UtcNow.ToString("dd MMM yyyy HH:mm") + ")";
         info.Cell(2, 1).Value = "Passwords are NOT stored in readable form. The 'Default password' column shows the seed password used when the account was created - it is valid only if the user has not changed it.";
         info.Cell(3, 1).Value = "Regenerate any time: Admin > Backup / Restore > Download master data (Excel).";
         info.Column(1).Width = 120;
@@ -67,7 +68,7 @@ public class MasterDataExportService(AppDbContext db, IOptions<AttendXOptions> o
         {
             wsS.Cell(r, 1).Value = s.StudentID; wsS.Cell(r, 2).Value = s.FullName; wsS.Cell(r, 3).Value = s.Email; wsS.Cell(r, 4).Value = s.Phone;
             wsS.Cell(r, 5).Value = s.Branch!.Code; wsS.Cell(r, 6).Value = s.Section!.Name; wsS.Cell(r, 7).Value = s.Semester; wsS.Cell(r, 8).Value = s.Year;
-            wsS.Cell(r, 9).Value = s.JoiningDate.ToString("yyyy-MM-dd"); wsS.Cell(r, 10).Value = s.IsActive ? "Yes" : "No"; wsS.Cell(r, 11).Value = _o.SeedStudentPassword;
+            wsS.Cell(r, 9).Value = s.JoiningDate.ToString("yyyy-MM-dd"); wsS.Cell(r, 10).Value = s.IsActive ? "Yes" : "No";             wsS.Cell(r, 11).Value = _o.SeedStudentPassword;
             r++;
         }
         Finish(wsS);
@@ -115,3 +116,4 @@ public class MasterDataExportService(AppDbContext db, IOptions<AttendXOptions> o
         return path;
     }
 }
+

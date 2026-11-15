@@ -17,7 +17,7 @@ public class AttendanceSettings
     public bool OfflineSyncEnabled { get; set; } = true;
     [Range(0, 1440)] public int OfflineMaxDelayMinutes { get; set; } = 120;
     [Range(1, 12)] public int PeriodCount { get; set; } = 7;
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>Attendance threshold for a branch / semester / section. Most specific matching rule wins.</summary>
@@ -36,7 +36,7 @@ public class ThresholdRule
 public class AuditLog
 {
     public long Id { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.Now;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     [StringLength(450)] public string? ActorId { get; set; }
     [StringLength(150)] public string ActorName { get; set; } = "";
     [Required, StringLength(60)] public string Action { get; set; } = "";
@@ -53,7 +53,7 @@ public class AuditLog
 public class BackupHistory
 {
     public int Id { get; set; }
-    public DateTime At { get; set; } = DateTime.Now;
+    public DateTime At { get; set; } = DateTime.UtcNow;
     [StringLength(20)] public string Action { get; set; } = "Backup";   // Backup / Restore
     [StringLength(200)] public string FileName { get; set; } = "";
     public long SizeBytes { get; set; }
@@ -61,3 +61,23 @@ public class BackupHistory
     [StringLength(500)] public string? Message { get; set; }
     [StringLength(150)] public string? By { get; set; }
 }
+
+/// <summary>Outbound email / SMS log for the notification service (audit + retry).</summary>
+public class NotificationLog
+{
+    public long Id { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>Email / SMS / Push</summary>
+    [Required, StringLength(20)] public string Channel { get; set; } = "Email";
+    [Required, StringLength(150)] public string To { get; set; } = "";
+    [Required, StringLength(200)] public string Subject { get; set; } = "";
+    [StringLength(2000)] public string? Body { get; set; }
+    /// <summary>Pending / Sent / Failed</summary>
+    [StringLength(20)] public string Status { get; set; } = "Pending";
+    [StringLength(500)] public string? Error { get; set; }
+    public DateTime? SentAt { get; set; }
+    /// <summary>Optional link to the entity that triggered the notification (student, exam, leave).</summary>
+    [StringLength(60)] public string? EntityType { get; set; }
+    [StringLength(80)] public string? EntityId { get; set; }
+}
+

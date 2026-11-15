@@ -1,0 +1,50 @@
+@model List<LeaveApplication>
+@{
+    ViewData["Title"] = "Leave Management";
+    var types = ViewBag.Types as List<LeaveType> ?? new();
+    bool isStudent = ViewBag.IsStudent;
+    bool isAdminOrHod = ViewBag.IsAdminOrHod;
+}
+<h1 class="page-title mb-3">Leave Management</h1>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h">@(isStudent ? "Apply for Leave" : "Pending Applications")</div>
+        @if (isStudent)
+        {
+        <div class="card-b">
+        <form asp-action="Apply" method="post" class="row g-2">
+            <div class="col-12"><label class="form-label">Leave Type</label><select name="leaveTypeId" class="form-select" required>@foreach (var lt in types) { <option value="@lt.Id">@lt.Name (@lt.DefaultDaysAllowed days)</option> }</select></div>
+            <div class="col-6"><label class="form-label">From</label><input type="date" name="startDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+            <div class="col-6"><label class="form-label">To</label><input type="date" name="endDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+            <div class="col-12"><label class="form-label">Reason</label><input name="reason" class="form-control" maxlength="500" required /></div>
+            <div class="col-12"><button class="btn btn-ax" type="submit">Submit Application</button></div>
+        </form>
+        </div>
+        }
+        else
+        {
+        <div class="card-b"><p class="text-muted small mb-0">Review leave applications below. Admin/HOD can approve or reject.</p></div>
+        }
+    </div></div>
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">Applications (@Model.Count)</div>
+        @if (!Model.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_queries", "No leave applications", "")' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Student</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th>@if (isAdminOrHod) { <th></th> }</tr></thead><tbody>
+        @foreach (var l in Model) {
+            <tr>
+                <td>@l.Student?.FullName<br /><span class="mono text-muted small">@l.Student?.StudentID</span></td>
+                <td>@l.LeaveType?.Name</td>
+                <td>@l.StartDate.ToString("dd MMM")</td><td>@l.EndDate.ToString("dd MMM")</td><td>@l.TotalDays</td>
+                <td class="small">@l.Reason</td>
+                <td><span class="badge @(l.Status == "Approved" ? "bg-success" : l.Status == "Rejected" ? "bg-danger" : "bg-warning")">@l.Status</span></td>
+                @if (isAdminOrHod && l.Status == "Pending") {
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-success" asp-action="Review" asp-route-id="@l.Id" asp-route-status="Approved" asp-route-adminResponse="Approved" onclick="return confirm('Approve?')">Approve</a>
+                        <a class="btn btn-sm btn-outline-danger" asp-action="Review" asp-route-id="@l.Id" asp-route-status="Rejected" asp-route-adminResponse="Rejected" onclick="return confirm('Reject?')">Reject</a>
+                    </td>
+                }
+            </tr>
+        }
+        </tbody></table></div> }
+    </div></div>
+</div>

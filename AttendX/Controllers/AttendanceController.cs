@@ -32,7 +32,8 @@ public class AttendanceController(IAttendanceService att, ICurrentUser user, App
     private readonly IClock _clock = clock;
     private readonly ICalendarService _calendar = calendar;
 
-    /// <summary>Today's classes: faculty see their own, HOD their department, admin everything.</summary>
+    /// <summary>Today's classes: faculty see their own, HOD their department, admin everything.
+    /// Returns period-grouped cards: one card per period, listing every class in that period (faculty + room + branch/section).</summary>
     public async Task<IActionResult> Index()
     {
         var today = _clock.Now.Date;
@@ -42,10 +43,13 @@ public class AttendanceController(IAttendanceService att, ICurrentUser user, App
             if (_user.IsHod) branchId = await _user.GetScopeBranchIdAsync();
             else facultyId = (await _user.GetFacultyAsync())?.Id ?? -1;
         }
+        var slots = await _att.GetSlotsAsync(today, facultyId, branchId, null);
+        var periods = await _db.PeriodDefinitions.AsNoTracking().OrderBy(p => p.PeriodNo).ToListAsync();
         ViewBag.Today = today;
         ViewBag.Mine = facultyId != null;
         ViewBag.NonWorking = await _calendar.GetNonWorkingReasonAsync(today);
-        return View(await _att.GetSlotsAsync(today, facultyId, branchId, null));
+        ViewBag.Periods = periods;
+        return View(slots);
     }
 
     [HttpGet]

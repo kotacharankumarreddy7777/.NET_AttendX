@@ -1,0 +1,59 @@
+@model ExamTimetableFormViewModel
+@{
+    ViewData["Title"] = "Schedule Exam Slot";
+    var examId = Model.ExamId;
+}
+<h1 class="page-title">Schedule Exam Slot</h1>
+<div class="ax-card">
+    <div class="card-b">
+        <form asp-action="AddTimetableSlot" method="post">
+            <input type="hidden" asp-for="ExamId" />
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Branch</label>
+                    <select asp-for="BranchId" class="form-select" asp-items="Model.Branches"></select>
+                    <span asp-validation-for="BranchId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Section</label>
+                    <select asp-for="SectionId" class="form-select" asp-items="Model.Sections"></select>
+                    <span asp-validation-for="SectionId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Subject</label>
+                    <select asp-for="SubjectId" class="form-select" asp-items="Model.Subjects"></select>
+                    <span asp-validation-for="SubjectId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Invigilator (Faculty)</label>
+                    <select asp-for="FacultyId" class="form-select" asp-items="Model.Faculty"></select>
+                    <span asp-validation-for="FacultyId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Exam Date</label>
+                    <input asp-for="ExamDate" type="date" class="form-control" />
+                    <span asp-validation-for="ExamDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Start Time</label>
+                    <input asp-for="StartTime" type="time" class="form-control" />
+                    <span asp-validation-for="StartTime" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">End Time</label>
+                    <input asp-for="EndTime" type="time" class="form-control" />
+                    <span asp-validation-for="EndTime" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Room</label>
+                    <input asp-for="RoomNo" class="form-control" placeholder="e.g. Block A-101" />
+                    <span asp-validation-for="RoomNo" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-ax" type="submit">Schedule Slot</button>
+                    <a class="btn btn-outline-secondary" asp-action="Timetable" asp-route-examId="@examId">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

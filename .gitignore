@@ -8,6 +8,10 @@ AttendX/wwwroot/QRCodes/*
 !AttendX/wwwroot/uploads/students/.gitkeep
 !AttendX/wwwroot/QRCodes/.gitkeep
 
+# Runtime logs
+logs/
+AttendX/logs/
+
 # Local databases and database backups
 *.db
 *.sqlite
@@ -27,3 +31,7 @@ AttendX/wwwroot/QRCodes/*
 *.pfx
 *.p12
 *.key
+.neon
+node_modules/
+run.log
+run.err

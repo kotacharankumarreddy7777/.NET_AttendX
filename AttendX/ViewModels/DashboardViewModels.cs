@@ -31,12 +31,21 @@ public class AdminDashboardViewModel
     public int TodaySessions { get; set; }
     public int TodayRecords { get; set; }
     public decimal AvgAttendance { get; set; }
+    public int PeriodCount { get; set; } = 7;
+    public List<PeriodGroup> TodayByPeriod { get; set; } = new();
     public int LowAttendanceCount { get; set; }
     public List<StudentSummary> LowStudents { get; set; } = new();
     public List<SlotView> MissingSlots { get; set; } = new();
     public List<string> Anomalies { get; set; } = new();
     public List<FacultyActivityRow> FacultyActivity { get; set; } = new();
     public DashboardCharts Charts { get; set; } = new();
+}
+
+public class PeriodGroup
+{
+    public int PeriodNo { get; set; }
+    public string TimeRange { get; set; } = "";
+    public List<SlotView> Classes { get; set; } = new();
 }
 
 public class FacultyActivityRow

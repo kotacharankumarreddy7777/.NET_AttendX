@@ -34,10 +34,11 @@ public class QueriesController(AppDbContext db, ICurrentUser user, IAuditService
         response = (response ?? "").Trim();
         if (response.Length < 3 || response.Length > 500) { TempData["Error"] = "Write a short answer (3-500 characters)."; return RedirectToAction(nameof(Index)); }
         q.Status = decision == "reject" ? "Rejected" : "Resolved";
-        q.Response = response; q.ResponderName = _user.DisplayName; q.RespondedAt = DateTime.Now;
+        q.Response = response; q.ResponderName = _user.DisplayName; q.RespondedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _audit.LogAsync("QueryAnswered", "AttendanceQuery", q.Student!.StudentID, newValues: q.Status, reason: response, branchId: q.BranchId);
         TempData["Success"] = "Reply sent to the student.";
         return RedirectToAction(nameof(Index));
     }
 }
+

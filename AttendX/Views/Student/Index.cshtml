@@ -106,6 +106,23 @@
     </div></div>
 </div>
 
+<div class="row g-3 mb-3">
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h"><i class="bi bi-calendar-event me-1"></i>Upcoming Exams</div>
+        @if (!Model.UpcomingExams.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No upcoming exams", "Exam timetable will appear here once published.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Date</th><th>Time</th><th>Subject</th><th>Room</th><th>Eligible</th></tr></thead><tbody>
+        @foreach (var e in Model.UpcomingExams) { <tr><td>@e.ExamName</td><td>@e.ExamDate.ToString("dd MMM yyyy")</td><td>@e.StartTime.ToString(@"hh\:mm")-@e.EndTime.ToString(@"hh\:mm")</td><td><b class="mono">@e.SubjectCode</b><br /><span class="small text-muted">@e.SubjectName</span></td><td>@e.RoomNo</td><td>@if (e.IsEligible) { <span class="badge bg-success">Yes</span> } else { <span class="badge bg-danger">No</span> }</td></tr> }
+        </tbody></table></div> }
+    </div></div>
+    <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h"><i class="bi bi-award me-1"></i>Exam Results</div>
+        @if (!Model.Results.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No results yet", "Results will be published after evaluation.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+        else {
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Subject</th><th>Total</th><th>Grade</th></tr></thead><tbody>
+        @foreach (var r in Model.Results.Take(12)) { <tr><td>@r.ExamName</td><td class="mono">@r.SubjectCode</td><td><b>@r.TotalMark</b></td><td>@(r.Grade ?? "-")</td></tr> }
+        </tbody></table></div> }
+    </div></div>
+</div>
+
 <div class="ax-card mb-3" id="queries"><div class="card-h">Attendance Query</div><div class="card-b">
     <form asp-action="Query" method="post" class="row g-2 mb-3" data-once>
         <div class="col-md-3"><label class="form-label">Class date</label><input type="date" name="date" class="form-control" max="@DateTime.Today.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd")" value="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>

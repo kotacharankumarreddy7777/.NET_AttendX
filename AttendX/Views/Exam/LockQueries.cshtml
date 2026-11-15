@@ -1,0 +1,56 @@
+@model List<ExamMark>
+@{
+    ViewData["Title"] = "Modification Queries";
+}
+<div class="mb-3"><h1 class="page-title">Modification Queries</h1><div class="text-muted small">Faculty raised these after marks were locked. Approve to allot a time window or reject with a note.</div></div>
+
+@if (!Model.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_queries", "No pending queries", "")' /> }
+else {
+<div class="ax-card">
+    <div class="card-h">Pending Queries (@Model.Count)</div>
+    <div class="card-b">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead><tr><th>Exam</th><th>Subject</th><th>Section</th><th>Student</th><th>Reason</th><th>Raised</th><th>Review</th></tr></thead>
+                <tbody>
+                @{
+                    // Group by timetable for one action row per class
+                    var groups = Model.GroupBy(m => m.ExamTimetableId);
+                }
+                @foreach (var g in groups)
+                {
+                    var first = g.First();
+                    var tt = first.ExamTimetable;
+                    var key = "rev-" + tt?.Id;
+                    <tr>
+                        <td>@tt?.Exam?.Name<br /><span class="small text-muted">@tt?.ExamDate.ToString("dd MMM yyyy")</span></td>
+                        <td class="mono">@tt?.Subject?.SubjectCode</td>
+                        <td>Sem @tt?.Semester / @tt?.Section?.Name</td>
+                        <td>@g.Count() students</td>
+                        <td class="small">@first.ModificationQueryReason</td>
+                        <td class="small">@first.ModificationQueryBy<br />@first.ModificationQueryAt?.ToString("dd MMM HH:mm")</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-success" data-bs-toggle="collapse" data-bs-target="#@key">Review</button>
+                        </td>
+                    </tr>
+                    <tr class="table-light"><td colspan="7">
+                        <div class="collapse" id="@key">
+                            <form asp-action="ReviewLockQuery" method="post" class="row g-2 align-items-end">
+                                <input type="hidden" name="examTimetableId" value="@tt?.Id" />
+                                <div class="col-12"><label class="form-label">Note</label><input name="note" class="form-control" maxlength="500" placeholder="HOD/Admin note..." /></div>
+                                <div class="col-6"><label class="form-label">Window Start</label><input type="datetime-local" name="windowStart" class="form-control" required /></div>
+                                <div class="col-6"><label class="form-label">Window End</label><input type="datetime-local" name="windowEnd" class="form-control" required /></div>
+                                <div class="col-12">
+                                    <button type="submit" name="approve" value="true" class="btn btn-success"><i class="bi bi-check-lg"></i> Approve &amp; Allot Window</button>
+                                    <button type="submit" name="approve" value="false" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i> Reject</button>
+                                </div>
+                            </form>
+                        </div>
+                    </td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+}

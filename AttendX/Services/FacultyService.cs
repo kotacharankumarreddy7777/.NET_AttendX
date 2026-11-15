@@ -104,7 +104,7 @@ public class FacultyService(AppDbContext db, UserManager<ApplicationUser> users,
         }
         f.FullName = m.FullName.Trim(); f.Email = email; f.Phone = m.Phone.Trim();
         f.BranchId = branch.Id; f.Department = branch.Name; f.Designation = m.Designation.Trim(); f.IsHOD = m.IsHOD;
-        f.UpdatedAt = DateTime.Now;
+        f.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         await _audit.LogAsync("FacultyUpdated", "Faculty", f.FacultyID, old, Snapshot(f), branchId: f.BranchId);
         return (true, null);
@@ -114,7 +114,7 @@ public class FacultyService(AppDbContext db, UserManager<ApplicationUser> users,
     {
         var f = await _db.Faculty.FirstOrDefaultAsync(x => x.Id == id);
         if (f == null) return (false, "Faculty not found.");
-        f.IsActive = active; f.UpdatedAt = DateTime.Now;
+        f.IsActive = active; f.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         var user = f.IdentityUserId == null ? null : await _users.FindByIdAsync(f.IdentityUserId);
         if (user != null)
@@ -187,3 +187,4 @@ public class FacultyService(AppDbContext db, UserManager<ApplicationUser> users,
 
     private static string Snapshot(Faculty f) => JsonSerializer.Serialize(new { f.FacultyID, f.FullName, f.Email, f.Phone, f.BranchId, f.Designation, f.IsHOD, f.IsActive });
 }
+

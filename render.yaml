@@ -1,0 +1,56 @@
+# Render deployment descriptor for AttendX.
+# Provision: Neon PostgreSQL + Web Service (Docker).
+# Set these env vars in the Render dashboard (do NOT commit secrets):
+#   ConnectionStrings__DefaultConnection  -> Neon pooled connection string
+#   ASPNETCORE_ENVIRONMENT                -> Production
+#   AttendX__UseMigrations                -> true
+#   AttendX__SeedDemoData                 -> false   (set true only for first deploy / demo)
+#   AttendX__SeedHistoryDays              -> 105
+#   Institution__Name                     -> PVG College of Engineering & Technology
+#   Institution__ShortName                -> PVGCOET
+#   Institution__SystemName               -> Attendance Management System
+#   Auth__SeedAdminPassword               -> <change>
+#   Auth__SeedFacultyPassword             -> <change>
+#   Auth__SeedStudentPassword             -> <change>
+#   Auth__SeedParentPassword              -> <change>
+#   Email__SmtpHost / Email__SmtpUser / Email__SmtpPassword   -> SendGrid SMTP (optional)
+#   Sms__TwilioAccountSid / Sms__TwilioAuthToken / Sms__TwilioFrom  -> Twilio (optional)
+
+services:
+  - type: web
+    name: attendx-web
+    runtime: docker
+    plan: starter
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: AttendX__UseMigrations
+        value: "true"
+      - key: AttendX__SeedDemoData
+        value: "false"
+      - key: AttendX__SeedHistoryDays
+        value: "105"
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Institution__Name
+        value: "PVG College of Engineering & Technology"
+      - key: Institution__ShortName
+        value: "PVGCOET"
+      - key: Institution__SystemName
+        value: "Attendance Management System"
+      - key: Auth__SeedAdminPassword
+        sync: false
+      - key: Auth__SeedFacultyPassword
+        sync: false
+      - key: Auth__SeedStudentPassword
+        sync: false
+      - key: Auth__SeedParentPassword
+        sync: false
+      - key: Email__SmtpHost
+        sync: false
+      - key: Sms__TwilioAccountSid
+        sync: false

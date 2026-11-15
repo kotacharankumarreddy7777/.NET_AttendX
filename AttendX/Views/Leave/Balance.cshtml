@@ -1,0 +1,16 @@
+@model LeaveBalance?
+@{
+    ViewData["Title"] = "Leave Balance";
+    var student = ViewBag.Student as Student;
+}
+<h1 class="page-title mb-3">Leave Balance</h1>
+@if (student != null) { <div class="text-muted mb-3">@student.FullName (@student.StudentID) — Sem @student.Semester</div> }
+
+@if (Model == null) { <partial name="_EmptyState" model='new EmptyStateModel("no_data", "No balance found", "Leave balance has not been set up for this student.")' /> }
+else {
+<div class="row g-3">
+    <div class="col-6 col-md-4"><div class="ax-card stat"><div><div class="v">@Model.TotalDays</div><div class="l">Total Allowed</div></div></div></div>
+    <div class="col-6 col-md-4"><div class="ax-card stat"><div><div class="v">@Model.UsedDays</div><div class="l">Used</div></div></div></div>
+    <div class="col-6 col-md-4"><div class="ax-card stat"><div><div class="v pct pct-ok">@Model.RemainingDays</div><div class="l">Remaining</div></div></div></div>
+</div>
+}

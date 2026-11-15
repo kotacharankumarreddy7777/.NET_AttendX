@@ -1,0 +1,64 @@
+@model Exam
+@{
+    ViewData["Title"] = "Create Exam";
+}
+<h1 class="page-title">Create Exam</h1>
+<div class="ax-card">
+    <div class="card-b">
+        <form asp-action="Create" method="post">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Exam Name</label>
+                    <input asp-for="Name" class="form-control" placeholder="e.g. Mid-Semester 1" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select asp-for="Type" class="form-select">
+                        <option value="Internal">Internal</option>
+                        <option value="External">External</option>
+                        <option value="Practical">Practical</option>
+                    </select>
+                    <span asp-validation-for="Type" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Semester</label>
+                    <select asp-for="Semester" class="form-select">
+                        @for (int i = 1; i <= 8; i++)
+                        {
+                            if (Model.Semester == i)
+                            { <option value="@i" selected>Semester @i</option> }
+                            else
+                            { <option value="@i">Semester @i</option> }
+                        }
+                    </select>
+                    <span asp-validation-for="Semester" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Start Date</label>
+                    <input asp-for="StartDate" type="date" class="form-control" />
+                    <span asp-validation-for="StartDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">End Date</label>
+                    <input asp-for="EndDate" type="date" class="form-control" />
+                    <span asp-validation-for="EndDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Academic Year</label>
+                    @{
+                        var yearTask = ((AttendX.Services.ISettingsService)Context.RequestServices.GetService(typeof(AttendX.Services.ISettingsService))!).GetCurrentYearAsync();
+                        var year = yearTask.Result;
+                    }
+                    <select class="form-select" disabled>
+                        <option>@year.Name</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-ax" type="submit">Create Exam</button>
+                    <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

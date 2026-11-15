@@ -1,6 +1,6 @@
 @model AdminDashboardViewModel
 @{ ViewData["Title"] = "Dashboard"; }
-<div class="mb-3"><h1>@(Model.IsHod ? "Department Dashboard" : "Dashboard")</h1><div class="text-muted small">@Model.ScopeName</div></div>
+<div class="mb-3"><h1 class="page-title">@(Model.IsHod ? "Department Dashboard" : "Dashboard")</h1><div class="text-muted small">@Model.ScopeName</div></div>
 <div class="row g-3 mb-3">
     @{
         void Tile(object value, string label, string? href = null)
@@ -11,16 +11,48 @@
     @{ Tile(Model.ActiveStudents, "Students"); }
     @{ Tile(Model.ActiveFaculty, "Faculty"); }
     @{ Tile(Model.TodayClasses, "Classes Today"); }
-    @{ Tile(Model.TodaySessions, "Sessions Marked Today"); }
-    @{ Tile(Model.AvgAttendance + "%", "Average Attendance (30 days)"); }
+    @{ Tile(Model.TodaySessions, "Sessions Marked"); }
+    @{ Tile(Model.AvgAttendance + "%", "Avg Attendance"); }
     @{ Tile(Model.LowAttendanceCount, "Below Minimum"); }
 </div>
+
+@if (Model.TodayByPeriod.Any())
+{
+    <div class="ax-card mb-3"><div class="card-h"><span><i class="bi bi-calendar3-week me-1"></i>Today's Classes — Period Wise</span><span class="small text-muted">@Model.PeriodCount periods/day</span></div>
+        <div class="card-b">
+            <div class="row g-2">
+            @foreach (var pg in Model.TodayByPeriod)
+            {
+                <div class="col-12 col-md-6 col-xl-4">
+                    <div class="period-card">
+                        <div class="period-head"><span class="period-badge">P@(pg.PeriodNo)</span><span class="period-time">@pg.TimeRange</span><span class="period-count">@pg.Classes.Count class@(pg.Classes.Count == 1 ? "" : "es")</span></div>
+                        @if (!pg.Classes.Any()) { <div class="period-empty">No classes scheduled</div> }
+                        else {
+                            <div class="period-list">
+                            @foreach (var c in pg.Classes)
+                            {
+                                <div class="period-item" data-timetable="@c.TimetableId">
+                                    <div class="pi-top"><b>@c.SubjectCode</b><span class="mono text-muted">@c.Room</span></div>
+                                    <div class="pi-mid">@c.BranchCode · Sem @c.Semester · @c.SectionName</div>
+                                    <div class="pi-bot"><i class="bi bi-person"></i> @c.FacultyName</div>
+                                </div>
+                            }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            </div>
+        </div>
+    </div>
+}
+
 <div class="row g-3 mb-3">
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">@Model.Charts.GroupTitle</div><div class="card-b"><div class="chart-box"><canvas id="chGroup"></canvas></div></div></div></div>
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Attendance by Semester (30 days)</div><div class="card-b"><div class="chart-box"><canvas id="chSem"></canvas></div></div></div></div>
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Daily Attendance (14 days)</div><div class="card-b"><div class="chart-box"><canvas id="chDaily"></canvas></div></div></div></div>
-    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Monthly Attendance</div><div class="card-b"><div class="chart-box"><canvas id="chMonthly"></canvas></div></div></div></div>
-    <div class="col-12"><div class="ax-card"><div class="card-h">Subjects with Lowest Attendance (30 days)</div><div class="card-b"><div class="chart-box"><canvas id="chSubject"></canvas></div></div></div></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Monthly Attendance Distribution</div><div class="card-b"><div class="chart-box"><canvas id="chMonthly"></canvas></div></div></div></div>
+    <div class="col-12"><div class="ax-card"><div class="card-h">Subjects with Lowest Attendance (30 days)</div><div class="card-b"><div class="chart-box" style="height:320px"><canvas id="chSubject"></canvas></div></div></div></div>
 </div>
 <div class="row g-3">
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Low Attendance List <a class="btn btn-sm btn-outline-primary" asp-controller="Reports" asp-action="Index" asp-route-type="defaulter" asp-route-run="true">View All</a></div>

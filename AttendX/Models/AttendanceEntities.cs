@@ -24,7 +24,7 @@ public class AttendanceSession
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
     [StringLength(450)] public string? StartedByUserId { get; set; }
-    public DateTime StartedAt { get; set; } = DateTime.Now;
+    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class Attendance
@@ -44,12 +44,13 @@ public class Attendance
     public DateTime Date { get; set; }
     public int Period { get; set; }
     public AttendanceStatus Status { get; set; }
-    public DateTime MarkedAt { get; set; } = DateTime.Now;
+    public DateTime MarkedAt { get; set; } = DateTime.UtcNow;
     public int AttendanceSessionId { get; set; }
     public AttendanceSession? AttendanceSession { get; set; }
     [StringLength(20)] public string Source { get; set; } = "Manual";   // Manual / QR / Offline
     [StringLength(64)] public string? DeviceId { get; set; }
     public DateTime? LastModifiedAt { get; set; }
     [StringLength(150)] public string? LastModifiedBy { get; set; }
-    [Timestamp] public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    [ConcurrencyCheck] public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
+

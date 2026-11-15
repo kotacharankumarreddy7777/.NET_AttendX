@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 
 namespace AttendX.Services;
 
@@ -11,6 +13,7 @@ public interface IAttendanceService
     Task<(string? Token, int ExpiresIn, string? Error)> IssueSessionTokenAsync(int timetableId);
     Task<ScanResult> ScanAsync(int timetableId, string payload, string token, DeviceInfo device);
     Task<List<SyncResult>> SyncOfflineAsync(List<OfflineRecord> records);
+    Task<int> MarkAbsentAfterGracePeriodAsync();
 }
 
 /// <summary>
@@ -18,7 +21,7 @@ public interface IAttendanceService
 /// Rules enforced: logged-in faculty identity, assigned class, same day, valid period window (server clock),
 /// student belongs to the class, signed QR, rotating session token, duplicate protection, audit trail.
 /// </summary>
-public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user, ISettingsService settings, IQrService qr, IAuditService audit, ICalendarService calendar) : IAttendanceService
+public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user, ISettingsService settings, IQrService qr, IAuditService audit, ICalendarService calendar, IHubContext<AttendX.Hubs.AttendanceHub>? hub = null, INotificationService? notification = null, IOptions<InstitutionOptions>? institution = null, ILogger<AttendanceService>? logger = null, IOptions<NotificationOptions>? notificationOptions = null) : IAttendanceService
 {
     private readonly AppDbContext _db = db;
     private readonly IClock _clock = clock;
@@ -27,6 +30,10 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
     private readonly IQrService _qr = qr;
     private readonly IAuditService _audit = audit;
     private readonly ICalendarService _calendar = calendar;
+    private readonly INotificationService? _notification = notification;
+    private readonly InstitutionOptions _inst = institution?.Value ?? new InstitutionOptions();
+    private readonly bool _notifyOnAbsence = notificationOptions?.Value?.NotifyOnAbsence ?? true;
+    private readonly ILogger<AttendanceService> _log = logger ?? LoggerFactory.Create(b => b.AddConsole()).CreateLogger<AttendanceService>();
 
     // ------------------------------------------------------------------ slots
     public async Task<List<SlotView>> GetSlotsAsync(DateTime date, int? facultyId, int? branchId, int? sectionId)
@@ -149,8 +156,15 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
             return new SaveResult(false, "A reason is required for corrections made after the period has ended.");
 
         var settings = await _settings.GetAsync();
-        if (!access.IsCorrection && settings.LocationRequirement == LocationRequirement.Required && device.Latitude == null)
-            return new SaveResult(false, "Location is required by the administrator. Allow location access in your browser and try again.");
+        if (!access.IsCorrection)
+        {
+            bool requireLoc = settings.LocationRequirement == LocationRequirement.Required;
+            if (requireLoc && device.Latitude == null)
+                return new SaveResult(false, "Location is required by the administrator. Allow location access in your browser and try again.");
+            // Geo-fence: enforce campus radius only when the admin has made location mandatory.
+            if (requireLoc && device.Latitude != null && GeoFenceBlocks(device, out var geoErr))
+                return new SaveResult(false, geoErr!);
+        }
 
         var students = await _db.Students.Where(s => s.IsActive && s.SectionId == t.SectionId && s.BranchId == t.BranchId && s.Semester == t.Semester).ToListAsync();
         var valid = students.ToDictionary(s => s.Id);
@@ -196,6 +210,45 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
             _db.ChangeTracker.Clear();
             return new SaveResult(false, "Attendance for this class was saved from another tab or device at the same moment. Reload the page to see the latest data.");
         }
+
+        // Push live update to class group + admin-today group
+        if (hub != null && (added + updated) > 0)
+        {
+            try
+            {
+                await hub.Clients.Group($"class-{t.Id}").SendAsync("AttendanceSaved", new
+                {
+                    timetableId = t.Id, date = date.ToString("yyyy-MM-dd"), period = t.Period,
+                    added, updated, skipped
+                });
+                await hub.Clients.Group("admin-today").SendAsync("AttendanceSaved", new
+                {
+                    timetableId = t.Id, date = date.ToString("yyyy-MM-dd"), period = t.Period,
+                    branchCode = t.Subject?.SubjectCode ?? "", added, updated, skipped
+                });
+            }
+            catch { /* hub not available (e.g. tests) - non-fatal */ }
+        }
+
+        // Fire-and-forget absence alerts (only when configured)
+        if (_notification != null && _notifyOnAbsence)
+        {
+            var absentIds = statuses
+                .Where(kv => string.Equals(kv.Value, "Absent", StringComparison.OrdinalIgnoreCase))
+                .Select(kv => kv.Key)
+                .Where(id => valid.ContainsKey(id))
+                .ToList();
+            var subjCode = t.Subject?.SubjectCode ?? "";
+            foreach (var sid in absentIds)
+            {
+                var studentIdCopy = sid;
+                _ = Task.Run(async () =>
+                {
+                    try { await _notification!.SendAbsenceAlertAsync(studentIdCopy, date, subjCode); }
+                    catch (Exception ex) { _log.LogError(ex, "Absence alert failed for student {StudentId}", studentIdCopy); }
+                });
+            }
+        }
         return new SaveResult(true, $"Attendance saved: {added} new, {updated} changed, {skipped} unchanged.", added, updated, skipped);
     }
 
@@ -226,8 +279,13 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
             return new ScanResult(ScanCode.Unauthorized, "You are not the assigned faculty for this class.");
         if (!AttendanceWindow.IsOpen(now, now.Date, t.StartTime, t.EndTime, settings.GraceMinutes))
             return new ScanResult(ScanCode.OutsideTime, "Outside the attendance time window for this period.");
-        if (settings.LocationRequirement == LocationRequirement.Required && device.Latitude == null)
-            return new ScanResult(ScanCode.LocationRequired, "Location is required. Allow location access in your browser.");
+        if (settings.LocationRequirement == LocationRequirement.Required)
+        {
+            if (device.Latitude == null)
+                return new ScanResult(ScanCode.LocationRequired, "Location is required. Allow location access in your browser.");
+            if (GeoFenceBlocks(device, out var geoErr))
+                return new ScanResult(ScanCode.LocationRequired, geoErr!);
+        }
 
         var session = await GetOrCreateSessionAsync(t, now.Date, "QR", device);
         if (!_qr.Signer.ValidateSessionToken(session.Id, token, new DateTimeOffset(now), settings.QrExpirySeconds))
@@ -310,6 +368,31 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         return results;
     }
 
+    // ------------------------------------------------------------------ geo-fence
+    /// <summary>Returns true if the device is off-campus (outside campus radius). Coords required.</summary>
+    private bool GeoFenceBlocks(DeviceInfo dev, out string? error)
+    {
+        error = null;
+        if (dev.Latitude == null || dev.Longitude == null) return false;   // missing coords — not our concern here
+        double dist = HaversineMeters(_inst.Latitude, _inst.Longitude, (double)dev.Latitude.Value, (double)dev.Longitude.Value);
+        if (dist > _inst.GeoFenceRadiusMeters)
+        {
+            error = $"Outside campus radius ({dist:0} m > {_inst.GeoFenceRadiusMeters} m).";
+            return true;
+        }
+        return false;
+    }
+
+    private static double HaversineMeters(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 6371000.0;
+        double dLat = ToRad(lat2 - lat1), dLon = ToRad(lon2 - lon1);
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                   Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2)) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        return 2 * R * Math.Asin(Math.Sqrt(a));
+        static double ToRad(double d) => d * Math.PI / 180.0;
+    }
+
     // ------------------------------------------------------------------ helpers
     private static AttendanceStatus DecideStatus(Timetable t, DateTime date, DateTime at, AttendanceSettings s)
     {
@@ -333,6 +416,17 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         {
             _db.Entry(rec).State = EntityState.Detached;
             return new ScanResult(ScanCode.AlreadyMarked, $"{st.FullName} is already marked for this period.", st.FullName, st.StudentID);
+        }
+        // Absence alert for QR-marked absent students
+        if (status == AttendanceStatus.Absent && _notification != null && _notifyOnAbsence)
+        {
+            var subjCode = t.Subject?.SubjectCode ?? "";
+            var dateCopy = session.Date;
+            _ = Task.Run(async () =>
+            {
+                try { await _notification!.SendAbsenceAlertAsync(st.Id, dateCopy, subjCode); }
+                catch (Exception ex) { _log.LogError(ex, "Absence alert failed for student {StudentId}", st.Id); }
+            });
         }
         return new ScanResult(ScanCode.Marked, $"Attendance marked: {st.FullName} ({status}).", st.FullName, st.StudentID, status.ToString());
     }
@@ -366,5 +460,37 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
             Timestamp = _clock.Now, ActorId = _user.UserId, ActorName = _user.DisplayName, Action = action, EntityType = "Attendance",
             EntityId = entityId, BranchId = t.BranchId, OldValues = oldV, NewValues = newV, Reason = reason, Details = details, IpAddress = _user.IpAddress
         });
+    }
+
+    public async Task<int> MarkAbsentAfterGracePeriodAsync()
+    {
+        var settings = await _settings.GetAsync();
+        var today = _clock.Now.Date;
+        var graceEnd = today.AddHours(23).AddMinutes(59); // end of day
+        var slots = await _db.Timetables.AsNoTracking()
+            .Where(t => t.IsActive && t.Day == today.DayOfWeek)
+            .ToListAsync();
+        int marked = 0;
+        foreach (var t in slots)
+        {
+            var session = await _db.AttendanceSessions.FirstOrDefaultAsync(s => s.TimetableId == t.Id && s.Date == today);
+            if (session == null) continue;
+            var alreadyMarked = await _db.Attendance.AsNoTracking().Where(a => a.AttendanceSessionId == session.Id).Select(a => a.StudentId).ToListAsync();
+            var students = await _db.Students.AsNoTracking()
+                .Where(s => s.IsActive && s.SectionId == t.SectionId && s.BranchId == t.BranchId && s.Semester == t.Semester && !alreadyMarked.Contains(s.Id))
+                .ToListAsync();
+            foreach (var s in students)
+            {
+                _db.Attendance.Add(new Attendance
+                {
+                    StudentId = s.Id, SubjectId = t.SubjectId, FacultyId = t.FacultyId, SectionId = t.SectionId, BranchId = s.BranchId, Semester = s.Semester,
+                    Date = today, Period = t.Period, Status = AttendanceStatus.Absent, MarkedAt = graceEnd, AttendanceSessionId = session.Id,
+                    Source = "Manual", DeviceId = "auto-absent"
+                });
+                marked++;
+            }
+        }
+        if (marked > 0) await _db.SaveChangesAsync();
+        return marked;
     }
 }

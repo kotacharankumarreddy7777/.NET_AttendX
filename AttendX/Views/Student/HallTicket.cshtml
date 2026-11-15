@@ -1,0 +1,74 @@
+@inject IOptions<InstitutionOptions> Inst
+@{
+    Layout = null;
+    var inst = Inst.Value;
+    var student = ViewBag.Student as Student;
+    var percent = (decimal)ViewBag.Percent;
+    var threshold = (decimal)ViewBag.Threshold;
+    var eligible = (bool)ViewBag.Eligible;
+    var exams = ViewBag.Exams as List<ExamTimetable> ?? new();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Hall Ticket - @student?.StudentID</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+<style>
+.media-print { display: none; }
+@@media print { .no-print { display: none !important; } .media-print { display: block; } }
+@@page { margin: 12mm; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12pt; }
+.ticket { max-width: 700px; margin: 20px auto; border: 2px solid #14305A; padding: 24px; border-radius: 6px; }
+.crest { font-size: 42px; font-weight: 800; color: #14305A; text-align: center; }
+.inst { text-align: center; border-bottom: 2px solid #B8892D; padding-bottom: 12px; margin-bottom: 12px; }
+.inst h1 { font-size: 20px; margin: 0; color: #14305A; text-transform: uppercase; }
+.inst span { font-size: 11px; color: #5E6A7A; }
+.meta td { padding: 4px 8px; font-size: 11pt; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #14305A; color: #fff; padding: 6px; font-size: 10pt; text-transform: uppercase; }
+td { border: 1px solid #D5DBE3; padding: 6px; font-size: 10pt; text-align: center; }
+.stamp { text-align: center; color: #1E7F4F; font-weight: 700; font-size: 16pt; margin-top: 16px; }
+.not-eligible { text-align: center; color: #B42318; font-weight: 700; font-size: 16pt; margin-top: 16px; }
+.sign { margin-top: 36px; display: flex; justify-content: space-between; font-size: 10pt; }
+</style>
+</head>
+<body>
+<div class="no-print" style="text-align:center;margin-top:8px"><button onclick="window.print()" class="btn btn-primary">Print Hall Ticket</button> <a href="/Student" class="btn btn-outline-secondary">Back</a></div>
+<div class="ticket">
+    <div class="inst">
+        <div class="crest">@inst.ShortName</div>
+        <h1>@inst.Name</h1>
+        <span>@inst.SystemName</span><br />
+        <span>Attendance Management System - Hall Ticket</span>
+    </div>
+    <table class="meta">
+        <tr><td><b>Admission ID:</b></td><td>@student?.StudentID</td><td><b>Semester:</b></td><td>@student?.Semester</td></tr>
+        <tr><td><b>Name:</b></td><td>@student?.FullName</td><td><b>Branch / Section:</b></td><td>@student?.Branch?.Name / @student?.Section?.Name</td></tr>
+        <tr><td><b>Year:</b></td><td>@student?.Year</td><td><b>Email:</b></td><td>@student?.Email</td></tr>
+    </table>
+
+    @if (eligible)
+    {
+        <div class="stamp">ATTENDANCE ELIGIBLE (@percent%)</div>
+        @if (exams.Any())
+        {
+            <table class="mt-3">
+                <thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Room</th></tr></thead>
+                <tbody>
+                @foreach (var e in exams) { <tr><td>@e.ExamDate.ToString("dd MMM yyyy")</td><td>@e.StartTime.ToString(@"hh\:mm")</td><td>@e.Subject?.SubjectCode</td><td>@e.RoomNo</td></tr> }
+                </tbody>
+            </table>
+        }
+        else { <p class="text-center text-muted mt-3">No upcoming exams scheduled for your semester yet.</p> }
+        <p class="small text-muted mt-3">Instructions: Report 30 minutes before the start time. Carry this hall ticket and your institute ID card. Mobile phones and smartwatches are not allowed inside the exam hall. Malpractice leads to disqualification.</p>
+    }
+    else
+    {
+        <div class="not-eligible">NOT ATTENDANCE ELIGIBLE (@percent% &lt; @threshold%)</div>
+        <p class="small text-muted mt-3">You are below the minimum attendance required for the upcoming examinations. Please meet your class teacher / HOD immediately to discuss your eligibility.</p>
+    }
+    <div class="sign"><span>______________________<br />Class Teacher</span><span>______________________<br />Controller of Examinations</span></div>
+</div>
+</body>
+</html>

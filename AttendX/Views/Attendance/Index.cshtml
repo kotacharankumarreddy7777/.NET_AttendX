@@ -1,5 +1,7 @@
 @model List<SlotView>
-@{ ViewData["Title"] = "Today's Classes"; DateTime today = ViewBag.Today; bool mine = ViewBag.Mine; }
+@{ ViewData["Title"] = "Today's Classes"; DateTime today = ViewBag.Today; bool mine = ViewBag.Mine;
+   var periods = (ViewBag.Periods as List<PeriodDefinition>) ?? new List<PeriodDefinition>();
+   var grouped = Model.GroupBy(s => s.Period).ToDictionary(g => g.Key, g => g.ToList()); }
 <h1 class="page-title">@(mine ? "My classes today" : "Classes today") <small class="text-muted fs-6">@today.ToString("dddd, dd MMM yyyy")</small></h1>
 <p class="text-muted">Attendance can be marked only while a period is open (period time +/- grace minutes, server clock). Closed periods can be corrected by Admin/HOD with a reason.</p>
 @{ string? nonWorking = ViewBag.NonWorking; }
@@ -9,20 +11,55 @@
     else if (nonWorking != null) { <partial name="_EmptyState" model='new EmptyStateModel("holiday", "No classes today", "Holiday: " + nonWorking + ".")' /> }
     else { <partial name="_EmptyState" model='new EmptyStateModel("no_classes", "No classes scheduled", "There are no periods today.")' /> }
 }
-<div class="row g-3">
-@foreach (var s in Model)
+else
 {
-    <div class="col-md-6 col-xl-4"><div class="ax-card h-100"><div class="card-b">
-        <div class="d-flex justify-content-between"><b>Period @s.Period</b><span class="badge @(s.State == "Open" ? "bg-success" : s.State == "Closed" ? "bg-secondary" : "bg-primary")">@s.State</span></div>
-        <div class="text-muted small">@UiHelpers.Time(s.Start) - @UiHelpers.Time(s.End) - room @s.Room</div>
-        <div class="fw-semibold mt-1">@s.SubjectCode @s.SubjectName</div>
-        <div class="small">@s.BranchCode / @s.SectionName - @s.FacultyName</div>
-        @if (s.HasSession) { <div class="small mt-1"><span class="badge bg-info text-dark">@s.MarkedCount students marked</span></div> }
-        @if (s.State == "Open") { <div class="small text-success mt-1">@s.RemainingMinutes minutes left</div> }
-        <div class="mt-2 d-flex gap-2 flex-wrap">
-            @if (s.State == "Open" || User.IsInRole("Admin") || User.IsInRole("HOD")) { <a class="btn btn-sm btn-ax" asp-action="Mark" asp-route-id="@s.TimetableId">@(s.State == "Open" ? "Mark attendance" : "Open / correct")</a> }
-            @if (s.State == "Open" && mine) { <a class="btn btn-sm btn-outline-primary" asp-action="Scan" asp-route-id="@s.TimetableId"><i class="bi bi-qr-code-scan"></i> Scan QR</a> }
+    <div class="row g-3">
+    @foreach (var p in periods)
+    {
+        var classes = grouped.TryGetValue(p.PeriodNo, out var list) ? list : new List<SlotView>();
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="period-card">
+                <div class="period-head"><span class="period-badge">P@(p.PeriodNo)</span><span class="period-time">@p.StartTime.ToString(@"hh\:mm")-@p.EndTime.ToString(@"hh\:mm")</span><span class="period-count">@classes.Count class@(classes.Count == 1 ? "" : "es")</span></div>
+                @if (!classes.Any()) { <div class="period-empty">No classes scheduled</div> }
+                else
+                {
+                    <div class="period-list">
+                    @foreach (var s in classes.OrderBy(c => c.BranchCode).ThenBy(c => c.SectionName))
+                    {
+                        <div class="period-item">
+                            <div class="pi-top"><b class="mono">@s.SubjectCode</b>
+                                <span class="badge @(s.State == "Open" ? "bg-success" : s.State == "Closed" ? "bg-secondary" : "bg-primary")">@s.State</span>
+                            </div>
+                            <div class="pi-mid"><b>@s.BranchCode</b> · Sem @s.Semester · @s.SectionName - @s.SubjectName</div>
+                            <div class="pi-bot"><i class="bi bi-person"></i> @s.FacultyName &nbsp;·&nbsp; <i class="bi bi-door-closed"></i> <b>@s.Room</b></div>
+                            <div class="pi-bot mt-1">
+                                @if (s.HasSession) { <span class="badge bg-info text-dark">@s.MarkedCount marked</span> }
+                                <a class="btn btn-sm btn-ax float-end" asp-action="Mark" asp-route-id="@s.TimetableId">@(s.State == "Open" ? "Mark" : "Open")</a>
+                                @if (s.State == "Open" && mine) { <a class="btn btn-sm btn-outline-primary float-end me-1" asp-action="Scan" asp-route-id="@s.TimetableId"><i class="bi bi-qr-code-scan"></i></a> }
+                            </div>
+                        </div>
+                    }
+                    </div>
+                }
+            </div>
         </div>
-    </div></div></div>
+    }
+    </div>
+
+    @if (Model.Any(s => s.Room != null && s.Room.Length > 0))
+    {
+        // Room-overlap audit: count (Room, Period) collisions. Admin/HOD see this if any clash slips in.
+        var clashes = Model.GroupBy(s => new { s.Room, s.Period }).Where(g => g.Count() > 1).ToList();
+        if (clashes.Any())
+        {
+            <div class="ax-card mt-3"><div class="card-h" style="color:var(--danger)"><i class="bi bi-exclamation-triangle me-1"></i>Room conflicts detected</div><div class="card-b">
+                <ul class="mb-0">
+                @foreach (var c in clashes)
+                {
+                    <li><b class="mono">@c.Key.Room</b> is booked @c.Count() times in Period @c.Key.Period (@string.Join(", ", c.Select(x => x.SubjectCode + "/" + x.BranchCode)))</li>
+                }
+                </ul>
+            </div></div>
+        }
+    }
 }
-</div>

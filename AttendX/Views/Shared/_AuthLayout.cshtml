@@ -22,7 +22,7 @@
     <div class="pt-brand"><b style="font-size:16px">@inst.Name</b><span style="display:block">@inst.SystemName</span></div>
 </header>
 <main class="auth-main" id="main">@RenderBody()</main>
-<canvas id="bgCanvas" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:auto;"></canvas>
+<canvas id="bgCanvas" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;"></canvas>
 <div class="auth-footer">&copy; @DateTime.Now.Year @inst.Name. All rights reserved.</div>
 <div class="toast-area" id="toastArea" aria-live="polite"></div>
 <script>

@@ -9,6 +9,17 @@ public class SettingsController(AppDbContext db, ISettingsService settings, IAud
     private readonly ISettingsService _settings = settings;
     private readonly IAuditService _audit = audit;
 
+    public async Task<IActionResult> Notifications(string? channel, string? status, int page = 1)
+    {
+        var q = _db.NotificationLogs.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(channel)) q = q.Where(n => n.Channel == channel);
+        if (!string.IsNullOrWhiteSpace(status)) q = q.Where(n => n.Status == status);
+        var total = await q.CountAsync();
+        var rows = await q.OrderByDescending(n => n.CreatedAt).Skip((page - 1) * 50).Take(50).ToListAsync();
+        ViewBag.Channel = channel; ViewBag.Status = status; ViewBag.Page = page; ViewBag.Total = total;
+        return View(rows);
+    }
+
     public async Task<IActionResult> Index()
     {
         var vm = new SettingsViewModel

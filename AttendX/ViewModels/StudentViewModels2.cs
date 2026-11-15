@@ -68,6 +68,34 @@ public class StudentDashboardViewModel
     public DateTime? LastLogin { get; set; }
     public List<SelectListItem> SubjectOptions { get; set; } = new();
     public string? NextClassText { get; set; }
+    public List<StudentExamRow> UpcomingExams { get; set; } = new();
+    public List<StudentExamRow> CompletedExams { get; set; } = new();
+    public List<StudentExamResultRow> Results { get; set; } = new();
+}
+
+public class StudentExamRow
+{
+    public string ExamName { get; set; } = "";
+    public string Type { get; set; } = "";
+    public DateTime ExamDate { get; set; }
+    public TimeSpan StartTime { get; set; }
+    public TimeSpan EndTime { get; set; }
+    public string SubjectCode { get; set; } = "";
+    public string SubjectName { get; set; } = "";
+    public string RoomNo { get; set; } = "";
+    public bool IsEligible { get; set; } = true;
+}
+
+public class StudentExamResultRow
+{
+    public string ExamName { get; set; } = "";
+    public string SubjectCode { get; set; } = "";
+    public string SubjectName { get; set; } = "";
+    public decimal InternalMark { get; set; }
+    public decimal ExternalMark { get; set; }
+    public decimal TotalMark { get; set; }
+    public string? Grade { get; set; }
+    public bool IsExternal { get; set; }
 }
 
 public class FacultyClassChip
@@ -92,6 +120,21 @@ public class FacultyHomeExtras
     public int OpenQueries { get; set; }
     public Dictionary<string, TimetableCellVm> Week { get; set; } = new();
     public List<PeriodDefinition> Periods { get; set; } = new();
+    public List<FacultyExamDutyRow> ExamDuties { get; set; } = new();
+}
+
+public class FacultyExamDutyRow
+{
+    public string ExamName { get; set; } = "";
+    public DateTime ExamDate { get; set; }
+    public TimeSpan StartTime { get; set; }
+    public TimeSpan EndTime { get; set; }
+    public string SubjectCode { get; set; } = "";
+    public string SubjectName { get; set; } = "";
+    public string RoomNo { get; set; } = "";
+    public int Semester { get; set; }
+    public string SectionName { get; set; } = "";
+    public int ExamTimetableId { get; set; }
 }
 
 public class WeekGridModel
@@ -107,7 +150,7 @@ public class RoleLoginViewModel
 {
     public string Role { get; set; } = "student";
     [StringLength(40), Display(Name = "Institution ID")] public string? InstitutionId { get; set; }
-    [Required, EmailAddress, StringLength(150)] public string Email { get; set; } = "";
+    [StringLength(150)] public string? Email { get; set; } = "";
     [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
     [Display(Name = "Remember me")] public bool RememberMe { get; set; }
     public string? ReturnUrl { get; set; }

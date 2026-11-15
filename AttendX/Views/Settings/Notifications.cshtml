@@ -1,0 +1,51 @@
+@model List<NotificationLog>
+@{
+    ViewData["Title"] = "Notification Log";
+    string? channel = ViewBag.Channel; string? status = ViewBag.Status; int page = ViewBag.Page; int total = ViewBag.Total;
+}
+<div class="mb-3"><h1 class="page-title">Notification Log</h1><div class="text-muted small">Outbound emails and SMS (audit + retry history). Showing latest 50 of @total.</div></div>
+<div class="ax-card mb-3"><div class="card-b d-flex flex-wrap gap-2 align-items-center">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+        <select name="channel" class="form-select form-select-sm">
+            <option value="">All channels</option>
+            <option value="Email" selected="@(channel=="Email")">Email</option>
+            <option value="Sms" selected="@(channel=="Sms")">SMS</option>
+            <option value="Push" selected="@(channel=="Push")">Push</option>
+        </select>
+        <select name="status" class="form-select form-select-sm">
+            <option value="">All statuses</option>
+            <option value="Sent" selected="@(status=="Sent")">Sent</option>
+            <option value="Logged" selected="@(status=="Logged")">Logged</option>
+            <option value="Failed" selected="@(status=="Failed")">Failed</option>
+        </select>
+        <button class="btn btn-sm btn-ax" type="submit">Filter</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Notifications">Clear</a>
+    </form>
+</div></div>
+<div class="ax-card"><div class="table-responsive">
+    <table class="table table-sm table-hover">
+        <thead><tr><th>When</th><th>Channel</th><th>To</th><th>Subject</th><th>Status</th><th>Error</th></tr></thead>
+        <tbody>
+        @if (!Model.Any()) { <tr><td colspan="6" class="text-center text-muted">No notifications logged yet.</td></tr> }
+        @foreach (var n in Model) {
+            <tr>
+                <td>@n.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                <td><span class="badge bg-secondary">@n.Channel</span></td>
+                <td class="small">@n.To</td>
+                <td class="small">@n.Subject</td>
+                <td><span class="badge @(n.Status == "Sent" || n.Status == "Logged" ? "bg-success" : n.Status == "Failed" ? "bg-danger" : "bg-warning")">@n.Status</span></td>
+                <td class="small text-muted">@n.Error</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div></div>
+@if (total > 50)
+{
+    var prev = Math.Max(1, page - 1); var next = page + 1;
+    <div class="d-flex gap-2 mt-2">
+        @if (page > 1) { <a class="btn btn-sm btn-outline-primary" asp-action="Notifications" asp-route-channel="@channel" asp-route-status="@status" asp-route-page="@prev">Previous</a> }
+        <span class="btn btn-sm btn-outline-secondary disabled">Page @(page)</span>
+        @if (total > page * 50) { <a class="btn btn-sm btn-outline-primary" asp-action="Notifications" asp-route-channel="@channel" asp-route-status="@status" asp-route-page="@next">Next</a> }
+    </div>
+}
