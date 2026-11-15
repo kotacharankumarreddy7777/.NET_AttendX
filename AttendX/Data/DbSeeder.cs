@@ -412,29 +412,22 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             }
         }
 
-        // Ensure every student has a login
-        var allStudents = await _db.Students.ToListAsync();
-        foreach (var s in allStudents)
+        // Ensure every student has a login (fast path: only create users for students missing one)
+        var missingLogin = await _db.Students.AsNoTracking().Where(s => s.IdentityUserId == null).Select(s => new { s.Id, s.Email, s.FullName }).ToListAsync();
+        if (missingLogin.Count > 0)
         {
-            var u = s.IdentityUserId != null ? await _users.FindByIdAsync(s.IdentityUserId) : await _users.FindByEmailAsync(s.Email);
-            if (u == null)
+            var sb = new System.Text.StringBuilder();
+            foreach (var s in missingLogin)
             {
-                u = NewUser(s.Email, s.FullName, hash);
-                await _users.CreateAsync(u, _o.SeedStudentPassword);
-                await _users.AddToRoleAsync(u, RoleNames.Student);
+                var userId = Guid.NewGuid().ToString();
+                var normEmail = s.Email.ToUpperInvariant();
+                var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                sb.Append($"INSERT INTO public.\"AspNetUsers\" (\"Id\", \"FullName\", \"UserName\", \"NormalizedUserName\", \"Email\", \"NormalizedEmail\", \"EmailConfirmed\", \"PasswordHash\", \"SecurityStamp\", \"ConcurrencyStamp\", \"PhoneNumber\", \"PhoneNumberConfirmed\", \"TwoFactorEnabled\", \"LockoutEnd\", \"LockoutEnabled\", \"AccessFailedCount\", \"MustChangePassword\", \"CreatedAt\") VALUES ('{userId}','{s.FullName.Replace("'", "''")}','{s.Email}','{normEmail}','{s.Email}','{normEmail}',true,'{hash}','{Guid.NewGuid()}','{Guid.NewGuid()}',NULL,false,false,NULL,true,0,false,now());");
+                sb.Append($"INSERT INTO public.\"AspNetUserRoles\" (\"UserId\", \"RoleId\") VALUES ('{userId}','{studentRole}');");
+                sb.Append($"UPDATE public.\"Students\" SET \"IdentityUserId\" = '{userId}' WHERE Id = {s.Id};");
             }
-            else
-            {
-                if (string.IsNullOrEmpty(u.PasswordHash) || u.MustChangePassword)
-                {
-                    u.PasswordHash = hash;
-                    u.MustChangePassword = false;
-                    await _users.UpdateAsync(u);
-                }
-            }
-            s.IdentityUserId = u.Id;
+            await _db.Database.ExecuteSqlRawAsync(sb.ToString());
         }
-        await _db.SaveChangesAsync();
 
         _db.ChangeTracker.AutoDetectChangesEnabled = true;
     }
@@ -506,45 +499,44 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     // ------------------------------------------------------------------ parents
     private async Task SeedParentsAsync()
     {
+        var existing = await _db.Parents.Select(p => p.StudentId).ToListAsync();
+        if (existing.Count > 0) { _log.LogInformation("Parents already seeded: {Count}", existing.Count); return; }
+
         var rows = await _db.Students.AsNoTracking().ToListAsync();
         var hash = new PasswordHasher<ApplicationUser>().HashPassword(new ApplicationUser(), _o.SeedParentPassword);
         var parentRole = (await _db.Roles.FirstOrDefaultAsync(r => r.Name == RoleNames.Parent))?.Id;
         if (parentRole == null)
         {
-            // Create Parent role on the fly if missing
             var pr = new IdentityRole(RoleNames.Parent);
             await _roles.CreateAsync(pr);
             parentRole = pr.Id;
         }
-        var existingParents = (await _db.Parents.Select(p => p.StudentId).ToListAsync()).ToHashSet();
         var existingEmails = (await _db.Users.AsNoTracking().Select(u => u.NormalizedEmail!).ToListAsync()).ToHashSet(StringComparer.Ordinal);
 
+        // Bulk insert parents + their Identity users directly via raw SQL (bypasses UserManager round-trips).
         int added = 0;
+        var sb = new System.Text.StringBuilder();
         foreach (var s in rows)
         {
-            if (existingParents.Contains(s.Id)) continue;
             string email = $"parent.{s.StudentID}@attendx.edu.in";
             string normEmail = email.ToUpperInvariant();
             if (existingEmails.Contains(normEmail)) continue;
             existingEmails.Add(normEmail);
 
-            var user = NewUser(email, "Parent of " + s.FullName, hash);
-            _db.Users.Add(user);
-            _db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = parentRole });
-            _db.Parents.Add(new Parent
-            {
-                FullName = "Parent of " + s.FullName,
-                Email = email,
-                Phone = s.Phone,
-                StudentId = s.Id,
-                IdentityUserId = user.Id,
-                IsActive = true
-            });
+            var userId = Guid.NewGuid().ToString();
+            var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+            sb.Append($"INSERT INTO public.\"AspNetUsers\" (\"Id\", \"FullName\", \"UserName\", \"NormalizedUserName\", \"Email\", \"NormalizedEmail\", \"EmailConfirmed\", \"PasswordHash\", \"SecurityStamp\", \"ConcurrencyStamp\", \"PhoneNumber\", \"PhoneNumberConfirmed\", \"TwoFactorEnabled\", \"LockoutEnd\", \"LockoutEnabled\", \"AccessFailedCount\", \"MustChangePassword\", \"CreatedAt\") VALUES ('{userId}','Parent of {s.FullName.Replace("'", "''")}','{email}','{normEmail}','{email}','{normEmail}',true,'{hash}','{Guid.NewGuid()}','{Guid.NewGuid()}',NULL,false,false,NULL,true,0,false,now());");
+            sb.Append($"INSERT INTO public.\"AspNetUserRoles\" (\"UserId\", \"RoleId\") VALUES ('{userId}','{parentRole}');");
+            sb.Append($"INSERT INTO public.\"Parents\" (\"FullName\", \"Email\", \"Phone\", \"StudentId\", \"IdentityUserId\", \"IsActive\", \"CreatedAt\") VALUES ('Parent of {s.FullName.Replace("'", "''")}','{email}','{s.Phone}',{s.Id},'{userId}',true,now());");
             added++;
-            if (added % 500 == 0) { await _db.SaveChangesAsync(); _db.ChangeTracker.Clear(); }
+            if (added % 500 == 0)
+            {
+                await _db.Database.ExecuteSqlRawAsync(sb.ToString());
+                sb.Clear();
+                _log.LogInformation("Parents: {Count}/{Total}", added, rows.Count);
+            }
         }
-        if (added > 0) await _db.SaveChangesAsync();
-        _db.ChangeTracker.Clear();
+        if (sb.Length > 0) await _db.Database.ExecuteSqlRawAsync(sb.ToString());
         _log.LogInformation("Seeded {Count} parent logins.", added);
     }
 

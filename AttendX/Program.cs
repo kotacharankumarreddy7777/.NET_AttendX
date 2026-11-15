@@ -70,6 +70,7 @@ if (cs.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) || cs.Sta
         }
     }
     npgsqlCs = sb.ToString();
+    npgsqlCs += ";Timeout=60;CommandTimeout=60"; // Neon cold start can take 30-60s to wake up
 }
 
 builder.Services.AddResponseCompression(options => { options.EnableForHttps = true; });
