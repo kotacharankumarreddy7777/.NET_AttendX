@@ -7,6 +7,7 @@ using Hangfire.Dashboard;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 using AttendX.Hubs;
+using System.Text;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -44,20 +45,35 @@ if (builder.Configuration.GetConnectionString("DefaultConnection") is null)
 var cs = builder.Configuration.GetConnectionString("DefaultConnection")
          ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing in appsettings.json");
 
-// Npgsql doesn't understand channel_binding=require from Neon's pooled URL; drop unsupported params.
-var withoutBinding = cs;
-var qIdx = withoutBinding.IndexOf('?');
-if (qIdx >= 0)
+// Neon's pooled/direct URL is postgresql://...?channel_binding=require&sslmode=require.
+// Npgsql doesn't understand channel_binding, so convert to Npgsql keyword=value format and drop it.
+var npgsqlCs = cs;
+if (cs.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) || cs.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
 {
-    var query = withoutBinding[(qIdx + 1)..];
-    var kept = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
-        .Where(p => !p.StartsWith("channel_binding="))
-        .ToList();
-    withoutBinding = withoutBinding[..qIdx] + (kept.Count > 0 ? "?" + string.Join("&", kept) : "");
+    var uri = new Uri(cs);
+    var userInfo = uri.UserInfo.Split(':');
+    var sb = new StringBuilder();
+    sb.Append($"Host={uri.Host}");
+    if (uri.Port != -1) sb.Append($";Port={uri.Port}");
+    sb.Append($";Username={userInfo[0]}");
+    if (userInfo.Length > 1) sb.Append($";Password={userInfo[1]}");
+    sb.Append($";Database={uri.AbsolutePath.TrimStart('/')}");
+    if (!string.IsNullOrEmpty(uri.Query))
+    {
+        foreach (var param in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eq = param.IndexOf('=');
+            var key = eq >= 0 ? param[..eq] : param;
+            var value = eq >= 0 ? param[(eq + 1)..] : "";
+            if (key.Equals("channel_binding", StringComparison.OrdinalIgnoreCase)) continue; // Npgsql doesn't support it
+            if (key.Equals("sslmode", StringComparison.OrdinalIgnoreCase)) sb.Append($";SSL Mode={value}");
+        }
+    }
+    npgsqlCs = sb.ToString();
 }
 
 builder.Services.AddResponseCompression(options => { options.EnableForHttps = true; });
-builder.Services.AddDbContextPool<AppDbContext>(o => o.UseNpgsql(withoutBinding, npgsql =>
+builder.Services.AddDbContextPool<AppDbContext>(o => o.UseNpgsql(npgsqlCs, npgsql =>
 {
     npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null!);
 }));
@@ -182,7 +198,7 @@ builder.Services.AddSignalR();
         .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(withoutBinding));
+        .UsePostgreSqlStorage(npgsqlCs));
 #pragma warning restore CS0618
 builder.Services.AddHangfireServer();
 
