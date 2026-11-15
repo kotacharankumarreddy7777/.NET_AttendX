@@ -6,8 +6,8 @@
 #   AttendX__UseMigrations                -> true
 #   AttendX__SeedDemoData                 -> false   (set true only for first deploy / demo)
 #   AttendX__SeedHistoryDays              -> 105
-#   Institution__Name                     -> PVG College of Engineering & Technology
-#   Institution__ShortName                -> PVGCOET
+#   Institution__Name                     -> Naveen Institution of Technology
+#   Institution__ShortName                -> NIT
 #   Institution__SystemName               -> Attendance Management System
 #   Auth__SeedAdminPassword               -> <change>
 #   Auth__SeedFacultyPassword             -> <change>
@@ -37,9 +37,9 @@ services:
       - key: ConnectionStrings__DefaultConnection
         sync: false
       - key: Institution__Name
-        value: "PVG College of Engineering & Technology"
+        value: "Naveen Institution of Technology"
       - key: Institution__ShortName
-        value: "PVGCOET"
+        value: "NIT"
       - key: Institution__SystemName
         value: "Attendance Management System"
       - key: Auth__SeedAdminPassword

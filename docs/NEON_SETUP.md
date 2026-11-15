@@ -36,8 +36,8 @@ In the Render dashboard → Service → Environment, set:
 | `Auth__SeedFacultyPassword` | strong faculty password |
 | `Auth__SeedStudentPassword` | strong student password |
 | `Auth__SeedParentPassword` | strong parent password |
-| `Institution__Name` | `PVG College of Engineering & Technology` |
-| `Institution__ShortName` | `PVGCOET` |
+| `Institution__Name` | `Naveen Institution of Technology` |
+| `Institution__ShortName` | `NIT` |
 | `Institution__Latitude` / `Institution__Longitude` | campus GPS (default 18.5204, 73.8567) |
 | `Notification__Provider` | `Smtp` or `SendGrid` (leave `Log` for no email) |
 | `Notification__SendGrid__ApiKey` | SendGrid key (optional) |

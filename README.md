@@ -1,7 +1,7 @@
 # AttendX — Attendance & Academic Management System
 
 ASP.NET Core 10 MVC + EF Core + Npgsql (Neon PostgreSQL) + ASP.NET Core Identity + Hangfire + Serilog.
-Built for **PVG College of Engineering & Technology (PVGCOET), Pune** — a **4-year B.Tech** program (8 semesters).
+Built for **Naveen Institution of Technology (NIT)** — a **4-year B.Tech** program (8 semesters).
 
 ## Features
 - 4 role logins: **Admin** (`/admin/login`), **HOD / Faculty** (`/faculty/login`), **Student** (`/student/login`), **Parent** (`/parent/login`).
