@@ -850,63 +850,102 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         };
     }
 
-    // ------------------------------------------------------------------ attendance history (EF batch insert)
+    // ------------------------------------------------------------------ attendance history (raw SQL bulk insert, preserves existing data)
     private async Task SeedAttendanceHistoryAsync()
     {
-        if (await _db.Attendance.AnyAsync()) return;
         // Attendance only makes sense for currently-running odd semesters (Aug–Dec 2026: Sem 1, 3, 5, 7).
         // Even semesters start Jan 2027 — no attendance to seed yet.
         var tts = await _db.Timetables.AsNoTracking().Where(t => t.Semester == 1 || t.Semester == 3 || t.Semester == 5 || t.Semester == 7).ToListAsync();
         var activeSemesters = new HashSet<int> { 1, 3, 5, 7 };
         var students = await _db.Students.AsNoTracking().Where(s => activeSemesters.Contains(s.Semester)).Select(s => new { s.Id, s.BranchId, s.SectionId, s.Semester }).ToListAsync();
         if (tts.Count == 0 || students.Count == 0) return;
-        if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding {Days} days of attendance history...", _o.SeedHistoryDays);
+
+        // Skip dates that already have attendance sessions (preserves existing Oct 16+ data)
+        var existingDates = new HashSet<DateTime>();
+        var maxSessionIds = await _db.AttendanceSessions.Select(s => (DateTime?)s.Date).ToListAsync();
+        foreach (var d in maxSessionIds) if (d.HasValue) existingDates.Add(d.Value.Date);
 
         var rnd = new Random(2026);
-        var today = DateTime.Today;
-        var holidays = await new CalendarService(_db, new SystemClock()).HolidayDatesAsync(today.AddDays(-_o.SeedHistoryDays - 1), today);
+        var startDate = new DateTime(2026, 8, 1);
+        var endDate = DateTime.Today;
+
+        var holidays = await new CalendarService(_db, new SystemClock()).HolidayDatesAsync(startDate, endDate);
         var byClass = students.GroupBy(s => (s.BranchId, s.SectionId, s.Semester)).ToDictionary(g => g.Key, g => g.ToList());
         var prop = students.ToDictionary(s => s.Id, s => { var r = rnd.NextDouble(); return r < 0.2 ? 0.55 + rnd.NextDouble() * 0.17 : r < 0.8 ? 0.78 + rnd.NextDouble() * 0.12 : 0.92 + rnd.NextDouble() * 0.06; });
         var decliners = students.Where(_ => rnd.NextDouble() < 0.08).Select(s => s.Id).ToHashSet();
 
-        var days = Enumerable.Range(1, Math.Max(1, _o.SeedHistoryDays)).Select(i => today.AddDays(-i))
-            .Where(d => d.DayOfWeek != DayOfWeek.Sunday && !holidays.Contains(d)).OrderBy(d => d).ToList();
-        var jobs = days.SelectMany(d => tts.Where(t => t.Day == d.DayOfWeek).Select(t => (Date: d, T: t))).ToList();
+        var days = Enumerable.Range(0, (endDate - startDate).Days + 1).Select(i => startDate.AddDays(i))
+            .Where(d => d.DayOfWeek != DayOfWeek.Sunday && !holidays.Contains(d) && !existingDates.Contains(d))
+            .OrderBy(d => d).ToList();
+
+        if (days.Count == 0)
+        {
+            _log.LogInformation("Attendance already seeded for Aug 1 - today");
+            return;
+        }
+        if (_log.IsEnabled(LogLevel.Information)) _log.LogInformation("Seeding {Days} days of attendance history (Aug 1 - today)...", days.Count);
+
+        int maxSessionId = await _db.AttendanceSessions.MaxAsync(s => (int?)s.Id) ?? 0;
+        long maxAttendanceId = await _db.Attendance.MaxAsync(a => (long?)a.Id) ?? 0;
+
+        var yearId = await _db.AcademicYears.Select(a => (int?)a.Id).FirstOrDefaultAsync() ?? 0;
+        var adminUserId = await _db.Users.Select(u => (string?)u.Id).FirstOrDefaultAsync() ?? "";
 
         _db.ChangeTracker.AutoDetectChangesEnabled = false;
-        foreach (var chunk in jobs.Chunk(500))
-        {
-            var sessions = chunk.Select(j => new AttendanceSession
-            {
-                TimetableId = j.T.Id, AcademicYearId = j.T.AcademicYearId, Date = j.Date, Period = j.T.Period, SubjectId = j.T.SubjectId, SectionId = j.T.SectionId,
-                FacultyId = j.T.FacultyId, Mode = "Manual", DeviceId = "seed", StartedAt = j.Date + j.T.StartTime
-            }).ToList();
-            _db.AttendanceSessions.AddRange(sessions);
-            await _db.SaveChangesAsync();
 
-            var attendanceRows = new List<Attendance>();
-            for (int i = 0; i < chunk.Length; i++)
+        int totalSessions = 0, totalAttendance = 0;
+        foreach (var chunk in days.Chunk(100))
+        {
+            var sessionSb = new System.Text.StringBuilder("INSERT INTO public.\"AttendanceSessions\" (\"Id\", \"TimetableId\", \"AcademicYearId\", \"Date\", \"Period\", \"SubjectId\", \"SectionId\", \"FacultyId\", \"Mode\", \"DeviceId\", \"StartedByUserId\", \"StartedAt\") VALUES ");
+            var sessionRows = new List<string>();
+            var chunkSessionIds = new List<int>();
+
+            foreach (var date in chunk)
             {
-                var (date, t) = chunk[i];
-                if (!byClass.TryGetValue((t.BranchId, t.SectionId, t.Semester), out var list)) continue;
-                foreach (var s in list)
+                foreach (var t in tts.Where(t => t.Day == date.DayOfWeek))
                 {
-                    double p = prop[s.Id];
-                    if (decliners.Contains(s.Id) && date >= today.AddDays(-14)) p *= 0.55;
-                    var status = rnd.NextDouble() < p ? (rnd.NextDouble() < 0.06 ? "Late" : "Present") : "Absent";
-                    attendanceRows.Add(new Attendance
-                    {
-                        StudentId = s.Id, SubjectId = t.SubjectId, FacultyId = t.FacultyId, SectionId = t.SectionId, BranchId = s.BranchId, Semester = s.Semester,
-                        Date = date, Period = t.Period, Status = Enum.Parse<AttendanceStatus>(status), MarkedAt = date + t.StartTime.Add(TimeSpan.FromMinutes(5)),
-                        AttendanceSessionId = sessions[i].Id, Source = "Manual", DeviceId = "seed"
-                    });
+                    var sid = maxSessionId + 1 + chunkSessionIds.Count;
+                    chunkSessionIds.Add(sid);
+                    var startedAt = date + t.StartTime;
+                    sessionRows.Add($"({sid},{t.Id},{yearId},{date:yyyy-MM-dd},{t.Period},{t.SubjectId},{t.SectionId},{t.FacultyId},'Manual','seed','{adminUserId}','{startedAt:yyyy-MM-dd} {startedAt.Hour:D2}:{startedAt.Minute:D2}:{startedAt.Second:D2}')");
                 }
             }
-            _db.Attendance.AddRange(attendanceRows);
-            await _db.SaveChangesAsync();
-            _db.ChangeTracker.Clear();
+            sessionSb.Append(string.Join(",", sessionRows));
+            await _db.Database.ExecuteSqlRawAsync(sessionSb.ToString());
+            totalSessions += chunkSessionIds.Count;
+
+            var attSb = new System.Text.StringBuilder("INSERT INTO public.\"Attendance\" (\"Id\", \"StudentId\", \"SubjectId\", \"FacultyId\", \"SectionId\", \"BranchId\", \"Semester\", \"Date\", \"Period\", \"Status\", \"MarkedAt\", \"AttendanceSessionId\", \"Source\", \"DeviceId\", \"RowVersion\") VALUES ");
+            var attRows = new List<string>();
+            int sessionIdx = 0;
+
+            foreach (var date in chunk)
+            {
+                foreach (var t in tts.Where(t => t.Day == date.DayOfWeek))
+                {
+                    if (!byClass.TryGetValue((t.BranchId, t.SectionId, t.Semester), out var list)) continue;
+                    foreach (var s in list)
+                    {
+                        double p = prop[s.Id];
+                        if (decliners.Contains(s.Id) && date >= endDate.AddDays(-14)) p *= 0.55;
+                        string status = rnd.NextDouble() < p ? (rnd.NextDouble() < 0.06 ? "Late" : "Present") : "Absent";
+                        var statusVal = status == "Present" ? 1 : status == "Late" ? 3 : 2;
+                        var markedAt = date + t.StartTime.Add(TimeSpan.FromMinutes(5));
+                        attRows.Add($"({maxAttendanceId + 1 + attRows.Count},{s.Id},{t.SubjectId},{t.FacultyId},{t.SectionId},{s.BranchId},{s.Semester},{date:yyyy-MM-dd},{t.Period},{statusVal},{markedAt:yyyy-MM-dd} {markedAt.Hour:D2}:{markedAt.Minute:D2}:{markedAt.Second:D2},{chunkSessionIds[sessionIdx]},'Manual','seed',decode('00','hex'))");
+                        totalAttendance++;
+                    }
+                    sessionIdx++;
+                }
+            }
+            attSb.Append(string.Join(",", attRows));
+            await _db.Database.ExecuteSqlRawAsync(attSb.ToString());
+            maxAttendanceId += attRows.Count;
+
+            if (totalSessions % 1000 < 100)
+                Console.WriteLine($"Progress: {totalSessions} sessions, {totalAttendance} attendance rows");
         }
+
         _db.ChangeTracker.AutoDetectChangesEnabled = true;
+        _log.LogInformation("Seeded {Sessions} sessions and {Attendance} attendance records (Aug 1 - today).", totalSessions, totalAttendance);
     }
 
     private async Task FixMalformedStudentIdsAsync()
