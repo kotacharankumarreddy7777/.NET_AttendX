@@ -129,7 +129,7 @@
     @if (admin)
     {
         <a class="@A("Backup")" asp-controller="Backup" asp-action="Index" title="Backup and Export"><i class="bi bi-database-down"></i> <span class="nav-text">Backup and Export</span></a>
-        <a class="@A("Settings")" asp-controller="Settings" asp-action="Index" title="Settings"><i class="bi bi-gear"></i> <span class="nav-text">Settings</span></a>
+        <a class="@A("Settings", "Index")" asp-controller="Settings" asp-action="Index" title="Settings"><i class="bi bi-gear"></i> <span class="nav-text">Settings</span></a>
         <a class="@A("Settings", "Notifications")" asp-controller="Settings" asp-action="Notifications" title="Notification Log"><i class="bi bi-bell-fill"></i> <span class="nav-text">Notification Log</span></a>
     }
     @if (staff) { <a class="@A("Account", "ChangePassword")" asp-controller="Account" asp-action="ChangePassword" title="Change Password"><i class="bi bi-key"></i> <span class="nav-text">Change Password</span></a> }

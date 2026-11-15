@@ -40,10 +40,10 @@ else
                         <tr>
                             <td>@t.ExamDate.ToString("dd MMM yyyy")</td>
                             <td>@t.StartTime.ToString(@"hh\:mm") - @t.EndTime.ToString(@"hh\:mm")</td>
-                            <td>@t.Subject!.SubjectCode</td>
-                            <td><b>@t.Branch!.Code</b> / @t.Section!.Name</td>
+                            <td>@t.Subject?.SubjectCode ?? "-"</td>
+                            <td><b>@(t.Branch?.Code ?? "-")</b> / @(t.Section?.Name ?? "-")</td>
                             <td>Sem @t.Semester</td>
-                            <td>@t.Faculty!.FullName</td>
+                            <td>@t.Faculty?.FullName ?? "-"</td>
                             <td>@t.RoomNo</td>
                             <td class="text-end">
                                 @if (User.IsInRole(RoleNames.Admin))
