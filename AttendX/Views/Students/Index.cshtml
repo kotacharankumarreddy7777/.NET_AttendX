@@ -18,7 +18,7 @@
 {
     <tr><td>@if (!string.IsNullOrEmpty(s.PhotoPath)) { <img class="avatar" src="~/@s.PhotoPath" alt="" /> } else { <span class="avatar">@UiHelpers.Initials(s.FullName)</span> }</td>
         <td><code>@s.StudentID</code></td><td><a asp-action="Details" asp-route-id="@s.Id">@s.FullName</a><br /><small class="text-muted">@s.Email</small></td>
-        <td>@s.Branch!.Code / @s.Section!.Name</td><td>@s.Semester / @s.Year</td><td>@s.Phone</td>
+        <td>@s.Branch!.Code / @(s.Semester)@s.Section!.Name</td><td>@s.Semester / @s.Year</td><td>@s.Phone</td>
         <td>@if (s.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</td>
         <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@s.Id">View</a>
             @if (admin) { <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@s.Id">Edit</a>

@@ -345,6 +345,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 {
                     if (!branches.TryGetValue(r["branchcode"], out var b)) continue;
                     int sem = int.Parse(r["semester"]);
+                    if (sem % 2 == 0) continue;
                     string secName = r["section"];
                     if (!sections.Any(s => s.BranchId == b.Id && s.Name == secName)) continue;
                     var sec = sections.First(s => s.BranchId == b.Id && s.Name == secName);
@@ -371,7 +372,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         {
             var b = branches.Values.FirstOrDefault(x => x.Id == sec.BranchId);
             if (b == null) continue;
-            foreach (int sem in new[] { 1, 2, 3, 4, 5, 6, 7, 8 })
+            foreach (int sem in new[] { 1, 3, 5, 7 })
             {
                 var sectionStudents = await _db.Students.Where(s => s.BranchId == b.Id && s.SectionId == sec.Id && s.Semester == sem).ToListAsync();
                 int currentCount = sectionStudents.Count;
@@ -653,19 +654,10 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     /// </summary>
     private async Task SeedExamTimetableAsync()
     {
-        // Clear any partial/inconsistent exam data left by an interrupted run, then re-seed cleanly.
-        if (await _db.ExamMarks.AnyAsync() || await _db.ExamRegistrations.AnyAsync() || await _db.ExamTimetables.AnyAsync())
-        {
-            _db.ExamMarks.RemoveRange(_db.ExamMarks);
-            _db.ExamRegistrations.RemoveRange(_db.ExamRegistrations);
-            _db.ExamTimetables.RemoveRange(_db.ExamTimetables);
-            _db.Exams.RemoveRange(_db.Exams);
-            await _db.SaveChangesAsync();
-        }
         if (!await _db.Exams.AnyAsync()) await SeedExamsAsync();
 
         var year = await _settings.GetCurrentYearAsync();
-        var exams = await _db.Exams.AsNoTracking().Where(e => e.IsActive).ToListAsync();
+        var exams = await _db.Exams.AsNoTracking().Where(e => e.IsActive && e.Type != "External").OrderBy(e => e.Semester).ThenBy(e => e.Name).ToListAsync();
         if (exams.Count == 0) return;
 
         var subjects = await _db.Subjects.AsNoTracking().Where(s => s.IsActive).ToListAsync();
@@ -683,19 +675,40 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         _db.ChangeTracker.AutoDetectChangesEnabled = false;
         int created = 0;
 
-        // Schedule one exam slot per (exam, subject) — all sections of that branch/semester sit the paper on the same date.
-        // Invigilators, rooms, AND sections rotate round-robin WITH per-date dedup shared across ALL exams
-        // so no faculty/room/section is double-booked on the same date+slot.
-        int facultyCursor = 0;
-        int roomCursor = 0;
+        // Pre-load existing room/faculty combos from DB to avoid clashes with already-seeded slots (e.g. Sem 1).
         var usedFacultyOnDate = new Dictionary<DateTime, HashSet<int>>();
         var usedRoomOnDate = new Dictionary<DateTime, HashSet<string>>();
-        var usedSectionOnDate = new Dictionary<DateTime, HashSet<int>>();
+        var existingRooms = await _db.ExamTimetables.AsNoTracking()
+            .Select(t => new { t.RoomNo, t.ExamDate, t.StartTime })
+            .ToListAsync();
+        foreach (var er in existingRooms)
+        {
+            if (!usedRoomOnDate.TryGetValue(er.ExamDate.Date, out var rmSet)) usedRoomOnDate[er.ExamDate.Date] = rmSet = new HashSet<string>();
+            rmSet.Add(er.RoomNo);
+        }
+        var existingFaculty = await _db.ExamTimetables.AsNoTracking()
+            .Select(t => new { t.FacultyId, t.ExamDate, t.StartTime })
+            .ToListAsync();
+        foreach (var ef in existingFaculty)
+        {
+            if (!usedFacultyOnDate.TryGetValue(ef.ExamDate.Date, out var facSet)) usedFacultyOnDate[ef.ExamDate.Date] = facSet = new HashSet<int>();
+            facSet.Add(ef.FacultyId);
+        }
+
+        int facultyCursor = 0;
+        int roomCursor = 0;
         foreach (var exam in exams)
         {
+            var existing = await _db.ExamTimetables.AsNoTracking().AnyAsync(t => t.ExamId == exam.Id);
+            if (existing)
+            {
+                _log.LogDebug("Exam {ExamId} ({Name}) Sem {Semester} already has slots, skipping", exam.Id, exam.Name, exam.Semester);
+                continue;
+            }
+            _log.LogInformation("Exam {ExamId} ({Name}) Sem {Semester} has no slots, generating", exam.Id, exam.Name, exam.Semester);
+
             var semSubjects = subjects.Where(s => s.Semester == exam.Semester).ToList();
             if (semSubjects.Count == 0) continue;
-            // Only schedule sections that actually have students in THIS semester (each branch runs 2 sections per odd/even sem).
             var sectionsWithStudents = await _db.Students.AsNoTracking()
                 .Where(s => s.IsActive && s.Semester == exam.Semester)
                 .Select(s => new { s.BranchId, s.SectionId })
@@ -705,6 +718,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             var examSections = sections.Where(s => branchById.ContainsKey(s.BranchId) && activeSectionKeys.Contains((s.BranchId, s.Id))).ToList();
             int dayIdx = 0;
 
+            // Per-exam section-day dedup: a section can only have one slot per day within the same exam
+            var usedSectionOnDate = new Dictionary<DateTime, HashSet<int>>();
+
             foreach (var sub in semSubjects)
             {
                 var examDate = exam.StartDate.AddDays(dayIdx % Math.Max(1, (exam.EndDate - exam.StartDate).Days + 1));
@@ -712,16 +728,14 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                 var sameBranchSections = examSections.Where(s => s.BranchId == sub.BranchId).ToList();
                 if (sameBranchSections.Count == 0) continue;
 
-                if (!usedFacultyOnDate.TryGetValue(examDate, out var usedFac)) usedFacultyOnDate[examDate] = usedFac = new HashSet<int>();
-                if (!usedRoomOnDate.TryGetValue(examDate, out var usedRm)) usedRoomOnDate[examDate] = usedRm = new HashSet<string>();
-                if (!usedSectionOnDate.TryGetValue(examDate, out var usedSec)) usedSectionOnDate[examDate] = usedSec = new HashSet<int>();
+                if (!usedFacultyOnDate.TryGetValue(examDate.Date, out var usedFac)) usedFacultyOnDate[examDate.Date] = usedFac = new HashSet<int>();
+                if (!usedRoomOnDate.TryGetValue(examDate.Date, out var usedRm)) usedRoomOnDate[examDate.Date] = usedRm = new HashSet<string>();
+                if (!usedSectionOnDate.TryGetValue(examDate.Date, out var usedSec)) usedSectionOnDate[examDate.Date] = usedSec = new HashSet<int>();
 
                 foreach (var sec in sameBranchSections)
                 {
-                    // Skip section if already has an exam on this date+slot
                     if (usedSec.Contains(sec.Id)) continue;
 
-                    // Pick next faculty not already used on this date
                     int pick = 0;
                     while (usedFac.Contains(faculty[facultyCursor % faculty.Count].Id) && pick < faculty.Count)
                     {
@@ -731,7 +745,136 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     var inv = faculty[facultyCursor % faculty.Count]; facultyCursor++;
                     usedFac.Add(inv.Id);
 
-                    // Pick next room not already used on this date
+                    pick = 0;
+                    while (usedRm.Contains(rooms[roomCursor % rooms.Count]) && pick < rooms.Count)
+                    {
+                        roomCursor++;
+                        pick++;
+                    }
+                    var room = rooms[roomCursor % rooms.Count]; roomCursor++;
+                    usedRm.Add(room);
+                    usedSec.Add(sec.Id);
+
+                    // Stagger start times per semester so sections on the same day don't clash
+                    int startHour = 9 + ((exam.Semester - 1) / 2);
+                    var startTime = new TimeSpan(startHour, 0, 0);
+                    var endTime = startTime.Add(TimeSpan.FromHours(3));
+
+                    _db.ExamTimetables.Add(new ExamTimetable
+                    {
+                        ExamId = exam.Id, SubjectId = sub.Id, BranchId = sec.BranchId, SectionId = sec.Id,
+                        Semester = exam.Semester, FacultyId = inv.Id,
+                        ExamDate = examDate, StartTime = startTime, EndTime = endTime,
+                        RoomNo = room, IsActive = true
+                    });
+                    created++;
+                    if (created % 500 == 0) { await _db.SaveChangesAsync(); _db.ChangeTracker.Clear(); }
+                }
+            }
+        }
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        _db.ChangeTracker.AutoDetectChangesEnabled = true;
+        _log.LogInformation("Seeded {Count} exam timetable slots.", created);
+    }
+
+    /// <summary>
+    /// Generates exam timetable slots ONLY for exams that currently have zero slots,
+    /// without touching existing data. Used to add Mid-1/Mid-2 slots for odd semesters
+    /// that were missed during the original seed.
+    /// </summary>
+    internal async Task GenerateMissingExamTimetablesAsync()
+    {
+        var year = await _settings.GetCurrentYearAsync();
+        var exams = await _db.Exams.AsNoTracking()
+            .Where(e => e.IsActive && e.Type != "External" && e.Semester % 2 == 1)
+            .OrderBy(e => e.Semester).ThenBy(e => e.Name)
+            .ToListAsync();
+        _log.LogInformation("SeedExamTimetableAsync: found {ExamCount} exams", exams.Count);
+        if (exams.Count == 0) return;
+
+        var subjects = await _db.Subjects.AsNoTracking().Where(s => s.IsActive).ToListAsync();
+        var faculty = await _db.Faculty.AsNoTracking().Where(f => f.IsActive).ToListAsync();
+        var sections = await _db.Sections.AsNoTracking().Where(s => s.IsActive).ToListAsync();
+        var branchById = await _db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Id, b => b);
+
+        var rooms = new List<string>();
+        foreach (var blk in new[] { "Block A", "Block B", "Block C" })
+            for (int f = 1; f <= 3; f++)
+                for (int r = 1; r <= 30; r++)
+                    rooms.Add($"{blk}-{f}{r:D2}");
+
+        _db.ChangeTracker.AutoDetectChangesEnabled = false;
+        int created = 0;
+
+        // Global dedup across ALL exams being generated AND existing DB rows
+        int facultyCursor = 0;
+        int roomCursor = 0;
+        var usedFacultyOnDate = new Dictionary<DateTime, HashSet<int>>();
+        var usedRoomOnDate = new Dictionary<DateTime, HashSet<string>>();
+
+        // Pre-load existing room/date combos from DB to avoid conflicts with Sem 1's slots
+        var existingRooms = await _db.ExamTimetables.AsNoTracking()
+            .Select(t => new { t.RoomNo, t.ExamDate, t.StartTime })
+            .ToListAsync();
+        foreach (var er in existingRooms)
+        {
+            if (!usedRoomOnDate.TryGetValue(er.ExamDate.Date, out var rmSet)) usedRoomOnDate[er.ExamDate.Date] = rmSet = new HashSet<string>();
+            rmSet.Add(er.RoomNo);
+        }
+        var existingFaculty = await _db.ExamTimetables.AsNoTracking()
+            .Select(t => new { t.FacultyId, t.ExamDate, t.StartTime })
+            .ToListAsync();
+        foreach (var ef in existingFaculty)
+        {
+            if (!usedFacultyOnDate.TryGetValue(ef.ExamDate.Date, out var facSet)) usedFacultyOnDate[ef.ExamDate.Date] = facSet = new HashSet<int>();
+            facSet.Add(ef.FacultyId);
+        }
+
+        foreach (var exam in exams)
+        {
+            var existing = await _db.ExamTimetables.AsNoTracking().AnyAsync(t => t.ExamId == exam.Id);
+            if (existing) continue; // already has slots
+
+            var semSubjects = subjects.Where(s => s.Semester == exam.Semester).ToList();
+            if (semSubjects.Count == 0) continue;
+
+            var sectionsWithStudents = await _db.Students.AsNoTracking()
+                .Where(s => s.IsActive && s.Semester == exam.Semester)
+                .Select(s => new { s.BranchId, s.SectionId })
+                .Distinct()
+                .ToListAsync();
+            var activeSectionKeys = sectionsWithStudents.Select(x => (x.BranchId, x.SectionId)).ToHashSet();
+            var examSections = sections.Where(s => branchById.ContainsKey(s.BranchId) && activeSectionKeys.Contains((s.BranchId, s.Id))).ToList();
+            int dayIdx = 0;
+
+            // Per-exam section-day dedup: a section can only have one slot per day within the same exam
+            var usedSectionOnDate = new Dictionary<DateTime, HashSet<int>>();
+
+            foreach (var sub in semSubjects)
+            {
+                var examDate = exam.StartDate.AddDays(dayIdx % Math.Max(1, (exam.EndDate - exam.StartDate).Days + 1));
+                dayIdx++;
+                var sameBranchSections = examSections.Where(s => s.BranchId == sub.BranchId).ToList();
+                if (sameBranchSections.Count == 0) continue;
+
+                if (!usedFacultyOnDate.TryGetValue(examDate.Date, out var usedFac)) usedFacultyOnDate[examDate.Date] = usedFac = new HashSet<int>();
+                if (!usedRoomOnDate.TryGetValue(examDate.Date, out var usedRm)) usedRoomOnDate[examDate.Date] = usedRm = new HashSet<string>();
+                if (!usedSectionOnDate.TryGetValue(examDate.Date, out var usedSec)) usedSectionOnDate[examDate.Date] = usedSec = new HashSet<int>();
+
+                foreach (var sec in sameBranchSections)
+                {
+                    if (usedSec.Contains(sec.Id)) continue;
+
+                    int pick = 0;
+                    while (usedFac.Contains(faculty[facultyCursor % faculty.Count].Id) && pick < faculty.Count)
+                    {
+                        facultyCursor++;
+                        pick++;
+                    }
+                    var inv = faculty[facultyCursor % faculty.Count]; facultyCursor++;
+                    usedFac.Add(inv.Id);
+
                     pick = 0;
                     while (usedRm.Contains(rooms[roomCursor % rooms.Count]) && pick < rooms.Count)
                     {
@@ -757,12 +900,11 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         await _db.SaveChangesAsync();
         _db.ChangeTracker.Clear();
         _db.ChangeTracker.AutoDetectChangesEnabled = true;
-        _log.LogInformation("Seeded {Count} exam timetable slots.", created);
+        _log.LogInformation("Generated {Count} missing exam timetable slots.", created);
     }
 
     private async Task SeedExamRegistrationsAsync()
     {
-        if (await _db.ExamRegistrations.AnyAsync()) return;
         var settings = await _settings.GetAsync();
         var exams = await _db.Exams.AsNoTracking().ToListAsync();
         if (exams.Count == 0) return;
@@ -776,6 +918,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         int created = 0;
         foreach (var exam in exams)
         {
+            var existing = await _db.ExamRegistrations.AsNoTracking().AnyAsync(r => r.ExamId == exam.Id);
+            if (existing) continue;
+
             foreach (var s in students.Where(st => st.Semester == exam.Semester))
             {
                 var pct = pctByStudent.TryGetValue(s.Id, out var p) ? p : 100m;
@@ -795,10 +940,9 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
     private async Task SeedExamMarksAsync()
     {
-        if (await _db.ExamMarks.AnyAsync()) return;
         var year = await _settings.GetCurrentYearAsync();
         int start = int.TryParse(year.Name.Split('-')[0], out var sy) ? sy : DateTime.Today.Year;
-        // Completed as of today (Nov 13 2026): Mid-Sem 1 (3rd week Sep) and Mid-Sem 2 (3rd week Nov).
+        // Completed as of today (Nov 16 2026): Mid-Sem 1 (3rd week Sep) and Mid-Sem 2 (3rd week Nov).
         // End-Semester (Dec 16-30 2026) has NOT happened yet — its marks must not be fabricated.
         var completedExamNames = new[] { $"Mid-Sem 1 (Sem 1)", $"Mid-Sem 1 (Sem 3)", $"Mid-Sem 1 (Sem 5)", $"Mid-Sem 1 (Sem 7)", $"Mid-Sem 2 (Sem 1)", $"Mid-Sem 2 (Sem 3)", $"Mid-Sem 2 (Sem 5)", $"Mid-Sem 2 (Sem 7)" };
         var completed = await _db.Exams.AsNoTracking().Where(e => completedExamNames.Contains(e.Name)).ToListAsync();
@@ -807,7 +951,11 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
         var examTimetables = await _db.ExamTimetables.AsNoTracking().Include(tt => tt.Exam).Where(tt => completedIds.Contains(tt.ExamId)).ToListAsync();
         if (examTimetables.Count == 0) return;
-        var ttIds = examTimetables.Select(tt => tt.Id).ToHashSet();
+
+        // Skip timetables that already have marks
+        var ttIdsWithMarks = await _db.ExamMarks.AsNoTracking().Select(m => m.ExamTimetableId).ToListAsync();
+        examTimetables = examTimetables.Where(tt => !ttIdsWithMarks.Contains(tt.Id)).ToList();
+        if (examTimetables.Count == 0) return;
 
         var students = await _db.Students.AsNoTracking().Where(s => s.IsActive).ToListAsync();
         var studentByClass = students.GroupBy(s => new { s.BranchId, s.SectionId, s.Semester }).ToDictionary(g => g.Key, g => g.ToList());

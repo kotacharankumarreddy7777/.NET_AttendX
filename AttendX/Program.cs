@@ -214,6 +214,12 @@ using (var scope = app.Services.CreateScope())
         log.LogCritical(ex, "Database creation/seeding failed. Check the connection string and that PostgreSQL is installed.");
         throw;
     }
+    try { await scope.ServiceProvider.GetRequiredService<DbSeeder>().GenerateMissingExamTimetablesAsync(); }
+    catch (Exception ex)
+    {
+        log.LogCritical(ex, "Missing exam timetable generation failed.");
+        throw;
+    }
 }
 
 if (app.Environment.IsDevelopment()) app.UseDeveloperExceptionPage();

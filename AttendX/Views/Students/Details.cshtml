@@ -11,7 +11,7 @@
             <a class="btn btn-sm btn-outline-dark" asp-action="Card" asp-route-id="@s.Id" target="_blank">Print card</a>
             @if (User.IsInRole("Admin")) { <form asp-action="RegenerateQr" asp-route-id="@s.Id" method="post" data-confirm="Regenerate QR? The image is replaced."><button class="btn btn-sm btn-outline-warning" type="submit">Regenerate</button></form> }
         </div>
-        <hr /><dl class="row text-start mb-0 small"><dt class="col-4">Branch</dt><dd class="col-8">@s.Branch!.Name</dd><dt class="col-4">Section</dt><dd class="col-8">@s.Section!.Name</dd><dt class="col-4">Sem / Year</dt><dd class="col-8">@s.Semester / @s.Year</dd><dt class="col-4">Email</dt><dd class="col-8">@s.Email</dd><dt class="col-4">Phone</dt><dd class="col-8">@s.Phone</dd><dt class="col-4">Joined</dt><dd class="col-8">@s.JoiningDate.ToString("dd MMM yyyy")</dd></dl>
+        <hr /><dl class="row text-start mb-0 small"><dt class="col-4">Branch</dt><dd class="col-8">@s.Branch!.Name</dd><dt class="col-4">Section</dt><dd class="col-8">@(s.Semester)@s.Section!.Name</dd><dt class="col-4">Sem / Year</dt><dd class="col-8">@s.Semester / @s.Year</dd><dt class="col-4">Email</dt><dd class="col-8">@s.Email</dd><dt class="col-4">Phone</dt><dd class="col-8">@s.Phone</dd><dt class="col-4">Joined</dt><dd class="col-8">@s.JoiningDate.ToString("dd MMM yyyy")</dd></dl>
         @if (User.IsInRole("Admin")) { <a class="btn btn-sm btn-ax mt-3" asp-action="Edit" asp-route-id="@s.Id">Edit student</a> }
     </div></div></div>
     <div class="col-lg-8">

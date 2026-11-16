@@ -24,7 +24,7 @@ else
         <td>
         @foreach (var t in Model.Cell(d, p.PeriodNo))
         {
-            <div class="tt-cell"><b>@t.Subject!.SubjectCode</b> <span class="badge bg-info text-dark">@t.ClassType</span><br />@t.Faculty!.FullName<br /><small class="text-muted">@t.Section!.Name - @t.RoomNo</small>
+            <div class="tt-cell"><b>@t.Subject!.SubjectCode</b> <span class="badge bg-info text-dark">@t.ClassType</span><br />@t.Faculty!.FullName<br /><small class="text-muted">@(t.Semester)@t.Section!.Name - @t.RoomNo</small>
             @if (!Model.ReadOnly) { <div class="mt-1"><a class="small" asp-action="Edit" asp-route-id="@t.Id">Edit</a> |
                 <form asp-action="Remove" asp-route-id="@t.Id" asp-route-sectionId="@Model.SectionId" asp-route-branchId="@Model.BranchId" asp-route-semester="@Model.Semester" method="post" class="d-inline" data-confirm="Remove this slot?"><button class="btn btn-link btn-sm p-0 text-danger" type="submit">Remove</button></form></div> }</div>
         }
