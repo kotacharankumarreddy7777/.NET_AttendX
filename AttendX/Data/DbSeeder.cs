@@ -897,11 +897,11 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         _db.ChangeTracker.AutoDetectChangesEnabled = false;
 
         int totalSessions = 0, totalAttendance = 0;
+        var chunkSessionIds = new List<int>();
         foreach (var chunk in days.Chunk(100))
         {
             var sessionSb = new System.Text.StringBuilder("INSERT INTO public.\"AttendanceSessions\" (\"Id\", \"TimetableId\", \"AcademicYearId\", \"Date\", \"Period\", \"SubjectId\", \"SectionId\", \"FacultyId\", \"Mode\", \"DeviceId\", \"StartedByUserId\", \"StartedAt\") VALUES ");
             var sessionRows = new List<string>();
-            var chunkSessionIds = new List<int>();
 
             foreach (var date in chunk)
             {
@@ -935,13 +935,27 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                         var markedAt = date + t.StartTime.Add(TimeSpan.FromMinutes(5));
                         attRows.Add($"({maxAttendanceId + 1 + attRows.Count},{s.Id},{t.SubjectId},{t.FacultyId},{t.SectionId},{s.BranchId},{s.Semester},'{date:yyyy-MM-dd}',{t.Period},{statusVal},CURRENT_TIMESTAMP,{chunkSessionIds[sessionIdx]},'Manual','seed',decode('00','hex'))");
                         totalAttendance++;
+
+                        // Flush in batches to avoid oversized INSERT statements on pooled connections
+                        if (attRows.Count >= 1000)
+                        {
+                            attSb.Append(string.Join(",", attRows));
+                            await _db.Database.ExecuteSqlRawAsync(attSb.ToString());
+                            maxAttendanceId += attRows.Count;
+                            attRows.Clear();
+                            attSb = new System.Text.StringBuilder("INSERT INTO public.\"Attendance\" (\"Id\", \"StudentId\", \"SubjectId\", \"FacultyId\", \"SectionId\", \"BranchId\", \"Semester\", \"Date\", \"Period\", \"Status\", \"MarkedAt\", \"AttendanceSessionId\", \"Source\", \"DeviceId\", \"RowVersion\") VALUES ");
+                        }
                     }
                     sessionIdx++;
                 }
             }
-            attSb.Append(string.Join(",", attRows));
-            await _db.Database.ExecuteSqlRawAsync(attSb.ToString());
-            maxAttendanceId += attRows.Count;
+            // Flush remaining rows
+            if (attRows.Count > 0)
+            {
+                attSb.Append(string.Join(",", attRows));
+                await _db.Database.ExecuteSqlRawAsync(attSb.ToString());
+                maxAttendanceId += attRows.Count;
+            }
 
             if (totalSessions % 1000 < 100)
                 Console.WriteLine($"Progress: {totalSessions} sessions, {totalAttendance} attendance rows");
