@@ -571,6 +571,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         var mapped = new HashSet<(int, int, int)>();
         var scheduledSlots = new HashSet<(int SectionId, DayOfWeek Day, int Period, int Semester)>();
         var facultySlots = new HashSet<(int FacultyId, DayOfWeek Day, int Period, int Semester)>();
+        var roomSlots = new HashSet<(string RoomNo, DayOfWeek Day, int Period, int Semester)>();
         _db.ChangeTracker.AutoDetectChangesEnabled = false;
         int n = 0;
         foreach (var r in rows)
@@ -588,6 +589,8 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
             if (!facultySlots.Add((f.Id, day, period, sem))) continue;
 
             string room = r["room"];
+            if (!roomSlots.Add((room, day, period, sem))) continue;
+
             string classType = r.TryGetValue("classtype", out var ct) && !string.IsNullOrWhiteSpace(ct) ? ct : (room.Contains("Lab", StringComparison.OrdinalIgnoreCase) ? "Lab" : room.Contains("Workshop", StringComparison.OrdinalIgnoreCase) ? "Workshop" : "Lecture");
 
             _db.Timetables.Add(new Timetable

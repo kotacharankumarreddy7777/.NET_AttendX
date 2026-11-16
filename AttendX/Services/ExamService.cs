@@ -99,6 +99,12 @@ public class ExamService(AppDbContext db, ICurrentUser user, ISettingsService se
             x.StartTime < tt.EndTime && tt.StartTime < x.EndTime);
         if (sectionClash != null) return (false, "Section already has an exam at this time.");
 
+        // Check room clash: same room cannot host two exams at the same time on the same date.
+        var roomClash = await _db.ExamTimetables.FirstOrDefaultAsync(x =>
+            x.IsActive && x.RoomNo == tt.RoomNo && x.ExamDate == tt.ExamDate &&
+            x.StartTime < tt.EndTime && tt.StartTime < x.EndTime);
+        if (roomClash != null) return (false, "Room is already booked for another exam at this time.");
+
         _db.ExamTimetables.Add(tt);
         await _db.SaveChangesAsync();
         return (true, null);

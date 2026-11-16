@@ -69,6 +69,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             .IsUnique();
         b.Entity<Timetable>().HasIndex(x => new { x.AcademicYearId, x.FacultyId, x.Day, x.Period, x.Semester })
             .IsUnique();
+        // One room cannot host two different sections at the same day+period+semester.
+        b.Entity<Timetable>().HasIndex(x => new { x.AcademicYearId, x.RoomNo, x.Day, x.Period, x.Semester })
+            .IsUnique();
 
         b.Entity<AttendanceSession>().HasIndex(x => new { x.TimetableId, x.Date }).IsUnique();
         b.Entity<AttendanceSession>().Property(x => x.Latitude).HasPrecision(8, 3);
@@ -100,9 +103,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Exam>().HasIndex(x => new { x.AcademicYearId, x.Semester, x.Name }).IsUnique();
         // A section sits only one paper per subject per exam date (no double-booking of the same paper).
         b.Entity<ExamTimetable>().HasIndex(x => new { x.ExamId, x.SubjectId, x.SectionId, x.ExamDate }).IsUnique();
-        // Exam centers: room clash prevented by the seeder (per-date dedup). Index is non-unique because
-        // the same room can legitimately host different sections across different exams on the same day.
-        b.Entity<ExamTimetable>().HasIndex(x => new { x.ExamId, x.RoomNo, x.ExamDate, x.StartTime });
+        // Exam centers: room clash prevented at DB level — same room cannot host two exams at the same time on the same date.
+        b.Entity<ExamTimetable>().HasIndex(x => new { x.RoomNo, x.ExamDate, x.StartTime }).IsUnique();
         b.Entity<ExamRegistration>().HasIndex(x => new { x.ExamId, x.StudentId }).IsUnique();
         b.Entity<ExamMark>().HasIndex(x => new { x.ExamTimetableId, x.StudentId }).IsUnique();
         b.Entity<ExamMark>().Property(x => x.InternalMark).HasPrecision(5, 2);

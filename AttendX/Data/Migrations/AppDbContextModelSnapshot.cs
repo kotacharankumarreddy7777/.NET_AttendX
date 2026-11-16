@@ -755,7 +755,8 @@ namespace AttendX.Data.Migrations
 
                     b.HasIndex("SubjectId");
 
-                    b.HasIndex("ExamId", "RoomNo", "ExamDate", "StartTime");
+                    b.HasIndex("RoomNo", "ExamDate", "StartTime")
+                        .IsUnique();
 
                     b.HasIndex("ExamId", "SubjectId", "SectionId", "ExamDate")
                         .IsUnique();
@@ -1493,6 +1494,9 @@ namespace AttendX.Data.Migrations
                     b.HasIndex("SubjectId");
 
                     b.HasIndex("AcademicYearId", "FacultyId", "Day", "Period", "Semester")
+                        .IsUnique();
+
+                    b.HasIndex("AcademicYearId", "RoomNo", "Day", "Period", "Semester")
                         .IsUnique();
 
                     b.HasIndex("AcademicYearId", "SectionId", "Day", "Period", "Semester")
