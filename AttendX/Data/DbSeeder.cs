@@ -684,11 +684,13 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
         int created = 0;
 
         // Schedule one exam slot per (exam, subject) — all sections of that branch/semester sit the paper on the same date.
-        // Invigilators and rooms rotate round-robin WITH per-date dedup shared across ALL exams so no faculty/room is double-booked on the same date+slot.
+        // Invigilators, rooms, AND sections rotate round-robin WITH per-date dedup shared across ALL exams
+        // so no faculty/room/section is double-booked on the same date+slot.
         int facultyCursor = 0;
         int roomCursor = 0;
         var usedFacultyOnDate = new Dictionary<DateTime, HashSet<int>>();
         var usedRoomOnDate = new Dictionary<DateTime, HashSet<string>>();
+        var usedSectionOnDate = new Dictionary<DateTime, HashSet<int>>();
         foreach (var exam in exams)
         {
             var semSubjects = subjects.Where(s => s.Semester == exam.Semester).ToList();
@@ -712,9 +714,13 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
 
                 if (!usedFacultyOnDate.TryGetValue(examDate, out var usedFac)) usedFacultyOnDate[examDate] = usedFac = new HashSet<int>();
                 if (!usedRoomOnDate.TryGetValue(examDate, out var usedRm)) usedRoomOnDate[examDate] = usedRm = new HashSet<string>();
+                if (!usedSectionOnDate.TryGetValue(examDate, out var usedSec)) usedSectionOnDate[examDate] = usedSec = new HashSet<int>();
 
                 foreach (var sec in sameBranchSections)
                 {
+                    // Skip section if already has an exam on this date+slot
+                    if (usedSec.Contains(sec.Id)) continue;
+
                     // Pick next faculty not already used on this date
                     int pick = 0;
                     while (usedFac.Contains(faculty[facultyCursor % faculty.Count].Id) && pick < faculty.Count)
@@ -734,6 +740,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
                     }
                     var room = rooms[roomCursor % rooms.Count]; roomCursor++;
                     usedRm.Add(room);
+                    usedSec.Add(sec.Id);
 
                     _db.ExamTimetables.Add(new ExamTimetable
                     {

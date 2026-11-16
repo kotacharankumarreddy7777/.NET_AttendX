@@ -105,6 +105,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<ExamTimetable>().HasIndex(x => new { x.ExamId, x.SubjectId, x.SectionId, x.ExamDate }).IsUnique();
         // Exam centers: room clash prevented at DB level — same room cannot host two exams at the same time on the same date.
         b.Entity<ExamTimetable>().HasIndex(x => new { x.RoomNo, x.ExamDate, x.StartTime }).IsUnique();
+        // A faculty cannot invigilate two exams at the same date+time.
+        b.Entity<ExamTimetable>().HasIndex(x => new { x.FacultyId, x.ExamDate, x.StartTime }).IsUnique();
+        // A section cannot sit two exams at the same date+time.
+        b.Entity<ExamTimetable>().HasIndex(x => new { x.SectionId, x.ExamDate, x.StartTime }).IsUnique();
         b.Entity<ExamRegistration>().HasIndex(x => new { x.ExamId, x.StudentId }).IsUnique();
         b.Entity<ExamMark>().HasIndex(x => new { x.ExamTimetableId, x.StudentId }).IsUnique();
         b.Entity<ExamMark>().Property(x => x.InternalMark).HasPrecision(5, 2);

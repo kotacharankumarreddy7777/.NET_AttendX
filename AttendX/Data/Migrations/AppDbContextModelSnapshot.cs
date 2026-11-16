@@ -749,13 +749,15 @@ namespace AttendX.Data.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.HasIndex("FacultyId");
-
-                    b.HasIndex("SectionId");
-
                     b.HasIndex("SubjectId");
 
+                    b.HasIndex("FacultyId", "ExamDate", "StartTime")
+                        .IsUnique();
+
                     b.HasIndex("RoomNo", "ExamDate", "StartTime")
+                        .IsUnique();
+
+                    b.HasIndex("SectionId", "ExamDate", "StartTime")
                         .IsUnique();
 
                     b.HasIndex("ExamId", "SubjectId", "SectionId", "ExamDate")
