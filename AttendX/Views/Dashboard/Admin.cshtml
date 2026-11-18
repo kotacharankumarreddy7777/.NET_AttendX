@@ -1,27 +1,27 @@
 @model AdminDashboardViewModel
 @inject AttendX.Data.AppDbContext db
 @{ ViewData["Title"] = "Dashboard"; }
-<div class="mb-3"><h1 class="page-title">@(Model.IsHod ? "Department Dashboard" : "Dashboard")</h1><div class="text-muted small">@Model.ScopeName</div>
-@if (Model.IsHod)
-{
-    <a class="btn btn-outline-primary" asp-action="HodTimetable"><i class="bi bi-table me-1"></i>Department Timetable</a>
-}
-</div>
+<div class="mb-3"><h1 class="page-title">@(Model.IsHod ? "Department Dashboard" : "Admin Dashboard")</h1><div class="text-muted small">@Model.ScopeName · Academic Year 2026-27</div></div>
+
+<!-- ============ QUICK ACTIONS ============ -->
+<div class="ax-card mb-3"><div class="card-h d-flex justify-content-between align-items-center"><span><i class="bi bi-lightning me-1"></i>Quick Actions</span></div>
+    <div class="card-b"><div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-ax" asp-controller="Attendance" asp-action="Index"><i class="bi bi-check2-square me-1"></i>Mark Today's Classes</a>
+        <a class="btn btn-outline-primary" asp-controller="Exam" asp-action="Index"><i class="bi bi-file-earmark-text me-1"></i>Manage Exams</a>
+        <a class="btn btn-outline-primary" asp-controller="Notices" asp-action="Board"><i class="bi bi-megaphone me-1"></i>Send Notice</a>
+        <a class="btn btn-outline-secondary" asp-controller="Backup" asp-action="Index"><i class="bi bi-database-down me-1"></i>Backup Data</a>
+        <a class="btn btn-outline-secondary" asp-controller="Settings" asp-action="Index"><i class="bi bi-gear me-1"></i>System Settings</a>
+    </div></div></div>
+
+<!-- ============ KPI CARDS ============ -->
 <div class="row g-3 mb-3">
-    @{
-        void Tile(object value, string label, string? href = null)
-        {
-            <div class="col-6 col-md-4 col-xl-2"><div class="ax-card stat"><div><div class="v">@value</div><div class="l">@label</div></div></div></div>
-        }
-    }
-    @{ Tile(Model.ActiveStudents, "Students"); }
-    @{ Tile(Model.ActiveFaculty, "Faculty"); }
-    @{ Tile(Model.TodayClasses, "Classes Today"); }
-    @{ Tile(Model.TodaySessions, "Sessions Marked"); }
-    @{ Tile(Model.AvgAttendance + "%", "Avg Attendance"); }
-    @{ Tile(Model.LowAttendanceCount, "Below Minimum"); }
+    <div class="col-6 col-md-3"><div class="ax-card stat stat-info"><div><div class="v">@Model.TotalStudents</div><div class="l">Students @(Model.ActiveStudents == Model.TotalStudents ? "" : "<span class=\"badge bg-success\">@Model.ActiveStudents active</span>")</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="ax-card stat stat-success"><div><div class="v">@Model.ActiveFaculty</div><div class="l">Faculty @(Model.Hods > 0 ? "<span class=\"badge bg-info\">@Model.Hods HOD(s)</span>" : "")</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="ax-card stat stat-primary"><div><div class="v">@Model.TodayClasses</div><div class="l">Classes Today @(Model.TodaySessions > 0 ? "<span class=\"badge bg-success\">@Model.TodaySessions marked</span>" : "<span class=\"badge bg-warning\">0 marked</span>")</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="ax-card stat stat-@(Model.AvgAttendance >= 75 ? "success" : "danger")"><div><div class="v">@Model.AvgAttendance%</div><div class="l">Avg Attendance (30d)</div></div></div></div>
 </div>
 
+<!-- ============ TODAY'S CLASSES ============ -->
 @if (Model.TodayByPeriod.Any())
 {
     <div class="ax-card mb-3"><div class="card-h d-flex justify-content-between align-items-center"><span><i class="bi bi-calendar3-week me-1"></i>Today's Classes — Period Wise</span><span class="small text-muted">@Model.PeriodCount periods/day</span></div>
@@ -29,7 +29,7 @@
             <form method="get" asp-controller="Dashboard" asp-action="Index" class="row g-2 mb-3 align-items-end">
                 @if (!Model.IsHod)
                 {
-                    <div class="col-md-3"><select name="branchId" class="form-select"><option value="">All branches</option>@foreach (var b in await db.Branches.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync()) { <option value="@b.Id">@b.Name</option> }</select></div>
+                    <div class="col-md-3"><select name="branchId" class="form-select"><option value="">All branches</option>@foreach (var b in await db.Branches.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync()) { <option value="@b.Id" selected="@(b.Id == Model.ScopeBranchId)">@b.Name</option> }</select></div>
                 }
                 <div class="col-md-@(Model.IsHod ? "3" : "3")"><select name="facultyId" class="form-select"><option value="">All faculty</option>@foreach (var f in await db.Faculty.AsNoTracking().Where(x => x.IsActive && (Model.IsHod ? x.BranchId == Model.ScopeBranchId : true)).OrderBy(x => x.FullName).ToListAsync()) { <option value="@f.Id">@f.FullName</option> }</select></div>
                 <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
@@ -62,22 +62,24 @@
     </div>
 }
 
+<!-- ============ CHARTS ROW ============ -->
 <div class="row g-3 mb-3">
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">@Model.Charts.GroupTitle</div><div class="card-b"><div class="chart-box"><canvas id="chGroup"></canvas></div></div></div></div>
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Attendance by Semester (30 days)</div><div class="card-b"><div class="chart-box"><canvas id="chSem"></canvas></div></div></div></div>
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Daily Attendance (14 days)</div><div class="card-b"><div class="chart-box"><canvas id="chDaily"></canvas></div></div></div></div>
     <div class="col-lg-6"><div class="ax-card"><div class="card-h">Monthly Attendance Distribution</div><div class="card-b"><div class="chart-box"><canvas id="chMonthly"></canvas></div></div></div></div>
-    <div class="col-12"><div class="ax-card"><div class="card-h">Subjects with Lowest Attendance (30 days)</div><div class="card-b"><div class="chart-box" style="height:320px"><canvas id="chSubject"></canvas></div></div></div></div>
 </div>
+
+<!-- ============ ALERTS & ACTIVITY ============ -->
 <div class="row g-3">
-    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Low Attendance List <a class="btn btn-sm btn-outline-primary" asp-controller="Reports" asp-action="Index" asp-route-type="defaulter" asp-route-run="true">View All</a></div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h d-flex justify-content-between align-items-center"><span><i class="bi bi-exclamation-triangle me-1"></i>Low Attendance (<span class="badge bg-@(Model.LowAttendanceCount > 0 ? "danger" : "success")">@Model.LowAttendanceCount</span>)</span><a class="btn btn-sm btn-outline-primary" asp-controller="Reports" asp-action="Index" asp-route-type="defaulter" asp-route-run="true">View All</a></div>
         @if (!Model.LowStudents.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("all_good", "No students below minimum", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
         else {
-        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Student</th><th>Class</th><th>%</th><th>Required</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Student</th><th>Class</th><th>%</th><th>Required</th><th></th></tr></thead><tbody>
         @foreach (var s in Model.LowStudents) { <tr><td><a asp-controller="Students" asp-action="Details" asp-route-id="@s.StudentId">@s.Name</a><br /><span class="mono text-muted">@s.Code</span></td><td>@(s.Semester.ToString() + s.Section)</td><td class="pct pct-bad">@s.Percent%</td><td>@(s.ClassesNeeded > 0 ? s.ClassesNeeded + " classes" : "-")</td></tr> }
         </tbody></table></div> }
     </div></div>
-    <div class="col-lg-6"><div class="ax-card"><div class="card-h">Attendance Not Marked Today</div>
+    <div class="col-lg-6"><div class="ax-card"><div class="card-h d-flex justify-content-between align-items-center"><span><i class="bi bi-exclamation-circle me-1"></i>Attendance Not Marked Today</span><a class="btn btn-sm btn-outline-primary" asp-controller="Attendance" asp-action="Index">View All</a></div>
         @if (!Model.MissingSlots.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("all_good", "Nothing pending", "")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
         else {
         <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Period</th><th>Subject</th><th>Branch / Sem / Section</th><th>Faculty</th><th></th></tr></thead><tbody>
