@@ -32,7 +32,7 @@ public class TimetableController(AppDbContext db, ITimetableService tt, ICurrent
         ViewBag.FacultyOnly = facultyOnly;
 
         // Exam overlay: if in an exam window, fetch invigilation slots for the same filter
-        ViewBag.ExamOverlay = await _tt.GetExamOverlayAsync(branchId, sectionId, semester, DateTime.UtcNow.Date.AddDays(-7), DateTime.UtcNow.Date.AddDays(7));
+        ViewBag.ExamOverlay = await _tt.GetExamOverlayAsync(branchId, sectionId, semester, facultyId, DateTime.UtcNow.Date.AddDays(-7), DateTime.UtcNow.Date.AddDays(7));
         ViewBag.InExamWindow = ViewBag.ExamOverlay is List<ExamTimetable> eo && eo.Any();
 
         return View(vm);

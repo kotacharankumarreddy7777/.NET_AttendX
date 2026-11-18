@@ -8,7 +8,7 @@ public interface ITimetableService
     Task<(bool Ok, List<string> Errors)> SaveAsync(TimetableFormViewModel m);
     Task<bool> DeactivateAsync(int id);
     Task<TimetableGridViewModel> BuildGridAsync(int? branchId, int? sectionId, int? semester, int? facultyId, int? scopeBranchId);
-    Task<List<ExamTimetable>> GetExamOverlayAsync(int? branchId, int? sectionId, int? semester, DateTime from, DateTime to);
+    Task<List<ExamTimetable>> GetExamOverlayAsync(int? branchId, int? sectionId, int? semester, int? facultyId, DateTime from, DateTime to);
 }
 
 public class TimetableService(AppDbContext db, ISettingsService settings, IAuditService audit) : ITimetableService
@@ -156,7 +156,7 @@ public class TimetableService(AppDbContext db, ISettingsService settings, IAudit
         return vm;
     }
 
-    public async Task<List<ExamTimetable>> GetExamOverlayAsync(int? branchId, int? sectionId, int? semester, DateTime from, DateTime to)
+    public async Task<List<ExamTimetable>> GetExamOverlayAsync(int? branchId, int? sectionId, int? semester, int? facultyId, DateTime from, DateTime to)
     {
         var q = _db.ExamTimetables.AsNoTracking()
             .Include(x => x.Subject).Include(x => x.Faculty).Include(x => x.Section).Include(x => x.Branch).Include(x => x.Exam)
@@ -165,6 +165,7 @@ public class TimetableService(AppDbContext db, ISettingsService settings, IAudit
         if (branchId != null) q = q.Where(x => x.BranchId == branchId);
         if (sectionId != null) q = q.Where(x => x.SectionId == sectionId);
         if (semester != null) q = q.Where(x => x.Semester == semester);
+        if (facultyId != null) q = q.Where(x => x.FacultyId == facultyId);
 
         return await q.OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime).ToListAsync();
     }
