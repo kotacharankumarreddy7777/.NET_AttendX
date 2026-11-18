@@ -1,7 +1,12 @@
 @model AdminDashboardViewModel
 @inject AttendX.Data.AppDbContext db
 @{ ViewData["Title"] = "Dashboard"; }
-<div class="mb-3"><h1 class="page-title">@(Model.IsHod ? "Department Dashboard" : "Dashboard")</h1><div class="text-muted small">@Model.ScopeName</div></div>
+<div class="mb-3"><h1 class="page-title">@(Model.IsHod ? "Department Dashboard" : "Dashboard")</h1><div class="text-muted small">@Model.ScopeName</div>
+@if (Model.IsHod)
+{
+    <a class="btn btn-outline-primary" asp-action="HodTimetable"><i class="bi bi-table me-1"></i>Department Timetable</a>
+}
+</div>
 <div class="row g-3 mb-3">
     @{
         void Tile(object value, string label, string? href = null)

@@ -42,6 +42,8 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         if (await _calendar.GetNonWorkingReasonAsync(date) != null) return new List<SlotView>();     // Sunday / holiday: no classes
         var now = _clock.Now;
         var year = await _settings.GetCurrentYearAsync();
+        var sem = await _settings.GetCurrentSemesterAsync();
+        var currentSem = sem?.Number ?? 0;
         var settings = await _settings.GetAsync();
 
         // Detect exam window: if today falls within any active semester's exam window, suspend regular classes
@@ -58,7 +60,7 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         }
 
         var q = _db.Timetables.AsNoTracking().Include(t => t.Subject).Include(t => t.Section).Include(t => t.Branch).Include(t => t.Faculty)
-            .Where(t => t.IsActive && t.AcademicYearId == year.Id && t.Day == date.DayOfWeek);
+            .Where(t => t.IsActive && t.AcademicYearId == year.Id && t.Semester == currentSem && t.Day == date.DayOfWeek);
 
         // During exam windows, hide classes marked as suspended during exams
         if (inExamWindow)

@@ -7,6 +7,7 @@ public interface ISettingsService
     Task<AttendanceSettings> GetAsync();
     Task SaveAsync(AttendanceSettings s);
     Task<AcademicYear> GetCurrentYearAsync();
+    Task<Semester?> GetCurrentSemesterAsync();
 }
 
 public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISettingsService
@@ -62,6 +63,11 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
         _db.AcademicYears.Add(ny);
         await _db.SaveChangesAsync();
         return ny;
+    }
+
+    public async Task<Semester?> GetCurrentSemesterAsync()
+    {
+        return await _db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.IsCurrent);
     }
 }
 

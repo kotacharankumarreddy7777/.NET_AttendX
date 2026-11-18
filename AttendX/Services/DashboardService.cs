@@ -17,6 +17,8 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var scope = await user.GetScopeBranchIdAsync();            // null = admin
         var settings = await settingsService.GetAsync();
         var year = await settingsService.GetCurrentYearAsync();
+        var sem = await settingsService.GetCurrentSemesterAsync();
+        var currentSem = sem?.Number ?? 0;
         var w = settings.LateWeight;
         var now = clock.Now; var today = now.Date;
         var vm = new AdminDashboardViewModel { IsHod = scope != null };
@@ -25,7 +27,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var faculty = db.Faculty.AsNoTracking().Where(f => f.IsActive);
         var sections = db.Sections.AsNoTracking().Where(s => s.IsActive);
         var subjects = db.Subjects.AsNoTracking().Where(s => s.IsActive);
-        var tt = db.Timetables.AsNoTracking().Where(t => t.IsActive && t.AcademicYearId == year.Id && t.Day == today.DayOfWeek);
+        var tt = db.Timetables.AsNoTracking().Where(t => t.IsActive && t.AcademicYearId == year.Id && t.Semester == currentSem && t.Day == today.DayOfWeek);
         IQueryable<Attendance> att = db.Attendance.AsNoTracking();
 
         if (scope != null)
