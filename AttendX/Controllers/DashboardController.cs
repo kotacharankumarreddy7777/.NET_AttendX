@@ -56,4 +56,41 @@ public class DashboardController(IDashboardService dash, ICurrentUser user, AppD
 
         return View(byFaculty);
     }
+
+    /// <summary>Invigilation duties: faculty sees their own, HOD sees branch faculty's, Admin sees all.</summary>
+    [Authorize(Policy = PolicyNames.AnyStaff), HttpGet]
+    public async Task<IActionResult> InvigilationDuties(DateTime? from, DateTime? to)
+    {
+        var scope = await _user.GetScopeBranchIdAsync();
+        var fac = await _user.GetFacultyAsync();
+        var today = DateTime.UtcNow.Date;
+        var fromDate = from ?? today.AddDays(-7);
+        var toDate = to ?? today.AddDays(30);
+
+        var q = _db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Exam).Include(x => x.Subject).Include(x => x.Section).Include(x => x.Branch).Include(x => x.Faculty)
+            .Where(x => x.IsActive && x.ExamDate.Date >= fromDate.Date && x.ExamDate.Date <= toDate.Date);
+
+        // Faculty: only their own duties. HOD: only their branch. Admin: all.
+        if (!_user.IsAdmin && !_user.IsHod)
+        {
+            if (fac == null) return View("NoFaculty");
+            q = q.Where(x => x.FacultyId == fac.Id);
+        }
+        else if (scope != null)
+        {
+            q = q.Where(x => x.BranchId == scope);
+        }
+
+        var duties = await q.OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime).ToListAsync();
+
+        ViewBag.From = fromDate;
+        ViewBag.To = toDate;
+        ViewBag.ScopeBranch = scope != null ? await _db.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == scope) : null;
+        ViewBag.IsAdmin = _user.IsAdmin;
+        ViewBag.IsHod = _user.IsHod;
+        ViewBag.IsFaculty = !_user.IsAdmin && !_user.IsHod;
+
+        return View(duties);
+    }
 }

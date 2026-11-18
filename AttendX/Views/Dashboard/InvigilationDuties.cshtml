@@ -1,0 +1,56 @@
+@model List<AttendX.Models.ExamTimetable>
+@inject AttendX.Data.AppDbContext db
+@{
+    ViewData["Title"] = "Invigilation Duties";
+    var from = (DateTime)ViewBag.From;
+    var to = (DateTime)ViewBag.To;
+    var scopeBranch = ViewBag.ScopeBranch as AttendX.Models.Branch;
+    var isAdmin = (bool?)ViewBag.IsAdmin ?? false;
+    var isHod = (bool?)ViewBag.IsHod ?? false;
+    var isFaculty = (bool?)ViewBag.IsFaculty ?? false;
+
+    var grouped = Model.GroupBy(d => d.ExamDate).OrderBy(g => g.Key).ToList();
+}
+<div class="mb-3"><h1 class="page-title">Invigilation Duties</h1>
+    <div class="text-muted small">
+        @if (isFaculty) { <span>Your invigilation schedule</span> }
+        else if (isHod) { <span>@(scopeBranch?.Name ?? "Your branch") — branch faculty invigilation duties</span> }
+        else { <span>All branches — faculty invigilation duties</span> }
+        <span class="ms-3">@from:dd MMM yyyy</span> to <span>@to:dd MMM yyyy</span>
+    </div></div>
+
+<div class="ax-card mb-3"><div class="card-b">
+    <form method="get" class="row g-2 mb-3 align-items-end">
+        <div class="col-md-3"><input type="date" name="from" class="form-control" value="@from:yyyy-MM-dd" /></div>
+        <div class="col-md-3"><input type="date" name="to" class="form-control" value="@to:yyyy-MM-dd" /></div>
+        <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+        <div class="col-md-2"><a class="btn btn-outline-secondary w-100" href="@Url.Action("InvigilationDuties")">Clear</a></div>
+    </form>
+</div></div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No invigilation duties found in the selected date range.</div>
+}
+else
+{
+    <div class="table-responsive"><table class="table table-bordered table-hover mb-0"><thead><tr><th>Date</th><th>Time</th><th>Exam</th><th>Subject</th><th>Section</th><th>Room</th><th>Role</th></tr></thead><tbody>
+    @foreach (var dayGroup in grouped)
+    {
+        <tr><td colspan="7" class="table-active"><strong>@dayGroup.Key:dd MMM yyyy</strong> (@dayGroup.Count() duty@(dayGroup.Count() == 1 ? "" : "s"))</td></tr>
+        foreach (var d in dayGroup.OrderBy(x => x.StartTime))
+        {
+            <tr>
+                <td>@d.ExamDate:dd MMM</td>
+                <td>@d.StartTime.ToString(@"hh\:mm")-@d.EndTime.ToString(@"hh\:mm")</td>
+                <td><strong>@d.Exam?.Name</strong><br /><span class="small text-muted">@d.Exam?.Type</span></td>
+                <td class="mono">@d.Subject?.SubjectCode - @d.Subject?.SubjectName</td>
+                <td>Sem @d.Semester / @d.Section?.Name</td>
+                <td>@d.RoomNo</td>
+                <td><span class="badge bg-primary">Invigilator</span></td>
+            </tr>
+        }
+    }
+    </tbody></table></div>
+}
+@section Scripts { }

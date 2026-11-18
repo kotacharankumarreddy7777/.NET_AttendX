@@ -79,10 +79,13 @@
     @if (student)
     {
         <a class="@A("Student", "Index", "Query", "MyQr", "Card", "UpdatePhone")" asp-controller="Student" asp-action="Index" title="Dashboard"><i class="bi bi-speedometer2"></i> <span class="nav-text">Dashboard</span></a>
+        <div class="grp"><span class="nav-text">Classes</span></div>
+        <a class="@A("Student", "Index", "Query", "MyQr", "Card", "UpdatePhone")" asp-controller="Student" asp-action="Index" title="My Timetable"><i class="bi bi-calendar3-week"></i> <span class="nav-text">My Timetable</span></a>
+        <a class="@A("Student", "Report")" asp-controller="Student" asp-action="Report" title="Attendance Report"><i class="bi bi-file-earmark-pdf"></i> <span class="nav-text">Attendance Report</span></a>
+        <div class="grp"><span class="nav-text">Exams</span></div>
         <a class="@A("Student", "Exams")" asp-controller="Student" asp-action="Exams" title="My Exams"><i class="bi bi-file-earmark-text"></i> <span class="nav-text">My Exams &amp; Results</span></a>
         <a class="@A("Student", "HallTicket")" asp-controller="Student" asp-action="HallTicket" title="Hall Ticket"><i class="bi bi-ticket-perforated"></i> <span class="nav-text">Hall Ticket</span></a>
         <a class="@A("Notices", "Board")" asp-controller="Notices" asp-action="Board" title="Notices"><i class="bi bi-megaphone"></i> <span class="nav-text">Notices</span></a>
-        <a class="@A("Student", "Report")" asp-controller="Student" asp-action="Report" title="Attendance Report"><i class="bi bi-file-earmark-pdf"></i> <span class="nav-text">Attendance Report</span></a>
         <a class="@A("Account", "ChangePassword")" asp-controller="Account" asp-action="ChangePassword" title="Change Password"><i class="bi bi-key"></i> <span class="nav-text">Change Password</span></a>
     }
     @if (parent)
@@ -93,12 +96,21 @@
     @if (staff)
     {
         <a class="@A("Dashboard")" asp-controller="Dashboard" asp-action="Index" title="Dashboard"><i class="bi bi-speedometer2"></i> <span class="nav-text">Dashboard</span></a>
-        <div class="grp"><span class="nav-text">Attendance</span></div>
+        <div class="grp"><span class="nav-text">Classes</span></div>
         <a class="@A("Attendance", todayActions)" asp-controller="Attendance" asp-action="Index" title="Today's Classes"><i class="bi bi-check2-square"></i> <span class="nav-text">Today's Classes</span></a>
-        @if (admin || hod) { <a class="@A("Attendance", "Corrections")" asp-controller="Attendance" asp-action="Corrections" title="Corrections"><i class="bi bi-pencil-square"></i> <span class="nav-text">Corrections</span></a> }
         <a class="@A("Timetable")" asp-controller="Timetable" asp-action="Index" title="Timetable"><i class="bi bi-calendar3-week"></i> <span class="nav-text">Timetable</span></a>
+        @if (admin || hod) { <a class="@A("Attendance", "Corrections")" asp-controller="Attendance" asp-action="Corrections" title="Corrections"><i class="bi bi-pencil-square"></i> <span class="nav-text">Corrections</span></a> }
         <a class="@A("Queries")" asp-controller="Queries" asp-action="Index" title="Student Queries"><i class="bi bi-chat-square-text"></i> <span class="nav-text">Student Queries</span></a>
-        <a class="@A("Exam", "MyQueries")" asp-controller="Exam" asp-action="MyQueries" title="My Modification Queries"><i class="bi bi-arrow-repeat"></i> <span class="nav-text">My Modification Queries</span></a>
+        <div class="grp"><span class="nav-text">Exams</span></div>
+        <a class="@A("Exam", "Index")" asp-controller="Exam" asp-action="Index" title="Exams"><i class="bi bi-file-earmark-text"></i> <span class="nav-text">Exams</span></a>
+        @if (!User.IsInRole("Student"))
+        {
+            @if (User.IsInRole("Admin") || User.IsInRole("HOD")) { <a class="@A("Exam", "LockQueries")" asp-controller="Exam" asp-action="LockQueries" title="Modification Queries"><i class="bi bi-unlock"></i> <span class="nav-text">Modification Queries</span></a> }
+            else { <a class="@A("Exam", "MyQueries")" asp-controller="Exam" asp-action="MyQueries" title="My Modification Queries"><i class="bi bi-arrow-repeat"></i> <span class="nav-text">My Modification Queries</span></a> }
+        }
+        <a class="@A("Exam", "MyResults")" asp-controller="Exam" asp-action="MyResults" title="My Results"><i class="bi bi-file-earmark-text"></i> <span class="nav-text">My Results</span></a>
+        <div class="grp"><span class="nav-text">Exams Invigilation</span></div>
+        <a class="@A("Dashboard", "InvigilationDuties")" asp-controller="Dashboard" asp-action="InvigilationDuties" title="Invigilation Duties"><i class="bi bi-shield-exclamation"></i> <span class="nav-text">Invigilation Duties</span></a>
         <div class="grp"><span class="nav-text">Reports</span></div>
         <a class="@A("Reports")" asp-controller="Reports" asp-action="Index" title="Reports"><i class="bi bi-file-earmark-bar-graph"></i> <span class="nav-text">Reports</span></a>
         <a class="@A("Analytics")" asp-controller="Analytics" asp-action="Index" title="Attendance Summary"><i class="bi bi-table"></i> <span class="nav-text">Attendance Summary</span></a>
@@ -111,8 +123,6 @@
         <a class="@A("Faculty")" asp-controller="Faculty" asp-action="Index" title="Faculty"><i class="bi bi-person-workspace"></i> <span class="nav-text">Faculty</span></a>
         <a class="@A("FacultySubject")" asp-controller="FacultySubject" asp-action="Index" title="Faculty - Subject"><i class="bi bi-diagram-3"></i> <span class="nav-text">Faculty - Subject</span></a>
         <a class="@A("Subjects")" asp-controller="Subjects" asp-action="Index" title="Subjects"><i class="bi bi-book"></i> <span class="nav-text">Subjects</span></a>
-        <a class="@A("Exam", "Index")" asp-controller="Exam" asp-action="Index" title="Exams"><i class="bi bi-file-earmark-text"></i> <span class="nav-text">Exams</span></a>
-        <a class="@A("Exam", "LockQueries")" asp-controller="Exam" asp-action="LockQueries" title="Modification Queries"><i class="bi bi-unlock"></i> <span class="nav-text">Modification Queries</span></a>
         <a class="@A("Notices", "Index", "Create", "Edit", "Save", "Delete")" asp-controller="Notices" asp-action="Index" title="Manage Notices"><i class="bi bi-send"></i> <span class="nav-text">Manage Notices</span></a>
     }
     @if (admin)
@@ -152,6 +162,7 @@
     @if (student)
     {
         <a class="@A("Student", "Index", "Query", "MyQr", "Card", "UpdatePhone")" asp-controller="Student" asp-action="Index"><i class="bi bi-house"></i>Home</a>
+        <a class="@A("Student", "Exams")" asp-controller="Student" asp-action="Exams"><i class="bi bi-file-earmark-text"></i>Exams</a>
         <a class="@A("Notices", "Board")" asp-controller="Notices" asp-action="Board"><i class="bi bi-megaphone"></i>Notices</a>
         <a class="@A("Student", "Report")" asp-controller="Student" asp-action="Report"><i class="bi bi-file-earmark-pdf"></i>Report</a>
     }
@@ -163,8 +174,8 @@
     else
     {
         <a class="@A("Dashboard")" asp-controller="Dashboard" asp-action="Index"><i class="bi bi-house"></i>Home</a>
-        <a class="@A("Attendance", todayActions)" asp-controller="Attendance" asp-action="Index"><i class="bi bi-check2-square"></i>Today</a>
-        <a class="@A("Timetable")" asp-controller="Timetable" asp-action="Index"><i class="bi bi-calendar3-week"></i>Timetable</a>
+        <a class="@A("Attendance", todayActions)" asp-controller="Attendance" asp-action="Index"><i class="bi bi-check2-square"></i>Classes</a>
+        <a class="@A("Exam", "Index")" asp-controller="Exam" asp-action="Index"><i class="bi bi-file-earmark-text"></i>Exams</a>
     }
     <a href="#" id="tabMenu"><i class="bi bi-list"></i>Menu</a>
 </nav>
