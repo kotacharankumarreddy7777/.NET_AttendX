@@ -34,6 +34,6 @@ public class TimetableGridViewModel
     public List<SelectListItem> Branches { get; set; } = new();
     public List<SelectListItem> Sections { get; set; } = new();
     public List<SelectListItem> Faculty { get; set; } = new();
-    public bool HasFilter => SectionId != null || FacultyId != null || BranchId != null;
+    public bool HasFilter => SectionId != null || FacultyId != null || BranchId != null || Semester != null;
     public List<Timetable> Cell(DayOfWeek d, int period) => Cells.TryGetValue($"{(int)d}-{period}", out var l) ? l : new List<Timetable>();
 }

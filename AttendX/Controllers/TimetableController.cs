@@ -17,6 +17,13 @@ public class TimetableController(AppDbContext db, ITimetableService tt, ICurrent
         if (facultyOnly) { var me = await _user.GetFacultyAsync(); facultyId = me?.Id ?? -1; branchId = null; sectionId = null; }
         else if (scope != null) branchId = scope;
 
+        // Default to current semester(s) when none specified
+        if (semester == null)
+        {
+            var currentSems = await _settings.GetCurrentSemestersAsync();
+            semester = currentSems.FirstOrDefault()?.Number;
+        }
+
         var vm = await _tt.BuildGridAsync(branchId, sectionId, semester, facultyId, scope);
         vm.ReadOnly = !_user.IsAdmin;
         vm.Branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && (scope == null || b.Id == scope)).OrderBy(b => b.Name).Select(b => new SelectListItem(b.Name, b.Id.ToString())).ToListAsync();
