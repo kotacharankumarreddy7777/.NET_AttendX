@@ -39,13 +39,13 @@ public class DashboardController(IDashboardService dash, ICurrentUser user, AppD
 
         if (sectionId != null) q = q.Where(t => t.SectionId == sectionId);
 
-        var rows = await q.OrderBy(t => t.Faculty!.FullName).ThenBy(t => t.Section!.Name).ThenBy(t => t.Day).ThenBy(t => t.Period).ToListAsync();
+        var rows = await q.OrderBy(t => t.FacultyId).ThenBy(t => t.SectionId).ThenBy(t => t.Day).ThenBy(t => t.Period).ToListAsync();
 
         var branches = await _db.Branches.AsNoTracking().Where(b => b.IsActive && b.Id == scope).OrderBy(b => b.Name).ToListAsync();
         var sections = await _db.Sections.AsNoTracking().Where(s => s.IsActive && s.BranchId == scope).OrderBy(s => s.Name).ToListAsync();
         var semesters = await _db.Semesters.AsNoTracking().Where(s => s.AcademicYearId == year.Id).OrderBy(s => s.Number).ToListAsync();
 
-        var byFaculty = rows.GroupBy(r => r.Faculty!.Id).ToDictionary(g => g.Key, g => g.ToList());
+        var byFaculty = rows.Where(r => r.Faculty != null).GroupBy(r => r.Faculty!.Id).ToDictionary(g => g.Key, g => g.ToList());
 
         ViewBag.ScopeBranch = branches.FirstOrDefault();
         ViewBag.Sections = sections;

@@ -1,14 +1,13 @@
-@model Dictionary<int, List<AttendX.Models.Timetable>>
+@model Dictionary<int, List<AttendX.Models.Timetable>?>
 @inject AttendX.Data.AppDbContext db
 @{
-    ViewData["Title"] = "HOD Timetable — @ViewBag.ScopeBranch?.Name";
     var branch = ViewBag.ScopeBranch as AttendX.Models.Branch;
-    var sections = ViewBag.Sections as List<AttendX.Models.Section> ?? new();
-    var semesters = ViewBag.Semesters as List<AttendX.Models.Semester> ?? new();
-    var selectedSection = (int?)ViewBag.SelectedSection ?? 0;
-    var selectedSemester = (int)ViewBag.SelectedSemester;
-    var currentSemester = (int)ViewBag.CurrentSemester;
+    var sections = ViewBag.Sections as List<AttendX.Models.Section> ?? new List<AttendX.Models.Section>();
+    var semesters = ViewBag.Semesters as List<AttendX.Models.Semester> ?? new List<AttendX.Models.Semester>();
+    var selectedSection = (int?)(ViewBag.SelectedSection) ?? 0;
+    var selectedSemester = (int?)(ViewBag.SelectedSemester) ?? 0;
     var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday };
+    ViewData["Title"] = "HOD Timetable — " + (branch?.Name ?? "Department");
 }
 <div class="mb-3"><h1 class="page-title">HOD Timetable — @branch?.Name</h1>
     <div class="text-muted small">All branch members' class timetables — Semester @selectedSemester</div></div>
@@ -23,21 +22,21 @@
     </form>
 </div></div>
 
-@if (!Model.Any())
+@if (Model == null || !Model.Any())
 {
     <div class="alert alert-info">No timetable slots found for this branch in the current semester.</div>
 }
 else
 {
-    @foreach (var faculty in Model.OrderBy(kvp => kvp.Value.First().Faculty!.FullName))
+    @foreach (var faculty in Model.OrderBy(kvp => kvp.Value?.FirstOrDefault()?.Faculty?.FullName ?? ""))
     {
-        var fac = faculty.Value.First().Faculty!;
-        var facSlots = faculty.Value.OrderBy(s => s.Section!.Name).ThenBy(s => (int)s.Day).ThenBy(s => s.Period).ToList();
-        var sectionsInFaculty = facSlots.Select(s => s.Section!.Name).Distinct().OrderBy(n => n).ToList();
+        var fac = faculty.Value?.FirstOrDefault()?.Faculty;
+        var facSlots = faculty.Value?.OrderBy(s => s.Section?.Name).ThenBy(s => (int)s.Day).ThenBy(s => s.Period).ToList() ?? new List<AttendX.Models.Timetable>();
+        var sectionsInFaculty = facSlots.Select(s => s.Section?.Name).Where(n => n != null).Distinct().OrderBy(n => n).ToList();
 
         <div class="ax-card mb-3">
             <div class="card-h d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-person-badge me-1"></i>@fac.FullName</span>
+                <span><i class="bi bi-person-badge me-1"></i>@(fac?.FullName ?? "Faculty")</span>
                 <span class="badge bg-secondary">@sectionsInFaculty.Count section@(sectionsInFaculty.Count == 1 ? "" : "s") · @facSlots.Count slot@(facSlots.Count == 1 ? "" : "s")</span>
             </div>
             <div class="card-b">
@@ -46,14 +45,14 @@ else
                     <tbody>
                     @foreach (var sec in sectionsInFaculty)
                     {
-                        var secSlots = facSlots.Where(s => s.Section!.Name == sec).ToList();
+                        var secSlots = facSlots.Where(s => s.Section?.Name == sec).ToList();
                         <tr><td><b class="mono">@sec</b></td>
                         @foreach (var d in days)
                         {
                             <td>
                             @foreach (var p in secSlots.Where(s => s.Day == d).OrderBy(s => s.Period))
                             {
-                                <div class="tt-cell"><b>@p.Subject!.SubjectCode</b><br /><small class="text-muted">@p.StartTime:hh\\:mm-@p.EndTime:hh\\:mm · @p.RoomNo</small></div>
+                                <div class="tt-cell"><b>@(p.Subject?.SubjectCode ?? "-")</b><br /><small class="text-muted">@p.StartTime.ToString(@"hh\:mm")-@p.EndTime.ToString(@"hh\:mm") · @p.RoomNo</small></div>
                             }
                             </td>
                         }
