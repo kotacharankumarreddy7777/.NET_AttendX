@@ -437,6 +437,28 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
             _db.Entry(rec).State = EntityState.Detached;
             return new ScanResult(ScanCode.AlreadyMarked, $"{st.FullName} is already marked for this period.", st.FullName, st.StudentID);
         }
+        // Push live update to class group + admin-today group (QR scan real-time sync)
+        if (hub != null)
+        {
+            try
+            {
+                await hub.Clients.Group($"class-{t.Id}").SendAsync("AttendanceSaved", new
+                {
+                    timetableId = t.Id, date = session.Date.ToString("yyyy-MM-dd"), period = t.Period,
+                    added = 1, updated = 0, skipped = 0,
+                    studentName = st.FullName, studentCode = st.StudentID, status = status.ToString(),
+                    source = "QR"
+                });
+                await hub.Clients.Group("admin-today").SendAsync("AttendanceSaved", new
+                {
+                    timetableId = t.Id, date = session.Date.ToString("yyyy-MM-dd"), period = t.Period,
+                    added = 1, updated = 0, skipped = 0,
+                    studentName = st.FullName, studentCode = st.StudentID, status = status.ToString(),
+                    source = "QR"
+                });
+            }
+            catch { /* hub not available (e.g. tests) - non-fatal */ }
+        }
         // Absence alert for QR-marked absent students
         if (status == AttendanceStatus.Absent && _notification != null && _notifyOnAbsence)
         {
