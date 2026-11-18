@@ -45,6 +45,12 @@ public class Timetable
     public TimeSpan StartTime { get; set; }
     public TimeSpan EndTime { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>When true, this class slot is suspended during exam windows.</summary>
+    public bool IsSuspendedDuringExams { get; set; } = false;
+    /// <summary>Start of the exam window that suspends this slot.</summary>
+    public DateTime? ExamWindowStart { get; set; }
+    /// <summary>End of the exam window that suspends this slot.</summary>
+    public DateTime? ExamWindowEnd { get; set; }
     public int AcademicYearId { get; set; }
     public AcademicYear? AcademicYear { get; set; }
 }

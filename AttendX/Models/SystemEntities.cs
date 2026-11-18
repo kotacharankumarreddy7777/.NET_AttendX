@@ -81,3 +81,14 @@ public class NotificationLog
     [StringLength(80)] public string? EntityId { get; set; }
 }
 
+/// <summary>Log of automatic semester rollover transitions.</summary>
+public class SemesterTransitionLog
+{
+    public int Id { get; set; }
+    public int FromSemester { get; set; }
+    public int ToSemester { get; set; }
+    public DateTime TransitionedAt { get; set; } = DateTime.UtcNow;
+    [StringLength(500)] public string? Notes { get; set; }
+    public int? BranchId { get; set; }
+}
+

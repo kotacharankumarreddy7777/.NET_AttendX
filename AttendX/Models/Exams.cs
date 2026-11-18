@@ -11,6 +11,10 @@ public class Exam
     public AcademicYear? AcademicYear { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    /// <summary>Results become visible to students/parents EndDate + 3 days.</summary>
+    public DateTime ResultReleaseDate { get; set; }
+    /// <summary>When true, marks are released to students/parents.</summary>
+    public bool ResultsPublished { get; set; } = false;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
@@ -34,6 +38,8 @@ public class ExamTimetable
     public TimeSpan StartTime { get; set; }
     public TimeSpan EndTime { get; set; }
     [StringLength(20)] public string RoomNo { get; set; } = "";
+    /// <summary>When true, this slot is an exam-window invigilation duty, not a regular class.</summary>
+    public bool IsInvigilationOnly { get; set; } = false;
     public bool IsActive { get; set; } = true;
 }
 

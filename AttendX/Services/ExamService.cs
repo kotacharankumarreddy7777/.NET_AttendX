@@ -190,10 +190,15 @@ public class ExamService(AppDbContext db, ICurrentUser user, ISettingsService se
     public async Task<(bool Ok, string? Error)> SaveMarkAsync(int examTimetableId, int studentId, decimal internalMark, decimal externalMark, string? remarks, string? markedBy)
     {
         if (internalMark < 0 || internalMark > 30) return (false, "Internal mark must be between 0 and 30.");
-        if (externalMark < 0 || externalMark > 100) return (false, "External mark is out of range.");
+        if (externalMark < 0 || externalMark > 70) return (false, "External mark must be between 0 and 70.");
 
         var tt = await _db.ExamTimetables.AsNoTracking().Include(x => x.Exam).FirstOrDefaultAsync(x => x.Id == examTimetableId);
         if (tt == null) return (false, "Exam timetable not found.");
+
+        // Marks can only be saved after the exam has ended.
+        if (tt.Exam == null) return (false, "Exam not linked to timetable.");
+        if (DateTime.UtcNow < tt.Exam.EndDate)
+            return (false, $"Marks cannot be entered until the exam ends on {tt.Exam.EndDate:dd MMM yyyy}.");
 
         var marks = await _db.ExamMarks.Where(m => m.ExamTimetableId == examTimetableId && m.StudentId == studentId).ToListAsync();
         if (marks.Any())

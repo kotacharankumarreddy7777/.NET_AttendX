@@ -60,7 +60,7 @@ public class ExamMarkLockTests
         var fac = new Faculty { FacultyID = "F1", FullName = "Teacher One", Email = "t1@x", Phone = "1", Branch = branch, Designation = "Professor", IdentityUserId = "u1" };
         db.AddRange(branch, sec, subj, fac);
         db.SaveChanges();
-        var exam = new Exam { Name = "End-Semester", Type = "External", Semester = 5, AcademicYearId = 1, StartDate = new DateTime(2026, 12, 16), EndDate = new DateTime(2026, 12, 30), IsActive = true };
+        var exam = new Exam { Name = "End-Semester", Type = "External", Semester = 5, AcademicYearId = 1, StartDate = new DateTime(2026, 11, 1), EndDate = new DateTime(2026, 11, 15), IsActive = true };
         db.Exams.Add(exam);
         db.SaveChanges();
         var paper = new ExamTimetable

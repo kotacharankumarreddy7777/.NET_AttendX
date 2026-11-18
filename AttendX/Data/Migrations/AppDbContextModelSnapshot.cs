@@ -552,6 +552,12 @@ namespace AttendX.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<DateTime>("ResultReleaseDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ResultsPublished")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Semester")
                         .HasColumnType("integer");
 
@@ -726,6 +732,9 @@ namespace AttendX.Data.Migrations
                         .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsInvigilationOnly")
                         .HasColumnType("boolean");
 
                     b.Property<string>("RoomNo")
@@ -1275,6 +1284,35 @@ namespace AttendX.Data.Migrations
                     b.ToTable("Semesters");
                 });
 
+            modelBuilder.Entity("AttendX.Models.SemesterTransitionLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FromSemester")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("ToSemester")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("TransitionedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SemesterTransitionLogs");
+                });
+
             modelBuilder.Entity("AttendX.Models.Student", b =>
                 {
                     b.Property<int>("Id")
@@ -1459,10 +1497,19 @@ namespace AttendX.Data.Migrations
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("interval");
 
+                    b.Property<DateTime?>("ExamWindowEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExamWindowStart")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("FacultyId")
                         .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSuspendedDuringExams")
                         .HasColumnType("boolean");
 
                     b.Property<int>("Period")

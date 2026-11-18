@@ -33,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<LeaveApplication> LeaveApplications => Set<LeaveApplication>();
     public DbSet<Parent> Parents => Set<Parent>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+    public DbSet<SemesterTransitionLog> SemesterTransitionLogs => Set<SemesterTransitionLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
