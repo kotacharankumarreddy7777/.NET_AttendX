@@ -19,6 +19,7 @@ public class DashboardCharts
 public class AdminDashboardViewModel
 {
     public string ScopeName { get; set; } = "All branches";
+    public int? ScopeBranchId { get; set; }
     public bool IsHod { get; set; }
     public int TotalStudents { get; set; }
     public int ActiveStudents { get; set; }

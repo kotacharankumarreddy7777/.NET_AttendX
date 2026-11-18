@@ -34,6 +34,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         {
             var b = await db.Branches.AsNoTracking().FirstOrDefaultAsync(x => x.Id == scope);
             vm.ScopeName = b?.Name ?? "Department";
+            vm.ScopeBranchId = scope;
             students = students.Where(s => s.BranchId == scope);
             faculty = faculty.Where(f => f.BranchId == scope);
             sections = sections.Where(s => s.BranchId == scope);
