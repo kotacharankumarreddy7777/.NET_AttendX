@@ -263,6 +263,8 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 
 RecurringJob.AddOrUpdate<IAttendanceService>("auto-mark-absent", s => s.MarkAbsentAfterGracePeriodAsync(), "0 23 * * *");
 RecurringJob.AddOrUpdate<INotificationService>("daily-deficiency-sweep", n => n.SendLowAttendanceSweepAsync(), "0 8 * * *");
+RecurringJob.AddOrUpdate<IExamService>("publish-results", e => e.PublishPendingResultsAsync(), "0 1 * * *");
+RecurringJob.AddOrUpdate<IDashboardService>("semester-rollover", d => d.CheckAndRolloverAsync(), "0 0 * * *");
 
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapControllers();   // /api/* attribute-routed API controllers

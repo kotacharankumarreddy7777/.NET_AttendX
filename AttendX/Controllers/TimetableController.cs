@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace AttendX.Controllers;
 
 [Authorize(Policy = PolicyNames.AnyStaff)]
-public class TimetableController(AppDbContext db, ITimetableService tt, ICurrentUser user) : Controller
+public class TimetableController(AppDbContext db, ITimetableService tt, ICurrentUser user, ISettingsService settings) : Controller
 {
     private readonly AppDbContext _db = db;
     private readonly ITimetableService _tt = tt;
     private readonly ICurrentUser _user = user;
+    private readonly ISettingsService _settings = settings;
 
     public async Task<IActionResult> Index(int? branchId, int? sectionId, int? semester, int? facultyId)
     {
@@ -22,6 +23,11 @@ public class TimetableController(AppDbContext db, ITimetableService tt, ICurrent
         if (branchId != null) vm.Sections = await _db.Sections.AsNoTracking().Where(s => s.BranchId == branchId && s.IsActive).OrderBy(s => s.Name).Select(s => new SelectListItem(s.Name, s.Id.ToString())).ToListAsync();
         if (!facultyOnly) vm.Faculty = await _db.Faculty.AsNoTracking().Where(f => f.IsActive && (scope == null || f.BranchId == scope)).OrderBy(f => f.FullName).Select(f => new SelectListItem(f.FullName, f.Id.ToString())).ToListAsync();
         ViewBag.FacultyOnly = facultyOnly;
+
+        // Exam overlay: if in an exam window, fetch invigilation slots for the same filter
+        ViewBag.ExamOverlay = await _tt.GetExamOverlayAsync(branchId, sectionId, semester, DateTime.UtcNow.Date.AddDays(-7), DateTime.UtcNow.Date.AddDays(7));
+        ViewBag.InExamWindow = ViewBag.ExamOverlay is List<ExamTimetable> eo && eo.Any();
+
         return View(vm);
     }
 

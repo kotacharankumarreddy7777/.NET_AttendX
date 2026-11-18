@@ -5,6 +5,8 @@
     var today = (DateTime)ViewBag.Today;
     var regs = ViewBag.Registrations as Dictionary<int, bool> ?? new();
     var marks = ViewBag.Marks as List<ExamMark> ?? new();
+    // Only show marks for exams whose ResultReleaseDate has passed AND ResultsPublished == true
+    var publishedMarks = marks.Where(m => m.ExamTimetable?.Exam?.ResultsPublished == true && m.ExamTimetable.Exam.ResultReleaseDate <= DateTime.UtcNow).ToList();
 }
 <div class="mb-3"><h1 class="page-title">My Exams &amp; Results</h1><div class="text-muted small">@student?.FullName (@student?.StudentID) — Sem @student?.Semester</div></div>
 
@@ -34,10 +36,10 @@ else {
 </div>
 
 <div class="ax-card"><div class="card-h">My Results</div>
-@if (!marks.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No results yet", "Marks will be published after evaluation.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+@if (!publishedMarks.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No results yet", "Marks will be published after evaluation (3 days after each exam ends).")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
 else {
 <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Subject</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>Status</th></tr></thead><tbody>
-@foreach (var m in marks) {
+@foreach (var m in publishedMarks) {
     var tt = m.ExamTimetable;
     var isExternal = tt?.Exam?.Type == "External";
     <tr><td>@tt?.Exam?.Name</td><td class="mono">@tt?.Subject?.SubjectCode</td><td>@m.InternalMark</td><td>@(isExternal ? m.ExternalMark.ToString() : "-")</td><td><b>@m.TotalMark</b></td><td>@(m.Grade ?? "-")</td><td><span class="badge @(m.LockStatus == "Locked" ? "bg-danger" : "bg-secondary")">@m.LockStatus</span></td></tr>

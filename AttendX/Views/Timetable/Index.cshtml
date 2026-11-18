@@ -1,5 +1,5 @@
 @model TimetableGridViewModel
-@{ ViewData["Title"] = "Timetable"; bool facultyOnly = ViewBag.FacultyOnly; var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday }; }
+@{ ViewData["Title"] = "Timetable"; bool facultyOnly = ViewBag.FacultyOnly; var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday }; var examOverlay = ViewBag.ExamOverlay as List<ExamTimetable> ?? new(); bool inExamWindow = ViewBag.InExamWindow ?? false; }
 <div class="d-flex justify-content-between flex-wrap gap-2 mb-3"><h1 class="page-title">Timetable</h1>
 @if (!Model.ReadOnly) { <a class="btn btn-ax" asp-action="Create" asp-route-branchId="@Model.BranchId" asp-route-sectionId="@Model.SectionId" asp-route-semester="@Model.Semester"><i class="bi bi-plus-lg"></i> Add slot</a> }</div>
 @if (!facultyOnly)
@@ -32,6 +32,16 @@ else
         </td>
     }
     </tr>
+}
+</tbody></table></div></div>
+}
+@if (inExamWindow && examOverlay.Any())
+{
+<div class="ax-card mt-3"><div class="card-h"><i class="bi bi-shield-exclamation me-1"></i>Invigilation / Exam Duty (Exam Window)</div>
+<div class="table-responsive"><table class="table table-bordered table-sm mb-0"><thead><tr><th>Date</th><th>Time</th><th>Exam</th><th>Subject</th><th>Section</th><th>Room</th><th>Role</th></tr></thead><tbody>
+@foreach (var e in examOverlay.OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime))
+{
+    <tr><td>@e.ExamDate.ToString("dd MMM yyyy")</td><td>@e.StartTime.ToString(@"hh\:mm")-@e.EndTime.ToString(@"hh\:mm")</td><td>@e.Exam?.Name</td><td class="mono">@e.Subject?.SubjectCode - @e.Subject?.SubjectName</td><td>Sem @e.Semester / @e.Section?.Name</td><td>@e.RoomNo</td><td><span class="badge bg-primary">Invigilator</span></td></tr>
 }
 </tbody></table></div></div>
 }

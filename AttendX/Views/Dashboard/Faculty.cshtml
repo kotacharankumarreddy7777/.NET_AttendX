@@ -36,21 +36,43 @@ else if (Model.Next != null)
     @{ Tile(ex.OpenQueries, "Open Queries", Url.Action("Index", "Queries")); }
 </div>
 <div class="row g-3 mb-3">
-    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">Today's Schedule</div>
+    <div class="col-lg-7"><div class="ax-card h-100"><div class="card-h">
+        @{
+            var today = DateTime.UtcNow.Date;
+            var inExamWindow = Model.Extra.ExamDuties.Any(d => d.ExamDate.Date == today);
+        }
+        @if (inExamWindow) { <span><i class="bi bi-shield-exclamation me-1"></i>Today's Invigilation Duties</span> } else { <span><i class="bi bi-calendar3-week me-1"></i>Today's Schedule</span> }
+    </div>
         @if (ex.NonWorkingReason == "Sunday") { <partial name="_EmptyState" model='new EmptyStateModel("sunday", "No classes today", "Today is Sunday.")' /> }
         else if (ex.NonWorkingReason != null) { <partial name="_EmptyState" model='new EmptyStateModel("holiday", "No classes today", "Holiday: " + ex.NonWorkingReason + ".")' /> }
-        else if (!Model.Today.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_classes", "No classes scheduled", "There are no periods today.")' /> }
+        else if (!Model.Today.Any() && !inExamWindow) { <partial name="_EmptyState" model='new EmptyStateModel("no_classes", "No classes scheduled", "There are no periods today.")' /> }
+        else if (inExamWindow && !Model.Extra.ExamDuties.Any(d => d.ExamDate.Date == DateTime.UtcNow.Date)) { <div class="card-b pt-0 text-muted small">No invigilation duties today.</div> }
         else
         {
-            <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Period</th><th>Time</th><th>Subject</th><th>Class</th><th>Room</th><th>Status</th><th></th></tr></thead><tbody>
+            <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Period</th><th>Time</th><th>Exam / Subject</th><th>Class</th><th>Room</th><th>Status</th><th></th></tr></thead><tbody>
+            @if (inExamWindow)
+            {
+                var dutiesToday = Model.Extra.ExamDuties.Where(d => d.ExamDate.Date == DateTime.UtcNow.Date).ToList();
+                foreach (var d in dutiesToday)
+                {
+                    <tr><td>Exam Duty</td><td>@d.StartTime.ToString(@"hh\:mm")-@d.EndTime.ToString(@"hh\:mm")</td>
+                        <td>@d.ExamName<br /><span class="small text-muted">@d.SubjectCode - @d.SubjectName</span></td>
+                        <td>Sem @d.Semester / @d.SectionName</td><td>@d.RoomNo</td>
+                        <td><span class="badge bg-primary">Invigilator</span></td>
+                        <td class="text-end"><a class="btn btn-sm btn-outline-primary" asp-controller="Exam" asp-action="Marks" asp-route-examTimetableId="@d.ExamTimetableId">Enter Marks</a></td></tr>
+                }
+            }
+            else
+            {
             @foreach (var s in Model.Today)
             {
                 <tr data-timetable="@s.TimetableId"><td>@s.Period</td><td>@UiHelpers.Time(s.Start)-@UiHelpers.Time(s.End)</td><td>@s.SubjectCode</td><td>@s.SectionName</td><td>@s.Room</td>
                     <td><span class="badge @(s.State == "Open" ? "bg-success" : s.State == "Closed" ? "bg-secondary" : "bg-primary")">@s.State</span> @if (s.HasSession) { <span class="small text-muted">@s.MarkedCount marked</span> }</td>
                     <td class="text-end">@if (s.State == "Open") { <a class="btn btn-sm btn-ax" asp-controller="Attendance" asp-action="Mark" asp-route-id="@s.TimetableId">Mark</a> }</td></tr>
             }
+            }
             </tbody></table></div>
-            @if (Model.Today.All(x => x.State == "Closed")) { <div class="card-b pt-0 text-muted small">All periods for today are over.</div> }
+            @if (!inExamWindow && Model.Today.All(x => x.State == "Closed")) { <div class="card-b pt-0 text-muted small">All periods for today are over.</div> }
         }
     </div></div>
     <div class="col-lg-5"><div class="ax-card h-100"><div class="card-h">Classes Taught</div>

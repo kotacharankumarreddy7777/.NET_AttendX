@@ -1,4 +1,5 @@
 @model AdminDashboardViewModel
+@inject AttendX.Data.AppDbContext db
 @{ ViewData["Title"] = "Dashboard"; }
 <div class="mb-3"><h1 class="page-title">@(Model.IsHod ? "Department Dashboard" : "Dashboard")</h1><div class="text-muted small">@Model.ScopeName</div></div>
 <div class="row g-3 mb-3">
@@ -18,8 +19,14 @@
 
 @if (Model.TodayByPeriod.Any())
 {
-    <div class="ax-card mb-3"><div class="card-h"><span><i class="bi bi-calendar3-week me-1"></i>Today's Classes — Period Wise</span><span class="small text-muted">@Model.PeriodCount periods/day</span></div>
+    <div class="ax-card mb-3"><div class="card-h d-flex justify-content-between align-items-center"><span><i class="bi bi-calendar3-week me-1"></i>Today's Classes — Period Wise</span><span class="small text-muted">@Model.PeriodCount periods/day</span></div>
         <div class="card-b">
+            <form method="get" asp-controller="Dashboard" asp-action="Index" class="row g-2 mb-3 align-items-end">
+                <div class="col-md-3"><select name="branchId" class="form-select"><option value="">All branches</option>@foreach (var b in await db.Branches.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync()) { <option value="@b.Id">@b.Name</option> }</select></div>
+                <div class="col-md-3"><select name="facultyId" class="form-select"><option value="">All faculty</option>@foreach (var f in await db.Faculty.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.FullName).ToListAsync()) { <option value="@f.Id">@f.FullName</option> }</select></div>
+                <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+                <div class="col-md-2"><a class="btn btn-outline-secondary w-100" href="@Url.Action("Index")">Clear</a></div>
+            </form>
             <div class="row g-2">
             @foreach (var pg in Model.TodayByPeriod)
             {

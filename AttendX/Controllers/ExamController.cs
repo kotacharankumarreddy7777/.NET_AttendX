@@ -243,6 +243,67 @@ public class ExamController(AppDbContext db, IExamService exam, ICurrentUser use
         return RedirectToAction(nameof(LockQueries));
     }
 
+    // ---------- Student/Parent results (gated by ResultsPublished) ----------
+    [Authorize(Policy = PolicyNames.StudentOrParent)]
+    public async Task<IActionResult> MyResults()
+    {
+        var uid = _user.UserId;
+        if (uid == null) return Forbid();
+
+        // Resolve student by identity user id
+        var student = await _db.Students.AsNoTracking().Include(s => s.Branch).Include(s => s.Section)
+            .FirstOrDefaultAsync(s => s.IdentityUserId == uid && s.IsActive);
+        if (student == null) return View("NoStudent");
+
+        // Parent: resolve by parent record
+        if (!User.IsInRole(RoleNames.Student))
+        {
+            var parent = await _db.Parents.AsNoTracking()
+                .Include(p => p.Student!).ThenInclude(s => s.Branch!)
+                .Include(p => p.Student!).ThenInclude(s => s.Section!)
+                .FirstOrDefaultAsync(p => p.IdentityUserId == uid && p.IsActive);
+            if (parent == null || parent.Student == null) return View("NoStudent");
+            student = parent.Student;
+        }
+
+        var today = DateTime.UtcNow.Date;
+        var marks = await _db.ExamMarks.AsNoTracking()
+            .Include(m => m.ExamTimetable)!.ThenInclude(et => et!.Exam)
+            .Include(m => m.ExamTimetable)!.ThenInclude(et => et!.Subject)
+            .Where(m => m.StudentId == student.Id)
+            .OrderByDescending(m => m.MarkedAt)
+            .ToListAsync();
+
+        // Gate: only show marks for exams whose ResultReleaseDate has passed AND ResultsPublished == true
+        var publishedExamIds = await _db.Exams.AsNoTracking()
+            .Where(e => e.IsActive && e.ResultsPublished && e.ResultReleaseDate <= DateTime.UtcNow)
+            .Select(e => e.Id).ToListAsync();
+
+        var visibleMarks = marks.Where(m => m.ExamTimetable != null && publishedExamIds.Contains(m.ExamTimetable.ExamId)).ToList();
+
+        ViewBag.Student = student;
+        ViewBag.Today = today;
+        ViewBag.PublishedCount = publishedExamIds.Count;
+        return View(visibleMarks);
+    }
+
+    // ---------- Admin: manually publish results ----------
+    [Authorize(Policy = PolicyNames.AdminOnly), HttpPost]
+    public async Task<IActionResult> PublishResults(int examId)
+    {
+        var exam = await _exam.GetExamAsync(examId);
+        if (exam == null) return NotFound();
+        if (DateTime.UtcNow < exam.ResultReleaseDate)
+        {
+            TempData["Error"] = $"Results for {exam.Name} can only be published after {exam.ResultReleaseDate:dd MMM yyyy} (exam end + 3 days).";
+            return RedirectToAction(nameof(Index));
+        }
+        exam.ResultsPublished = true;
+        await _db.SaveChangesAsync();
+        TempData["Success"] = $"Results published for {exam.Name}.";
+        return RedirectToAction(nameof(Index));
+    }
+
     // ---------- Helpers ----------
     private async Task<List<SelectListItem>> BranchItems(int? scope)
     {

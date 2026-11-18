@@ -1,0 +1,27 @@
+@model List<ExamMark>
+@{
+    ViewData["Title"] = "My Results";
+    var student = ViewBag.Student as Student;
+    var today = (DateTime)ViewBag.Today;
+    var publishedCount = (int?)ViewBag.PublishedCount ?? 0;
+}
+<div class="mb-3"><h1 class="page-title">My Results</h1><div class="text-muted small">@student?.FullName (@student?.StudentID) — @student?.Branch?.Name / @student?.Section?.Name, Sem @student?.Semester</div></div>
+
+@if (publishedCount == 0)
+{
+    <div class="alert alert-info">No exams have had results published yet. Results are released 3 days after each exam ends.</div>
+}
+else
+{
+    <div class="ax-card mb-3"><div class="card-h">Published Results (@publishedCount exam(s) released)</div>
+    @if (!Model.Any()) { <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No results found", "Your results will appear here once published.")' view-data='new ViewDataDictionary(ViewData) { { "compact", true } }' /> }
+    else {
+    <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Exam</th><th>Subject</th><th>Date</th><th>Internal</th><th>External</th><th>Total</th><th>Grade</th><th>Status</th></tr></thead><tbody>
+    @foreach (var m in Model.OrderByDescending(m => m.MarkedAt)) {
+        var tt = m.ExamTimetable;
+        var isExternal = tt?.Exam?.Type == "External";
+        <tr><td>@tt?.Exam?.Name</td><td class="mono">@tt?.Subject?.SubjectCode</td><td>@tt?.ExamDate.ToString("dd MMM yyyy")</td><td>@m.InternalMark</td><td>@(isExternal ? m.ExternalMark.ToString() : "-")</td><td><b>@m.TotalMark</b></td><td>@(m.Grade ?? "-")</td><td><span class="badge @(m.LockStatus == "Locked" ? "bg-danger" : "bg-secondary")">@m.LockStatus</span></td></tr>
+    }
+    </tbody></table></div> }
+    </div>
+}
