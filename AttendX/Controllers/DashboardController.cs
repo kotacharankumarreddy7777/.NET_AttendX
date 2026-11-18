@@ -29,12 +29,13 @@ public class DashboardController(IDashboardService dash, ICurrentUser user, AppD
 
         var year = await _db.AcademicYears.AsNoTracking().FirstOrDefaultAsync(a => a.IsCurrent)
             ?? await _db.AcademicYears.AsNoTracking().OrderByDescending(a => a.StartDate).FirstOrDefaultAsync() ?? new AcademicYear { Id = 0, Name = "2026-27" };
-        var sem = await _db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.IsCurrent);
-        var currentSem = semester ?? sem?.Number ?? 0;
+        var currentSems = await _db.Semesters.AsNoTracking().Where(s => s.IsCurrent).OrderBy(s => s.Number).ToListAsync();
+        var currentSemSet = new HashSet<int>(currentSems.Select(s => s.Number));
+        var currentSem = semester ?? currentSems.FirstOrDefault()?.Number ?? 0;
 
         var q = _db.Timetables.AsNoTracking()
             .Include(t => t.Subject).Include(t => t.Section).Include(t => t.Faculty)
-            .Where(t => t.IsActive && t.AcademicYearId == year.Id && t.Semester == currentSem && t.BranchId == scope);
+            .Where(t => t.IsActive && t.AcademicYearId == year.Id && currentSemSet.Contains(t.Semester) && t.BranchId == scope);
 
         if (sectionId != null) q = q.Where(t => t.SectionId == sectionId);
 
@@ -49,9 +50,9 @@ public class DashboardController(IDashboardService dash, ICurrentUser user, AppD
         ViewBag.ScopeBranch = branches.FirstOrDefault();
         ViewBag.Sections = sections;
         ViewBag.Semesters = semesters;
+        ViewBag.CurrentSemesters = currentSems;
         ViewBag.SelectedSection = sectionId;
         ViewBag.SelectedSemester = currentSem;
-        ViewBag.CurrentSemester = sem?.Number ?? 0;
 
         return View(byFaculty);
     }

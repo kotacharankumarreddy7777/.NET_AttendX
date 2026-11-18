@@ -39,6 +39,10 @@ public class ExamMarkLockTests
             => await db.AcademicYears.FirstOrDefaultAsync() ?? new AcademicYear { Name = "2026-27", StartDate = new DateTime(2026, 6, 1), EndDate = new DateTime(2027, 5, 31), IsCurrent = true };
         public Task<Semester?> GetCurrentSemesterAsync()
             => Task.FromResult<Semester?>(db.Semesters.FirstOrDefault(s => s.IsCurrent) ?? new Semester { Number = 1, Type = "Odd", StartDate = new DateTime(2026, 8, 1), EndDate = new DateTime(2026, 12, 15), ExamStartDate = new DateTime(2026, 12, 16), ExamEndDate = new DateTime(2026, 12, 30), IsCurrent = true });
+        public Task<List<Semester>> GetCurrentSemestersAsync()
+            => Task.FromResult(db.Semesters.Where(s => s.IsCurrent).OrderBy(s => s.Number).ToList());
+        public Task<string?> GetCurrentSemesterTypeAsync()
+            => Task.FromResult<string?>("Odd");
     }
 
     private sealed class FakeAttendance : IAttendanceService

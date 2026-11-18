@@ -8,6 +8,8 @@ public interface ISettingsService
     Task SaveAsync(AttendanceSettings s);
     Task<AcademicYear> GetCurrentYearAsync();
     Task<Semester?> GetCurrentSemesterAsync();
+    Task<List<Semester>> GetCurrentSemestersAsync();
+    Task<string?> GetCurrentSemesterTypeAsync();
 }
 
 public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISettingsService
@@ -68,6 +70,18 @@ public class SettingsService(AppDbContext db, IOptions<AttendXOptions> o) : ISet
     public async Task<Semester?> GetCurrentSemesterAsync()
     {
         return await _db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.IsCurrent);
+    }
+
+    public async Task<List<Semester>> GetCurrentSemestersAsync()
+    {
+        return await _db.Semesters.AsNoTracking().Where(s => s.IsCurrent).OrderBy(s => s.Number).ToListAsync();
+    }
+
+    public async Task<string?> GetCurrentSemesterTypeAsync()
+    {
+        var sems = await GetCurrentSemestersAsync();
+        if (sems == null || sems.Count == 0) return null;
+        return sems.First().Type;
     }
 }
 

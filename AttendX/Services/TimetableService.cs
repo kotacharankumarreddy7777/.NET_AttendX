@@ -123,21 +123,23 @@ public class TimetableService(AppDbContext db, ISettingsService settings, IAudit
         if (!vm.HasFilter) return vm;
 
         var year = await _settings.GetCurrentYearAsync();
+        var currentSems = await _settings.GetCurrentSemestersAsync();
+        var currentSemSet = new HashSet<int>(currentSems.Select(s => s.Number));
 
         // Determine if we are inside an exam window (classes suspended, exam duty takes over)
         bool inExamWindow = false;
-        if (semester.HasValue)
+        var today = DateTime.UtcNow.Date;
+        foreach (var s in currentSems)
         {
-            var sem = await _db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.Number == semester.Value && s.AcademicYearId == year.Id);
-            if (sem != null)
+            if (today >= s.ExamStartDate.Date && today <= s.ExamEndDate.Date)
             {
-                var today = DateTime.UtcNow.Date;
-                inExamWindow = today >= sem.ExamStartDate.Date && today <= sem.ExamEndDate.Date;
+                inExamWindow = true;
+                break;
             }
         }
 
         var q = _db.Timetables.AsNoTracking().Include(t => t.Subject).Include(t => t.Faculty).Include(t => t.Section)
-            .Where(t => t.IsActive && t.AcademicYearId == year.Id);
+            .Where(t => t.IsActive && t.AcademicYearId == year.Id && currentSemSet.Contains(t.Semester));
 
         // During exam windows, hide classes that are marked as suspended
         if (inExamWindow)

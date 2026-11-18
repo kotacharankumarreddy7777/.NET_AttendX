@@ -1,16 +1,18 @@
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AttendX.Controllers;
 
 [Authorize]
-public class AccountController(SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users, AppDbContext db, IAuditService audit, ILogger<AccountController> log) : Controller
+public class AccountController(SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users, AppDbContext db, IAuditService audit, ISettingsService settings, ILogger<AccountController> log) : Controller
 {
     private readonly SignInManager<ApplicationUser> _signIn = signIn;
     private readonly UserManager<ApplicationUser> _users = users;
     private readonly AppDbContext _db = db;
     private readonly IAuditService _audit = audit;
+    private readonly ISettingsService _settings = settings;
     private readonly ILogger<AccountController> _log = log;
 
     // ---------------------------------------------------------------- four login screens
@@ -252,6 +254,36 @@ public class AccountController(SignInManager<ApplicationUser> signIn, UserManage
         await _users.UpdateAsync(user);
         await _signIn.SignInAsync(user, m.RememberMe);
         await _audit.LogAsync("Login", "Account", user.Email, actorName: user.Email, actorId: user.Id, details: role);
+
+        // ---- Semester-type login gating ----
+        if (role == "student" || role == "parent")
+        {
+            var activeType = await _settings.GetCurrentSemesterTypeAsync();
+            int? studentSemester = null;
+            if (role == "student")
+            {
+                var s = await _db.Students.FirstOrDefaultAsync(x => x.IdentityUserId == user.Id);
+                studentSemester = s?.Semester;
+            }
+            else // parent
+            {
+                var p = await _db.Parents.Include(x => x.Student).FirstOrDefaultAsync(x => x.IdentityUserId == user.Id);
+                studentSemester = p?.Student?.Semester;
+            }
+            if (studentSemester.HasValue && activeType != null)
+            {
+                bool studentIsOdd = studentSemester.Value % 2 == 1;
+                bool activeIsOdd = activeType.Equals("Odd", StringComparison.OrdinalIgnoreCase);
+                if (studentIsOdd != activeIsOdd)
+                {
+                    await _signIn.SignOutAsync();
+                    var typeMsg = activeIsOdd ? "Odd" : "Even";
+                    var otherMsg = activeIsOdd ? "Even" : "Odd";
+                    return Fail(m, $"{typeMsg} semester is running. {otherMsg} semester students cannot log in until the {otherMsg} semester begins.");
+                }
+            }
+        }
+
         if (!string.IsNullOrEmpty(m.ReturnUrl) && Url.IsLocalUrl(m.ReturnUrl)) return Redirect(m.ReturnUrl);
         return role switch
         {
