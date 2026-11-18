@@ -57,6 +57,38 @@ public class DashboardController(IDashboardService dash, ICurrentUser user, AppD
         return View(byFaculty);
     }
 
+    /// <summary>HOD My Classes: shows HOD's own teaching timetable for their branch.</summary>
+    [Authorize(Policy = PolicyNames.AdminOrHod), HttpGet]
+    public async Task<IActionResult> MyClasses(int? semester)
+    {
+        var scope = await _user.GetScopeBranchIdAsync();
+        var fac = await _user.GetFacultyAsync();
+        if (scope == null || fac == null) return Forbid();
+
+        var year = await _db.AcademicYears.AsNoTracking().FirstOrDefaultAsync(a => a.IsCurrent)
+            ?? await _db.AcademicYears.AsNoTracking().OrderByDescending(a => a.StartDate).FirstOrDefaultAsync() ?? new AcademicYear { Id = 0, Name = "2026-27" };
+        var currentSems = await _db.Semesters.AsNoTracking().Where(s => s.IsCurrent).OrderBy(s => s.Number).ToListAsync();
+        var currentSem = semester ?? currentSems.FirstOrDefault()?.Number ?? 0;
+
+        var q = _db.Timetables.AsNoTracking()
+            .Include(t => t.Subject).Include(t => t.Section)
+            .Where(t => t.IsActive && t.AcademicYearId == year.Id && currentSems.Select(s => s.Number).Contains(t.Semester) && t.BranchId == scope && t.FacultyId == fac.Id);
+
+        var rows = await q.OrderBy(t => t.SectionId).ThenBy(t => t.Day).ThenBy(t => t.Period).ToListAsync();
+
+        var sections = await _db.Sections.AsNoTracking().Where(s => s.IsActive && s.BranchId == scope).OrderBy(s => s.Name).ToListAsync();
+        var semesters = await _db.Semesters.AsNoTracking().Where(s => s.AcademicYearId == year.Id).OrderBy(s => s.Number).ToListAsync();
+
+        ViewBag.ScopeBranch = await _db.Branches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == scope);
+        ViewBag.Sections = sections;
+        ViewBag.Semesters = semesters;
+        ViewBag.SelectedSemester = currentSem;
+        ViewBag.CurrentSemesters = currentSems;
+        ViewBag.Faculty = fac;
+
+        return View(rows);
+    }
+
     /// <summary>Invigilation duties: faculty sees their own, HOD sees branch faculty's, Admin sees all.</summary>
     [Authorize(Policy = PolicyNames.AnyStaff), HttpGet]
     public async Task<IActionResult> InvigilationDuties(DateTime? from, DateTime? to)

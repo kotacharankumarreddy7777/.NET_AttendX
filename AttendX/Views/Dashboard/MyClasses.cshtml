@@ -1,0 +1,56 @@
+@model List<AttendX.Models.Timetable>
+@inject AttendX.Data.AppDbContext db
+@{
+    var fac = ViewBag.Faculty as AttendX.Models.Faculty;
+    var branch = ViewBag.ScopeBranch as AttendX.Models.Branch;
+    var sections = ViewBag.Sections as List<AttendX.Models.Section> ?? new List<AttendX.Models.Section>();
+    var semesters = ViewBag.Semesters as List<AttendX.Models.Semester> ?? new List<AttendX.Models.Semester>();
+    var selectedSemester = (int?)(ViewBag.SelectedSemester) ?? 0;
+    var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday };
+    ViewData["Title"] = "My Classes — " + (fac?.FullName ?? "Faculty");
+}
+<div class="mb-3"><h1 class="page-title">My Classes — @fac?.FullName</h1>
+    <div class="text-muted small">@branch?.Name · Semester @selectedSemester</div></div>
+
+<div class="ax-card mb-3"><div class="card-b">
+    <form method="get" class="row g-2 mb-3 align-items-end">
+        <div class="col-md-3"><select name="semester" class="form-select">
+            @foreach (var s in semesters) { <option value="@s.Number" selected="@(s.Number == selectedSemester)">Sem @s.Number (@s.Type)</option> }</select></div>
+        <div class="col-md-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
+        <div class="col-md-2"><a class="btn btn-outline-secondary w-100" asp-action="MyClasses">Clear</a></div>
+    </form>
+</div></div>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info">No classes assigned to you in the current semester.</div>
+}
+else
+{
+    @foreach (var d in days)
+    {
+        var daySlots = Model.Where(s => s.Day == d).OrderBy(s => s.Period).ToList();
+        if (!daySlots.Any()) continue;
+
+        <div class="ax-card mb-3">
+            <div class="card-h">@d</div>
+            <div class="card-b">
+                <div class="table-responsive"><table class="table table-bordered table-sm mb-0">
+                    <thead><tr><th>Period</th><th>Subject</th><th>Section</th><th>Room</th><th>Class Type</th></tr></thead>
+                    <tbody>
+                    @foreach (var p in daySlots)
+                    {
+                        <tr>
+                            <td><b class="mono">P@(p.Period)</b></td>
+                            <td class="mono">@(p.Subject?.SubjectCode ?? "-")</td>
+                            <td>@(p.Section?.Name ?? "-")</td>
+                            <td>@p.RoomNo</td>
+                            <td>@p.ClassType</td>
+                        </tr>
+                    }
+                    </tbody></table></div>
+            </div>
+        </div>
+    }
+}
+@section Scripts { }

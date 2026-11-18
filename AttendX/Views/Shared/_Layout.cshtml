@@ -100,6 +100,7 @@
         <a class="@A("Attendance", todayActions)" asp-controller="Attendance" asp-action="Index" title="Today's Classes"><i class="bi bi-check2-square"></i> <span class="nav-text">Today's Classes</span></a>
         <a class="@A("Timetable")" asp-controller="Timetable" asp-action="Index" title="Timetable"><i class="bi bi-calendar3-week"></i> <span class="nav-text">Timetable</span></a>
         @if (admin || hod) { <a class="@A("Attendance", "Corrections")" asp-controller="Attendance" asp-action="Corrections" title="Corrections"><i class="bi bi-pencil-square"></i> <span class="nav-text">Corrections</span></a> }
+        @if (User.IsInRole("HOD")) { <a class="@A("Dashboard", "MyClasses")" asp-controller="Dashboard" asp-action="MyClasses" title="My Classes"><i class="bi bi-person-badge"></i> <span class="nav-text">My Classes</span></a> }
         <a class="@A("Queries")" asp-controller="Queries" asp-action="Index" title="Student Queries"><i class="bi bi-chat-square-text"></i> <span class="nav-text">Student Queries</span></a>
         <div class="grp"><span class="nav-text">Exams</span></div>
         <a class="@A("Exam", "Index")" asp-controller="Exam" asp-action="Index" title="Exams"><i class="bi bi-file-earmark-text"></i> <span class="nav-text">Exams</span></a>
