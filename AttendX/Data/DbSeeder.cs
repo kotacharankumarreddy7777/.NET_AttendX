@@ -21,7 +21,7 @@ public class DbSeeder(AppDbContext db, UserManager<ApplicationUser> users, RoleM
     {
         // Each branch runs 2 sections (EV1..EV2 / EN1..EN2 etc.) section per semester — matches the dataset.
         // Sections are reused across all 8 semesters of a 4-year B.Tech program.
-        ["CSE"] = ("EV", 2), ["CSEAI"] = ("EN", 2), ["CSEAIML"] = ("EN", 2), ["ADS"] = ("EU", 2), ["ECE"] = ("EC", 2), ["EEE"] = ("EE", 2),
+        ["CSE"] = ("EV", 2), ["CSEAI"] = ("EN", 2), ["CSEAIML"] = ("EM", 2), ["ADS"] = ("EU", 2), ["ECE"] = ("EC", 2), ["EEE"] = ("EE", 2),
         ["MECH"] = ("ME", 2), ["CIVIL"] = ("CE", 2), ["IT"] = ("IT", 2), ["CYBER"] = ("CS", 2), ["AIDS"] = ("AD", 2), ["AIML"] = ("AM", 2), ["IOT"] = ("IO", 2), ["DS"] = ("DS", 2)
     };
 
