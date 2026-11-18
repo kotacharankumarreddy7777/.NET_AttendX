@@ -27,6 +27,12 @@ public interface IExamService
     Task<(bool Ok, string? Error)> ReviewLockQueryAsync(int examTimetableId, bool approve, string? note, DateTime? windowStart, DateTime? windowEnd, string? reviewedBy); // HOD/Admin allots window
     Task<List<ExamMark>> GetLockedMarksAwaitingReviewAsync(int? branchId);                            // HOD/Admin list
     Task<decimal> GetStudentAttendancePercentAsync(int studentId, int branchId, int sectionId, int semester);
+
+    // ---- Invigilation duties for faculty during exam windows ----
+    Task<List<ExamTimetable>> GetInvigilationDutiesAsync(int facultyId, DateTime from, DateTime to);
+
+    // ---- Result publishing: after EndDate + 3 days, mark ResultsPublished = true ----
+    Task<int> PublishPendingResultsAsync();
 }
 
 public class ExamService(AppDbContext db, ICurrentUser user, ISettingsService settings, IAttendanceService attendance) : IExamService
@@ -357,6 +363,29 @@ public class ExamService(AppDbContext db, ICurrentUser user, ISettingsService se
         var present = rows.Count(a => a.Status == AttendanceStatus.Present);
         var late = rows.Count(a => a.Status == AttendanceStatus.Late);
         return AttendanceMath.Percent(present, late, rows.Count, settings.LateWeight);
+    }
+
+    // ------------------------------------------------------------------ invigilation duties
+    public async Task<List<ExamTimetable>> GetInvigilationDutiesAsync(int facultyId, DateTime from, DateTime to)
+    {
+        return await _db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Exam).Include(x => x.Subject).Include(x => x.Section).Include(x => x.Branch)
+            .Where(x => x.IsActive && x.FacultyId == facultyId && x.ExamDate.Date >= from.Date && x.ExamDate.Date <= to.Date)
+            .OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime)
+            .ToListAsync();
+    }
+
+    // ------------------------------------------------------------------ result publishing
+    public async Task<int> PublishPendingResultsAsync()
+    {
+        var now = DateTime.UtcNow;
+        var exams = await _db.Exams.Where(e => e.IsActive && !e.ResultsPublished && e.ResultReleaseDate <= now).ToListAsync();
+        foreach (var e in exams)
+        {
+            e.ResultsPublished = true;
+        }
+        if (exams.Count > 0) await _db.SaveChangesAsync();
+        return exams.Count;
     }
 }
 

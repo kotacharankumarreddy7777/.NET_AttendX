@@ -4,6 +4,9 @@ public interface IDashboardService
 {
     Task<AdminDashboardViewModel> BuildAdminOrHodAsync();
     Task<FacultyDashboardViewModel?> BuildFacultyAsync();
+
+    // ---- Automatic semester rollover ----
+    Task<(bool Rolled, string? Message)> CheckAndRolloverAsync();
 }
 
 public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsService settingsService, IAttendanceService attendance, IReportService reports,
@@ -219,6 +222,49 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
                 RoomNo = d.RoomNo, Semester = d.Semester, SectionName = d.Section?.Name ?? "",
                 ExamTimetableId = d.Id
             });
+        }
+    }
+
+    // ------------------------------------------------------------------ automatic semester rollover
+    public async Task<(bool Rolled, string? Message)> CheckAndRolloverAsync()
+    {
+        var now = DateTime.UtcNow.Date;
+        var current = await db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.IsCurrent);
+        if (current == null) return (false, "No current semester found.");
+
+        // Only roll over after the exam window has fully ended
+        if (now < current.ExamEndDate.Date)
+            return (false, null);
+
+        var next = await db.Semesters.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.AcademicYearId == current.AcademicYearId && s.Number == current.Number + 1);
+        if (next == null)
+            return (false, $"Semester {current.Number} is the final semester. No next semester to roll over to.");
+
+        using var tx = await db.Database.BeginTransactionAsync();
+        try
+        {
+            current.IsCurrent = false;
+            next.IsCurrent = true;
+            await db.SaveChangesAsync();
+
+            db.SemesterTransitionLogs.Add(new SemesterTransitionLog
+            {
+                FromSemester = current.Number,
+                ToSemester = next.Number,
+                TransitionedAt = DateTime.UtcNow,
+                Notes = $"Automatic rollover after {current.ExamEndDate:dd MMM yyyy} exam end.",
+                BranchId = null
+            });
+            await db.SaveChangesAsync();
+
+            await tx.CommitAsync();
+            return (true, $"Rolled over from Semester {current.Number} to Semester {next.Number} ({next.Type}).");
+        }
+        catch (Exception ex)
+        {
+            await tx.RollbackAsync();
+            return (false, $"Rollover failed: {ex.Message}");
         }
     }
 }

@@ -44,8 +44,26 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         var year = await _settings.GetCurrentYearAsync();
         var settings = await _settings.GetAsync();
 
+        // Detect exam window: if today falls within any active semester's exam window, suspend regular classes
+        bool inExamWindow = false;
+        var today = date;
+        var sems = await _db.Semesters.AsNoTracking().Where(s => s.AcademicYearId == year.Id).ToListAsync();
+        foreach (var s in sems)
+        {
+            if (today >= s.ExamStartDate.Date && today <= s.ExamEndDate.Date)
+            {
+                inExamWindow = true;
+                break;
+            }
+        }
+
         var q = _db.Timetables.AsNoTracking().Include(t => t.Subject).Include(t => t.Section).Include(t => t.Branch).Include(t => t.Faculty)
             .Where(t => t.IsActive && t.AcademicYearId == year.Id && t.Day == date.DayOfWeek);
+
+        // During exam windows, hide classes marked as suspended during exams
+        if (inExamWindow)
+            q = q.Where(t => !t.IsSuspendedDuringExams);
+
         if (facultyId != null) q = q.Where(t => t.FacultyId == facultyId);
         if (branchId != null) q = q.Where(t => t.BranchId == branchId);
         if (sectionId != null) q = q.Where(t => t.SectionId == sectionId);

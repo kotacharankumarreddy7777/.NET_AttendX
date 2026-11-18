@@ -8,6 +8,7 @@ public interface ITimetableService
     Task<(bool Ok, List<string> Errors)> SaveAsync(TimetableFormViewModel m);
     Task<bool> DeactivateAsync(int id);
     Task<TimetableGridViewModel> BuildGridAsync(int? branchId, int? sectionId, int? semester, int? facultyId, int? scopeBranchId);
+    Task<List<ExamTimetable>> GetExamOverlayAsync(int? branchId, int? sectionId, int? semester, DateTime from, DateTime to);
 }
 
 public class TimetableService(AppDbContext db, ISettingsService settings, IAuditService audit) : ITimetableService
@@ -122,8 +123,26 @@ public class TimetableService(AppDbContext db, ISettingsService settings, IAudit
         if (!vm.HasFilter) return vm;
 
         var year = await _settings.GetCurrentYearAsync();
+
+        // Determine if we are inside an exam window (classes suspended, exam duty takes over)
+        bool inExamWindow = false;
+        if (semester.HasValue)
+        {
+            var sem = await _db.Semesters.AsNoTracking().FirstOrDefaultAsync(s => s.Number == semester.Value && s.AcademicYearId == year.Id);
+            if (sem != null)
+            {
+                var today = DateTime.UtcNow.Date;
+                inExamWindow = today >= sem.ExamStartDate.Date && today <= sem.ExamEndDate.Date;
+            }
+        }
+
         var q = _db.Timetables.AsNoTracking().Include(t => t.Subject).Include(t => t.Faculty).Include(t => t.Section)
             .Where(t => t.IsActive && t.AcademicYearId == year.Id);
+
+        // During exam windows, hide classes that are marked as suspended
+        if (inExamWindow)
+            q = q.Where(t => !t.IsSuspendedDuringExams);
+
         if (scopeBranchId != null) q = q.Where(t => t.BranchId == scopeBranchId);
         if (branchId != null) q = q.Where(t => t.BranchId == branchId);
         if (sectionId != null) q = q.Where(t => t.SectionId == sectionId);
@@ -133,6 +152,19 @@ public class TimetableService(AppDbContext db, ISettingsService settings, IAudit
         var rows = await q.OrderBy(t => t.Section!.Name).ToListAsync();
         foreach (var g in rows.GroupBy(t => $"{(int)t.Day}-{t.Period}")) vm.Cells[g.Key] = [.. g];
         return vm;
+    }
+
+    public async Task<List<ExamTimetable>> GetExamOverlayAsync(int? branchId, int? sectionId, int? semester, DateTime from, DateTime to)
+    {
+        var q = _db.ExamTimetables.AsNoTracking()
+            .Include(x => x.Subject).Include(x => x.Faculty).Include(x => x.Section).Include(x => x.Branch).Include(x => x.Exam)
+            .Where(x => x.IsActive && x.ExamDate.Date >= from.Date && x.ExamDate.Date <= to.Date);
+
+        if (branchId != null) q = q.Where(x => x.BranchId == branchId);
+        if (sectionId != null) q = q.Where(x => x.SectionId == sectionId);
+        if (semester != null) q = q.Where(x => x.Semester == semester);
+
+        return await q.OrderBy(x => x.ExamDate).ThenBy(x => x.StartTime).ToListAsync();
     }
 
     private static string Snapshot(Timetable t) => JsonSerializer.Serialize(new { t.BranchId, t.SectionId, t.Semester, Day = t.Day.ToString(), t.Period, t.SubjectId, t.FacultyId, t.RoomNo, t.ClassType, t.IsActive });
