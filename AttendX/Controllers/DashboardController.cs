@@ -4,11 +4,12 @@ using AttendX.Data;
 using AttendX.Services;
 
 [Authorize(Policy = PolicyNames.AnyStaff)]
-public class DashboardController(IDashboardService dash, ICurrentUser user, AppDbContext db) : Controller
+public class DashboardController(IDashboardService dash, ICurrentUser user, AppDbContext db, ISettingsService settings) : Controller
 {
     private readonly IDashboardService _dash = dash;
     private readonly ICurrentUser _user = user;
     private readonly AppDbContext _db = db;
+    private readonly ISettingsService _settings = settings;
 
     /// <summary>One entry point - the user is routed to the dashboard that matches the role.</summary>
     public async Task<IActionResult> Index()
@@ -27,9 +28,8 @@ public class DashboardController(IDashboardService dash, ICurrentUser user, AppD
         var scope = await _user.GetScopeBranchIdAsync();
         if (scope == null) return Forbid();
 
-        var year = await _db.AcademicYears.AsNoTracking().FirstOrDefaultAsync(a => a.IsCurrent)
-            ?? await _db.AcademicYears.AsNoTracking().OrderByDescending(a => a.StartDate).FirstOrDefaultAsync() ?? new AcademicYear { Id = 0, Name = "2026-27" };
-        var currentSems = await _db.Semesters.AsNoTracking().Where(s => s.IsCurrent).OrderBy(s => s.Number).ToListAsync();
+        var year = await _settings.GetCurrentYearAsync();
+        var currentSems = await _settings.GetCurrentSemestersAsync();
         var currentSemSet = new HashSet<int>(currentSems.Select(s => s.Number));
         var currentSem = semester ?? currentSems.FirstOrDefault()?.Number ?? 0;
 
@@ -65,9 +65,8 @@ public class DashboardController(IDashboardService dash, ICurrentUser user, AppD
         var fac = await _user.GetFacultyAsync();
         if (scope == null || fac == null) return Forbid();
 
-        var year = await _db.AcademicYears.AsNoTracking().FirstOrDefaultAsync(a => a.IsCurrent)
-            ?? await _db.AcademicYears.AsNoTracking().OrderByDescending(a => a.StartDate).FirstOrDefaultAsync() ?? new AcademicYear { Id = 0, Name = "2026-27" };
-        var currentSems = await _db.Semesters.AsNoTracking().Where(s => s.IsCurrent).OrderBy(s => s.Number).ToListAsync();
+        var year = await _settings.GetCurrentYearAsync();
+        var currentSems = await _settings.GetCurrentSemestersAsync();
         var currentSem = semester ?? currentSems.FirstOrDefault()?.Number ?? 0;
 
         var q = _db.Timetables.AsNoTracking()
