@@ -20,13 +20,17 @@ body{transition:background-color .3s ease}
   transition: transform 0.08s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* Sidebar links - single styling system (.sb-link) */
-.pt-side a.sb-link {
+/* Sidebar links ultra smooth slide, press, and glow */
+.pt-side {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease !important;
+  will-change: transform;
+}
+.pt-side a {
   position: relative;
   overflow: hidden;
   will-change: transform;
 }
-.pt-side a.sb-link::after {
+.pt-side a::after {
   content: '';
   position: absolute;
   left: 0;
@@ -36,8 +40,19 @@ body{transition:background-color .3s ease}
   background: rgba(255, 255, 255, 0.06);
   transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.pt-side a.sb-link:hover::after {
+.pt-side a:hover::after {
   width: 100%;
+}
+.pt-side a:hover {
+  transform: translateX(4px);
+}
+.pt-side a:active {
+  transform: scale(0.96) translateX(2px);
+  transition: transform 0.08s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.pt-side a.active {
+  transform: translateX(3px);
+  border-left-color: var(--accent);
 }
 
 /* Main area smooth slide and layout transit */
@@ -470,113 +485,8 @@ textarea.form-control{min-height:90px}
 
 /* ---------- Enhanced Button Interactions ---------- */
 .btn-ax:active,.btn-primary:active{transform:scale(0.95) translateY(0);transition:transform .08s}
-.pt-side a.sb-link.active{box-shadow:inset 3px 0 0 var(--accent)}
+.pt-side a.active{box-shadow:inset 3px 0 0 var(--accent)}
 .role-tile:active{transform:scale(0.96)}
-
-/* ---------- NEW SIDEBAR STYLES ---------- */
-.pt-side-header{background:linear-gradient(135deg,var(--navy),var(--navy-dark));}
-.pt-side-search{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;}
-.pt-side-search input{
-  background:transparent;
-  border:none;
-  outline:none;
-  color:#fff;
-  font-size:13px;
-  width:100%;
-}
-.pt-side-search input::placeholder{color:rgba(255,255,255,.5);}
-.sb-link{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 16px;
-  color:#E4EBF5;
-  text-decoration:none;
-  border-left:3px solid transparent;
-  border-radius:0 8px 8px 0;
-  margin:0 4px;
-  transition:all 0.2s ease;
-  font-size:14px;
-}
-.sb-link i{
-  font-size:15px;
-  width:18px;
-  text-align:center;
-  opacity:.85;
-}
-.sb-link .nav-text{
-  font-size:14px;
-  font-weight:500;
-}
-.sb-link:hover{
-  background:rgba(255,255,255,.08);
-  color:#fff;
-  transform:translateX(3px);
-  border-left-color:var(--accent);
-}
-.sb-link.active{
-  background:rgba(255,255,255,.12);
-  color:#fff;
-  border-left-color:var(--accent);
-  font-weight:500;
-}
-.sb-link.active i{
-  opacity:1;
-  color:var(--accent);
-}
-.pt-side-divider{
-  height:1px;
-  background:rgba(255,255,255,.12);
-  margin:12px 16px;
-}
-.pt-side-collapse{
-  width:36px;
-  height:36px;
-  border-radius:8px;
-  border:none;
-  background:rgba(255,255,255,.08);
-  color:#fff;
-  font-size:14px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  margin:8px 16px;
-  transition:all 0.2s ease;
-}
-.pt-side-collapse:hover{
-  background:rgba(255,255,255,.18);
-  transform:scale(1.05);
-}
-.pt-side-user{
-  padding:16px;
-  background:rgba(255,255,255,.06);
-  border-radius:12px;
-  margin:16px;
-}
-.pt-side-user-actions{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.pt-side-user-actions .btn{
-  font-size:13px;
-  padding:8px 12px;
-  font-weight:500;
-}
-
-/* ---------- Collapsed Sidebar State ---------- */
-body.sb-collapsed .pt-side-header .pt-side-brand,
-body.sb-collapsed .pt-side-search,
-body.sb-collapsed .pt-side .grp span,
-body.sb-collapsed .sb-link .nav-text,
-body.sb-collapsed .pt-side-user .flex-1,
-body.sb-collapsed .pt-side-user-actions .btn span{
-  display:none;
-}
-body.sb-collapsed .pt-side-user .avatar{width:36px;height:36px;font-size:12px;}
-body.sb-collapsed .pt-side-user .d-flex{align-items:center;justify-content:center;}
-body.sb-collapsed .pt-side-user-actions .btn{justify-content:center;}
 
 /* ---------- responsive ---------- */
 @media (max-width: 991.98px) {

@@ -56,28 +56,6 @@
     var bd = document.querySelector('.ax-backdrop'); if (bd) bd.addEventListener('click', function () { b.classList.remove('sb-open'); });
     var tm = document.getElementById('tabMenu'); if (tm) tm.addEventListener('click', function (e) { e.preventDefault(); b.classList.toggle('sb-open'); });
 
-    // ---------- Sidebar collapse toggle ----------
-    var sbToggle = document.getElementById('sbToggle');
-    var sbCollapse = document.getElementById('sbCollapse');
-    function toggleCollapse() {
-      b.classList.toggle('sb-collapsed');
-      localStorage.setItem('ax-sb', b.classList.contains('sb-collapsed') ? '1' : '0');
-    }
-    if (sbToggle) sbToggle.addEventListener('click', toggleCollapse);
-    if (sbCollapse) sbCollapse.addEventListener('click', toggleCollapse);
-
-    // ---------- Sidebar search ----------
-    var sbSearch = document.getElementById('sbSearch');
-    if (sbSearch) {
-      sbSearch.addEventListener('input', function () {
-        var q = sbSearch.value.toLowerCase();
-        document.querySelectorAll('.sb-link').forEach(function (link) {
-          var text = link.textContent.toLowerCase();
-          link.style.display = text.includes(q) ? '' : 'none';
-        });
-      });
-    }
-
     document.querySelectorAll('form[data-confirm]').forEach(function (f) { f.addEventListener('submit', function (e) { if (!confirm(f.getAttribute('data-confirm'))) e.preventDefault(); }); });
     document.querySelectorAll('form[data-once]').forEach(function (f) { f.addEventListener('submit', function () { f.querySelectorAll('button[type=submit]').forEach(function (x) { setTimeout(function () { x.disabled = true; }, 0); }); }); });
     document.querySelectorAll('table.dt').forEach(function (tbl) { if (window.jQuery && jQuery.fn.DataTable) jQuery(tbl).DataTable({ pageLength: 25, order: [] }); });
