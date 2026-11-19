@@ -488,9 +488,25 @@ textarea.form-control{min-height:90px}
 .pt-side a.active{box-shadow:inset 3px 0 0 var(--accent)}
 .role-tile:active{transform:scale(0.96)}
 
-/* ---------- responsive ---------- */
-@media (max-width: 991.98px) {
-  body, html { overflow-x: hidden; }
-  .pt-main { overflow-x: hidden; }
-  .pt-content { overflow-x: hidden; }
+/* ---------- Timetable grid enhancements ---------- */
+.tt-cell{background:#EEF3FA;border:1px solid #D5E0EF;border-radius:4px;padding:6px 8px;margin-bottom:4px;font-size:12px;position:relative}
+.tt-cell.today{background:#FFF9E6;border-left:3px solid var(--accent);box-shadow:0 0 8px rgba(184,137,45,.15)}
+.tt-cell .ct-lecture{background:var(--info-bg);color:var(--info);border-color:#BCD4EE}
+.tt-cell .ct-lab{background:var(--success-bg);color:var(--success);border-color:#BFE0CD}
+.tt-cell .ct-workshop{background:#F3E5F5;color:#6A1B9A;border-color:#CE93D8}
+.tt-cell .btn-mark{width:100%;font-size:11px;padding:3px 6px;margin-top:4px;border-radius:3px}
+.tt-cell .btn-mark:hover{background:var(--navy-dark);border-color:var(--navy-dark)}
+.empty-slot-add{display:block;text-align:center;color:var(--muted);font-size:11px;padding:4px 0}
+
+/* Responsive mobile: day cards instead of squished table */
+@media (max-width: 767.98px){
+  .tt-grid{display:block;font-size:12px}
+  .tt-grid thead{display:none}
+  .tt-grid tbody{display:block}
+  .tt-grid tr{display:block;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+  .tt-grid tr th{background:var(--navy);color:#fff;padding:8px 12px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+  .tt-grid tr td{display:block;padding:8px 12px;border:none;border-bottom:1px solid var(--border)}
+  .tt-grid tr td:last-child{border-bottom:0}
+  .tt-cell{margin-bottom:6px;padding:8px 10px}
+  .tt-grid .period-item{padding:6px 10px}
 }
