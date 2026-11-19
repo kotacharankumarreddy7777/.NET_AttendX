@@ -1,6 +1,11 @@
 @model AdminDashboardViewModel
 @inject AttendX.Data.AppDbContext db
-@{ ViewData["Title"] = "Dashboard"; }
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{ ViewData["Title"] = "Dashboard";
+    string studentsBadge = Model.ActiveStudents > 0 && Model.ActiveStudents != Model.TotalStudents ? "<span class=\"badge bg-success\">" + Model.ActiveStudents + " active</span>" : "";
+    string hodsBadge = Model.Hods > 0 ? "<span class=\"badge bg-info\">" + Model.Hods + " HOD(s)</span>" : "";
+    string todayBadge = Model.TodaySessions > 0 ? "<span class=\"badge bg-success\">" + Model.TodaySessions + " marked</span>" : "<span class=\"badge bg-warning\">0 marked</span>";
+}
 <div class="mb-3"><h1 class="page-title">@(Model.IsHod ? "Department Dashboard" : "Admin Dashboard")</h1><div class="text-muted small">@Model.ScopeName · Academic Year 2026-27</div></div>
 
 <!-- ============ QUICK ACTIONS ============ -->
@@ -15,9 +20,9 @@
 
 <!-- ============ KPI CARDS ============ -->
 <div class="row g-3 mb-3">
-    <div class="col-6 col-md-3"><div class="ax-card stat stat-info"><div><div class="v">@Model.TotalStudents</div><div class="l">Students @(Model.ActiveStudents == Model.TotalStudents ? "" : "<span class=\"badge bg-success\">@Model.ActiveStudents active</span>")</div></div></div></div>
-    <div class="col-6 col-md-3"><div class="ax-card stat stat-success"><div><div class="v">@Model.ActiveFaculty</div><div class="l">Faculty @(Model.Hods > 0 ? "<span class=\"badge bg-info\">@Model.Hods HOD(s)</span>" : "")</div></div></div></div>
-    <div class="col-6 col-md-3"><div class="ax-card stat stat-primary"><div><div class="v">@Model.TodayClasses</div><div class="l">Classes Today @(Model.TodaySessions > 0 ? "<span class=\"badge bg-success\">@Model.TodaySessions marked</span>" : "<span class=\"badge bg-warning\">0 marked</span>")</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="ax-card stat stat-info"><div><div class="v">@Model.TotalStudents</div><div class="l">Students @Html.Raw(studentsBadge)</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="ax-card stat stat-success"><div><div class="v">@Model.ActiveFaculty</div><div class="l">Faculty @Html.Raw(hodsBadge)</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="ax-card stat stat-primary"><div><div class="v">@Model.TodayClasses</div><div class="l">Classes Today @Html.Raw(todayBadge)</div></div></div></div>
     <div class="col-6 col-md-3"><div class="ax-card stat stat-@(Model.AvgAttendance >= 75 ? "success" : "danger")"><div><div class="v">@Model.AvgAttendance%</div><div class="l">Avg Attendance (30d)</div></div></div></div>
 </div>
 
