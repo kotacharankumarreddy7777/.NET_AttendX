@@ -1,7 +1,7 @@
 @model MarkPageViewModel
 @{ ViewData["Title"] = "QR attendance"; }
 <div class="ax-card mb-3"><div class="card-b d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <div><h4 class="mb-0">@Model.SubjectCode - @Model.SubjectName</h4><div class="text-muted">@Model.BranchCode / section @Model.SectionName - Period @Model.Period (@UiHelpers.Time(Model.Start)-@UiHelpers.Time(Model.End)) - @Model.Students.Count students</div></div>
+    <div><h1 class="page-title">@Model.SubjectCode - @Model.SubjectName</h1><div class="text-muted">@Model.BranchCode / section @Model.SectionName - Period @Model.Period (@UiHelpers.Time(Model.Start)-@UiHelpers.Time(Model.End)) - @Model.Students.Count students</div></div>
     <a class="btn btn-outline-secondary" asp-action="Mark" asp-route-id="@Model.TimetableId">Manual list</a>
 </div></div>
 <div id="scanRoot" data-tt="@Model.TimetableId" data-expiry="30" data-location="@Model.LocationRequirement" data-offline="@(Model.OfflineEnabled ? "true" : "false")" data-date="@Model.Date.ToString("yyyy-MM-dd")" class="row g-3">

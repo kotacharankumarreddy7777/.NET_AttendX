@@ -1,7 +1,7 @@
 @model MarkPageViewModel
 @{ ViewData["Title"] = "Mark attendance"; }
 <div class="ax-card mb-3"><div class="card-b d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <div><h4 class="mb-0">@Model.SubjectCode - @Model.SubjectName</h4>
+    <div><h1 class="page-title">@Model.SubjectCode - @Model.SubjectName</h1>
         <div class="text-muted">@Model.BranchCode / section @Model.SectionName - Period @Model.Period (@UiHelpers.Time(Model.Start)-@UiHelpers.Time(Model.End)) - room @Model.Room - @Model.Date.ToString("dd MMM yyyy") - @Model.FacultyName</div></div>
     <div class="text-end">
         @if (Model.IsCorrection) { <span class="badge bg-warning text-dark">Correction mode (reason required)</span> } else { <span id="countdown" class="badge bg-success"></span> }

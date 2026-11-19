@@ -3,7 +3,7 @@
 <div class="row g-3">
     <div class="col-lg-4"><div class="ax-card"><div class="card-b text-center">
         @if (!string.IsNullOrEmpty(s.PhotoPath)) { <img class="avatar avatar-lg mb-2" src="~/@s.PhotoPath" alt="" /> } else { <div class="avatar avatar-lg mb-2">@UiHelpers.Initials(s.FullName)</div> }
-        <h4 class="mb-0">@s.FullName</h4><code>@s.StudentID</code>
+        <h1 class="page-title">@s.FullName</h1><code>@s.StudentID</code>
         <div class="mt-2">@if (s.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</div>
         <hr /><img src="@Url.Action("Qr", new { id = s.Id })" width="190" alt="QR code" />
         <div class="d-flex gap-2 justify-content-center mt-2 flex-wrap">

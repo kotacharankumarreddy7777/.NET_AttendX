@@ -1,1 +1,59 @@
-@model List<Faculty>
+@model List<Student>
+@{ ViewData["Title"] = "Students"; bool locked = ViewBag.Locked; bool admin = User.IsInRole("Admin"); string status = ViewBag.Status; int activeCount = Model.Count(s => s.IsActive);
+}
+<div class="ax-card mb-3">
+    <div class="card-h d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1 class="page-title">Students</h1>
+            <div class="text-muted small">@Model.Count students @(activeCount > 0 ? "<span class=\"badge bg-success\">" + activeCount + " active</span>" : "")</div>
+        </div>
+        <div class="d-flex gap-2">
+            @if (admin) {
+                <a class="btn btn-ax" asp-action="Import"><i class="bi bi-upload me-1"></i>Import CSV</a>
+                <a class="btn btn-outline-secondary" asp-action="Template"><i class="bi bi-file-earmark me-1"></i>Template</a>
+                <a class="btn btn-outline-secondary" asp-action="Create"><i class="bi bi-plus-lg me-1"></i>Add Student</a>
+            }
+        </div>
+    </div>
+    <div class="card-b">
+        <form method="get" class="ax-card card-b mb-3"><div class="row g-2">
+            <div class="col-md-3 col-lg-3"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input name="search" value="@ViewBag.Search" class="form-control" placeholder="Search name, email, ID" /></div></div>
+            <div class="col-md-2 col-lg-2"><select name="branchId" class="form-select" disabled="@locked"><option value="">All branches</option>@foreach (var b in (List<SelectListItem>)ViewBag.Branches) { <option value="@b.Value" selected="@(b.Value == ViewBag.BranchId?.ToString())">@b.Text</option> }</select>@if (locked) { <input type="hidden" name="branchId" value="@ViewBag.BranchId" /> }</div>
+            <div class="col-md-1 col-lg-1"><select name="status" class="form-select"><option value="">All</option>@foreach (var s in new[] { "active", "inactive" }) { <option value="@s" selected="@(status == s)">@(s.Substring(0, 1).ToUpper() + s.Substring(1))</option> }</select></div>
+            <div class="col-md-2 col-lg-2 d-flex gap-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button><a class="btn btn-outline-secondary w-100" asp-action="Index">Clear</a></div>
+        </div></form>
+    </div>
+</div>
+
+<div class="ax-card mb-3"><div class="card-b">
+    @if (!Model.Any()) {
+        <partial name="_EmptyState" model='new EmptyStateModel("no_results", "No students found", "Try changing your search or filters.")' />
+    } else {
+    <div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th style="width:120px">Student ID</th><th>Name</th><th>Branch / Section</th><th>Sem / Yr</th><th>Email</th><th>Phone</th><th style="width:90px">Status</th><th style="width:150px"></th></tr></thead><tbody>
+    @foreach (var s in Model)
+    {
+        <tr>
+            <td><code>@s.StudentID</code></td>
+            <td><a asp-action="Details" asp-route-id="@s.Id">@s.FullName</a> <br /><small class="text-muted">@s.Branch!.Code / @s.Section!.Name</small></td>
+            <td><b>@s.Branch!.Code</b> / @s.Section!.Name</td>
+            <td>@s.Semester / Y@s.Year</td>
+            <td>@s.Email</td>
+            <td>@s.Phone</td>
+            <td>@if (s.IsActive) { <span class="badge bg-success">Active</span> } else { <span class="badge bg-secondary">Inactive</span> }</td>
+            <td class="text-end text-nowrap">
+                <div class="btn-group btn-group-sm">
+                    <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@s.Id">View</a>
+                    <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"></button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        @if (admin) {
+                            <a class="dropdown-item" asp-action="Edit" asp-route-id="@s.Id"><i class="bi bi-pencil me-2"></i>Edit details</a>
+                            <form asp-action="SetActive" asp-route-id="@s.Id" asp-route-active="@(!s.IsActive)" method="post" class="d-inline" data-confirm="@(s.IsActive ? "Deactivate this student? Their login will be blocked." : "Activate this student?")"><button class="dropdown-item text-@(s.IsActive ? "danger" : "success")" type="submit">@(s.IsActive ? "Deactivate" : "Activate")</button></form>
+                        }
+                    </div>
+                </div>
+            </td>
+        </tr>
+    }
+    </tbody></table></div>
+    }
+</div></div>

@@ -4,7 +4,7 @@
 <div class="ax-card mb-3">
     <div class="card-h d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
-            <h4 class="mb-0">Subjects</h4>
+            <h1 class="page-title">Subjects</h1>
             <div class="text-muted small">@Model.Count subjects across @((List<SelectListItem>)ViewBag.Branches).Count branches</div>
         </div>
         <div class="d-flex gap-2">
@@ -12,7 +12,7 @@
         </div>
     </div>
     <div class="card-b">
-        <form method="get" class="ax-card card-b mb-3"><div class="row g-2">
+        <form method="get" class="mb-0"><div class="row g-2">
             <div class="col-md-3 col-lg-3"><select name="branchId" class="form-select" disabled="@locked"><option value="">All branches</option>@foreach (var b in (List<SelectListItem>)ViewBag.Branches) { <option value="@b.Value" selected="@(b.Value == bid?.ToString())">@b.Text</option> }</select>@if (locked) { <input type="hidden" name="branchId" value="@bid" /> }</div>
             <div class="col-md-2 col-lg-2"><select name="semester" class="form-select"><option value="">All</option>@for (int i = 1; i <= 8; i++) { <option value="@i" selected="@(sem == i)">@i</option> }</select></div>
             <div class="col-md-3 col-lg-4"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input name="search" value="@ViewBag.Search" class="form-control" placeholder="Search name / code" /></div></div>
