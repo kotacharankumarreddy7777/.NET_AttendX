@@ -1,6 +1,7 @@
 /* Manual attendance: three-state cycler on each row + self-contained helper used by Mark.cshtml.
    Saves go through AttendX.postJson so the offline queue can catch them when the network is down.
-   Adds BroadcastChannel sync so multi-tab edits of the same class update each other live. */
+   Adds BroadcastChannel sync so multi-tab edits of the same class update each other live.
+   SignalR live sync (cross-client) is handled by /js/realtime.js. */
 (function () {
   var bc = null;
   try { bc = new BroadcastChannel('attendx-attendance'); } catch (e) { bc = null; }
@@ -30,7 +31,7 @@
       lastSnapshot[i.getAttribute('data-student')] = i.value;
     });
   }
-  function toast(msg) { if (window.AttendX) AttendX.toast(msg, 'success'); }
+  function toast(msg, type) { if (window.AttendX) AttendX.toast(msg, type || 'success'); }
 
   if (form) {
     form.addEventListener('submit', function () { snapshotForm(); }, { capture: true });

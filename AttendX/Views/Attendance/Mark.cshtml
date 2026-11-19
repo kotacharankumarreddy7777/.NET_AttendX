@@ -5,6 +5,7 @@
         <div class="text-muted">@Model.BranchCode / section @Model.SectionName - Period @Model.Period (@UiHelpers.Time(Model.Start)-@UiHelpers.Time(Model.End)) - room @Model.Room - @Model.Date.ToString("dd MMM yyyy") - @Model.FacultyName</div></div>
     <div class="text-end">
         @if (Model.IsCorrection) { <span class="badge bg-warning text-dark">Correction mode (reason required)</span> } else { <span id="countdown" class="badge bg-success"></span> }
+        <span id="markedCountBadge" class="badge bg-info text-dark ms-2">@(Model.Students.Count(s => s.CurrentStatus != null)) marked</span>
         @if (Model.CanScanQr) { <a class="btn btn-sm btn-outline-primary ms-2" asp-action="Scan" asp-route-id="@Model.TimetableId"><i class="bi bi-qr-code-scan"></i> Scan QR</a> }
     </div>
 </div></div>
