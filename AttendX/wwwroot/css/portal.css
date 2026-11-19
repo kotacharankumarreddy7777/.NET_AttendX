@@ -20,17 +20,13 @@ body{transition:background-color .3s ease}
   transition: transform 0.08s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* Sidebar links ultra smooth slide, press, and glow */
-.pt-side {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease !important;
-  will-change: transform;
-}
-.pt-side a {
+/* Sidebar links - single styling system (.sb-link) */
+.pt-side a.sb-link {
   position: relative;
   overflow: hidden;
   will-change: transform;
 }
-.pt-side a::after {
+.pt-side a.sb-link::after {
   content: '';
   position: absolute;
   left: 0;
@@ -40,19 +36,8 @@ body{transition:background-color .3s ease}
   background: rgba(255, 255, 255, 0.06);
   transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.pt-side a:hover::after {
+.pt-side a.sb-link:hover::after {
   width: 100%;
-}
-.pt-side a:hover {
-  transform: translateX(4px);
-}
-.pt-side a:active {
-  transform: scale(0.96) translateX(2px);
-  transition: transform 0.08s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-.pt-side a.active {
-  transform: translateX(3px);
-  border-left-color: var(--accent);
 }
 
 /* Main area smooth slide and layout transit */
@@ -485,7 +470,7 @@ textarea.form-control{min-height:90px}
 
 /* ---------- Enhanced Button Interactions ---------- */
 .btn-ax:active,.btn-primary:active{transform:scale(0.95) translateY(0);transition:transform .08s}
-.pt-side a.active{box-shadow:inset 3px 0 0 var(--accent)}
+.pt-side a.sb-link.active{box-shadow:inset 3px 0 0 var(--accent)}
 .role-tile:active{transform:scale(0.96)}
 
 /* ---------- NEW SIDEBAR STYLES ---------- */
