@@ -115,14 +115,14 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
             ch.GroupTitle = "Branch-wise attendance % (30 days)";
             var g = await last30.GroupBy(a => a.BranchId).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
             var names = await db.Branches.AsNoTracking().ToDictionaryAsync(b => b.Id, b => b.Code);
-            foreach (var r in g.OrderBy(q => names[q.Key])) { ch.Group.Labels.Add(names[r.Key]); ch.Group.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
+            foreach (var r in g.OrderBy(q => names.GetValueOrDefault(q.Key, "?"))) { ch.Group.Labels.Add(names.GetValueOrDefault(r.Key, "?")); ch.Group.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
         }
         else
         {
             ch.GroupTitle = "Section-wise attendance % (30 days)";
             var g = await last30.GroupBy(a => a.SectionId).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
             var names = await db.Sections.AsNoTracking().ToDictionaryAsync(s => s.Id, s => s.Name);
-            foreach (var r in g.OrderBy(q => names[q.Key])) { ch.Group.Labels.Add(names[r.Key]); ch.Group.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
+            foreach (var r in g.OrderBy(q => names.GetValueOrDefault(q.Key, "?"))) { ch.Group.Labels.Add(names.GetValueOrDefault(r.Key, "?")); ch.Group.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
         }
         var sg = await last30.GroupBy(a => a.Semester).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
         foreach (var r in sg.OrderBy(q => q.Key)) { ch.Semester.Labels.Add("Sem " + r.Key); ch.Semester.Values.Add(AttendanceMath.Percent(r.P, r.L, r.T, w)); }
@@ -138,7 +138,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         var sbj = await last30.GroupBy(a => a.SubjectId).Select(x => new { x.Key, T = x.Count(), P = x.Count(r => r.Status == AttendanceStatus.Present), L = x.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
         var sids = sbj.Select(x => x.Key).ToList();
         var snames = await db.Subjects.AsNoTracking().Where(s => sids.Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.SubjectCode);
-        foreach (var r in sbj.Select(q => new { Name = snames[q.Key], Pct = AttendanceMath.Percent(q.P, q.L, q.T, w) }).OrderBy(q => q.Pct).Take(8))
+        foreach (var r in sbj.Select(q => new { Name = snames.GetValueOrDefault(q.Key, "?"), Pct = AttendanceMath.Percent(q.P, q.L, q.T, w) }).OrderBy(q => q.Pct).Take(8))
         { ch.Subject.Labels.Add(r.Name); ch.Subject.Values.Add(r.Pct); }
         return vm;
     }
@@ -157,7 +157,7 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         vm.Next = vm.Today.FirstOrDefault(s => s.State == "Upcoming");
         vm.Assigned = [.. (await db.FacultySubjectMappings.AsNoTracking().Include(m => m.Subject).Include(m => m.Section)
             .Where(m => m.FacultyId == me.Id && m.Active && m.AcademicYearId == year.Id).ToListAsync())
-            .Select(m => $"{m.Subject!.SubjectCode} {m.Subject.SubjectName} - section {m.Section!.Name}").OrderBy(x => x)];
+            .Select(m => $"{m.Subject?.SubjectCode ?? ""} {m.Subject?.SubjectName ?? ""} - section {m.Section?.Name ?? ""}").OrderBy(x => x)];
         var t = db.Attendance.AsNoTracking().Where(a => a.FacultyId == me.Id && a.Date == today);
         vm.TodayPresent = await t.CountAsync(a => a.Status == AttendanceStatus.Present);
         vm.TodayAbsent = await t.CountAsync(a => a.Status == AttendanceStatus.Absent);
@@ -190,12 +190,12 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
             .GroupBy(a => new { a.SubjectId, a.SectionId, a.Semester })
             .Select(g => new { g.Key.SubjectId, g.Key.SectionId, g.Key.Semester, T = g.Count(), P = g.Count(r => r.Status == AttendanceStatus.Present), L = g.Count(r => r.Status == AttendanceStatus.Late) }).ToListAsync();
         ex.AvgAttendance = AttendanceMath.Percent(agg.Sum(a => a.P), agg.Sum(a => a.L), agg.Sum(a => a.T), settings.LateWeight);
-        foreach (var g in myTt.GroupBy(x => new { x.SubjectId, x.SectionId, x.Semester }).OrderBy(k => k.Key.Semester).ThenBy(k => k.First().Section!.Name))
+        foreach (var g in myTt.GroupBy(x => new { x.SubjectId, x.SectionId, x.Semester }).OrderBy(k => k.Key.Semester).ThenBy(k => k.First().Section?.Name ?? ""))
         {
             var first = g.First();
             var a = agg.FirstOrDefault(z => z.SubjectId == g.Key.SubjectId && z.SectionId == g.Key.SectionId && z.Semester == g.Key.Semester);
             var st = strengths.FirstOrDefault(s => s.BranchId == first.BranchId && s.SectionId == g.Key.SectionId && s.Semester == g.Key.Semester);
-            ex.Chips.Add(new FacultyClassChip { Label = $"{g.Key.Semester}{first.Section!.Name}-{first.Subject!.SubjectCode}", Strength = st?.C ?? 0, AvgPercent = a == null ? 0 : AttendanceMath.Percent(a.P, a.L, a.T, settings.LateWeight) });
+            ex.Chips.Add(new FacultyClassChip { Label = $"{g.Key.Semester}{first.Section?.Name ?? ""}-{first.Subject?.SubjectCode ?? ""}", Strength = st?.C ?? 0, AvgPercent = a == null ? 0 : AttendanceMath.Percent(a.P, a.L, a.T, settings.LateWeight) });
         }
 
         var low = await reports.GetStudentSummariesAsync(new ReportFilter { Type = "low" });
@@ -219,9 +219,9 @@ public class DashboardService(AppDbContext db, ICurrentUser user, ISettingsServi
         {
             ex.ExamDuties.Add(new FacultyExamDutyRow
             {
-                ExamName = d.Exam!.Name, ExamDate = d.ExamDate,
+                ExamName = d.Exam?.Name ?? "", ExamDate = d.ExamDate,
                 StartTime = d.StartTime, EndTime = d.EndTime,
-                SubjectCode = d.Subject!.SubjectCode, SubjectName = d.Subject.SubjectName,
+                SubjectCode = d.Subject?.SubjectCode ?? "", SubjectName = d.Subject?.SubjectName ?? "",
                 RoomNo = d.RoomNo, Semester = d.Semester, SectionName = d.Section?.Name ?? "",
                 ExamTimetableId = d.Id
             });

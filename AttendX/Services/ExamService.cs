@@ -26,7 +26,7 @@ public interface IExamService
     Task<(bool Ok, string? Error)> RaiseLockQueryAsync(int examTimetableId, string reason, string? raisedBy); // faculty raises after lock
     Task<(bool Ok, string? Error)> ReviewLockQueryAsync(int examTimetableId, bool approve, string? note, DateTime? windowStart, DateTime? windowEnd, string? reviewedBy); // HOD/Admin allots window
     Task<List<ExamMark>> GetLockedMarksAwaitingReviewAsync(int? branchId);                            // HOD/Admin list
-    Task<decimal> GetStudentAttendancePercentAsync(int studentId, int branchId, int sectionId, int semester);
+    Task<decimal> GetStudentAttendancePercentAsync(int studentId, int? branchId, int? sectionId, int? semester);
 
     // ---- Invigilation duties for faculty during exam windows ----
     Task<List<ExamTimetable>> GetInvigilationDutiesAsync(int facultyId, DateTime from, DateTime to);
@@ -353,12 +353,14 @@ public class ExamService(AppDbContext db, ICurrentUser user, ISettingsService se
         };
     }
 
-    public async Task<decimal> GetStudentAttendancePercentAsync(int studentId, int branchId, int sectionId, int semester)
-    {
-        var settings = await _settings.GetAsync();
-        var rows = await _db.Attendance.AsNoTracking()
-            .Where(a => a.StudentId == studentId && a.BranchId == branchId && a.SectionId == sectionId && a.Semester == semester)
-            .ToListAsync();
+public async Task<decimal> GetStudentAttendancePercentAsync(int studentId, int? branchId, int? sectionId, int? semester)
+        {
+            var settings = await _settings.GetAsync();
+            var q = _db.Attendance.AsNoTracking().Where(a => a.StudentId == studentId);
+            if (branchId.HasValue) q = q.Where(a => a.BranchId == branchId.Value);
+            if (sectionId.HasValue) q = q.Where(a => a.SectionId == sectionId.Value);
+            if (semester.HasValue) q = q.Where(a => a.Semester == semester.Value);
+            var rows = await q.ToListAsync();
         if (rows.Count == 0) return 100m;
         var present = rows.Count(a => a.Status == AttendanceStatus.Present);
         var late = rows.Count(a => a.Status == AttendanceStatus.Late);

@@ -69,7 +69,7 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         if (facultyId != null) q = q.Where(t => t.FacultyId == facultyId);
         if (branchId != null) q = q.Where(t => t.BranchId == branchId);
         if (sectionId != null) q = q.Where(t => t.SectionId == sectionId);
-        var rows = await q.OrderBy(t => t.Period).ThenBy(t => t.Section!.Name).ToListAsync();
+        var rows = (await q.ToListAsync()).OrderBy(t => t.Period).ThenBy(t => t.Section?.Name ?? "").ToList();
 
         var ids = rows.Select(r => r.Id).ToList();
         var sessions = await _db.AttendanceSessions.AsNoTracking().Where(s => s.Date == date && ids.Contains(s.TimetableId))
@@ -87,8 +87,8 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
             list.Add(new SlotView
             {
                 TimetableId = t.Id, Period = t.Period, Start = t.StartTime, End = t.EndTime, Semester = t.Semester,
-                SubjectName = t.Subject!.SubjectName, SubjectCode = t.Subject.SubjectCode,
-                SectionName = t.Section!.Name, BranchCode = t.Branch!.Code, FacultyName = t.Faculty!.FullName, Room = t.RoomNo,
+                SubjectName = t.Subject?.SubjectName ?? "", SubjectCode = t.Subject?.SubjectCode ?? "",
+                SectionName = t.Section?.Name ?? "", BranchCode = t.Branch?.Code ?? "", FacultyName = t.Faculty?.FullName ?? "", Room = t.RoomNo,
                 State = state, RemainingMinutes = state == "Open" ? (int)Math.Max(0, (end - now).TotalMinutes) : 0,
                 HasSession = sess != null, MarkedCount = sess != null && countBySession.TryGetValue(sess.Id, out var c) ? c : 0
             });
@@ -149,8 +149,8 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
         var (_, end) = AttendanceWindow.For(date, t.StartTime, t.EndTime, settings.GraceMinutes);
         var vm = new MarkPageViewModel
         {
-            TimetableId = t.Id, Date = date, SubjectName = t.Subject!.SubjectName, SubjectCode = t.Subject.SubjectCode,
-            SectionName = t.Section!.Name, BranchCode = t.Branch!.Code, FacultyName = t.Faculty!.FullName, Room = t.RoomNo,
+            TimetableId = t.Id, Date = date, SubjectName = t.Subject?.SubjectName ?? "", SubjectCode = t.Subject?.SubjectCode ?? "",
+            SectionName = t.Section?.Name ?? "", BranchCode = t.Branch?.Code ?? "", FacultyName = t.Faculty?.FullName ?? "", Room = t.RoomNo,
             Period = t.Period, Start = t.StartTime, End = t.EndTime, IsCorrection = access.IsCorrection,
             CanScanQr = !access.IsCorrection, OfflineEnabled = settings.OfflineSyncEnabled && !access.IsCorrection,
             LocationRequirement = settings.LocationRequirement.ToString(),
@@ -206,7 +206,7 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
                 rec.Status = status; rec.LastModifiedAt = now; rec.LastModifiedBy = _user.DisplayName;
                 updated++;
                 AddAudit(access.IsCorrection ? "AttendanceCorrected" : "AttendanceEdited", st.StudentID, t, oldStatus.ToString(), status.ToString(), reason,
-                         $"Subject {t.Subject!.SubjectCode}, {date:yyyy-MM-dd}, period {t.Period}");
+                         $"Subject {t.Subject?.SubjectCode ?? ""}, {date:yyyy-MM-dd}, period {t.Period}");
             }
             else
             {
@@ -218,7 +218,7 @@ public class AttendanceService(AppDbContext db, IClock clock, ICurrentUser user,
                 });
                 added++;
                 if (access.IsCorrection)
-                    AddAudit("AttendanceCorrected", st.StudentID, t, "(none)", status.ToString(), reason, $"Subject {t.Subject!.SubjectCode}, {date:yyyy-MM-dd}, period {t.Period}");
+                    AddAudit("AttendanceCorrected", st.StudentID, t, "(none)", status.ToString(), reason, $"Subject {t.Subject?.SubjectCode ?? ""}, {date:yyyy-MM-dd}, period {t.Period}");
             }
         }
         if (added + updated > 0)
